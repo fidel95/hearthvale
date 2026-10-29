@@ -1,6 +1,10 @@
 import * as THREE from 'three'
 import { CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js'
+import { BuildMenu } from '../ui/BuildMenu'
+import { BuildingPanel } from '../ui/BuildingPanel'
 import { CropPicker } from '../ui/CropPicker'
+import { el } from '../ui/dom'
+import { Modal, Sheet, button } from '../ui/Sheet'
 import { DockPanel } from '../ui/DockPanel'
 import { Hud } from '../ui/Hud'
 import { LandPanel } from '../ui/LandPanel'
@@ -11,8 +15,9 @@ import { TaxPanel } from '../ui/TaxPanel'
 import { Builder } from './Builder'
 import { BUILDINGS_BY_ID } from './buildings'
 import { CameraController } from './CameraController'
-import { City } from './City'
+import { City, type PlacedBuilding } from './City'
 import { CityView } from './CityView'
+import { ContextMenu } from './ContextMenu'
 import { CROPS_BY_ID } from './crops'
 import { Docks } from './Docks'
 import { GameClock, MONTH_NAMES } from './GameClock'
@@ -61,6 +66,8 @@ export class Game {
   private landView: LandView
   private shipView: ShipView
   private incomeView: IncomeView
+  private contextMenu!: ContextMenu
+  private buildingPanel!: BuildingPanel
   private hud: Hud
   private saver: AutoSaver
   private lastFrame = performance.now()
@@ -104,11 +111,22 @@ export class Game {
 
     const taxPanel = new TaxPanel(container, this.city, this.taxes, this.clock)
     const townPanel = new TownPanel(container, this.city, this.services)
+    const buildMenu = new BuildMenu(container, this.city, this.player, (type) => builder.setMode({ kind: 'build', type }))
+    const comingSoon = (what: string) => () => this.hud.toast(`${what} is coming in this update`)
     this.hud = new Hud(container, builder, this.city, this.player, this.services, {
+      onOpenBuild: () => {
+        builder.setMode({ kind: 'select' })
+        buildMenu.open()
+      },
+      onOpenQuests: comingSoon('Quests'),
+      onOpenInventory: comingSoon('Inventory'),
+      onOpenCollections: comingSoon('Collections'),
+      onOpenMap: comingSoon('The map'),
       onOpenTaxes: () => taxPanel.open(),
       onOpenTown: () => townPanel.open(),
-      onNewTown: () => this.newTown(),
+      onOpenSettings: () => this.openSettings(container),
     })
+    this.setUpSelection(container, builder)
     this.showTaxEvents(taxPanel)
     const cropPicker = new CropPicker(container, this.city, this.player, (message) => this.hud.toast(message))
     builder.onPlantRequest = (plot) => cropPicker.open(plot)
@@ -160,6 +178,8 @@ export class Game {
 
     const now = Date.now()
     this.cityView.update(now)
+    this.contextMenu.update(now)
+    this.buildingPanel.update(now)
     this.roadView.update()
     const seconds = frameTime / 1000
     this.landView.update(seconds)
@@ -220,6 +240,57 @@ export class Game {
       if (document.visibilityState === 'hidden') hiddenAt = Date.now()
       else if (hiddenAt !== null) welcome(hiddenAt)
     })
+  }
+
+  // Selecting a building: its context menu on the map, the details sheet,
+  // and the actions both offer.
+  private setUpSelection(container: HTMLElement, builder: Builder) {
+    const confirmRemove = new Modal(container)
+    const remove = (b: PlacedBuilding) => {
+      confirmRemove.body.replaceChildren(
+        el('p', '', `Tear down this ${b.type.name}? You get nothing back for it.`),
+        el('p', 'muted', "No tax deduction either: in the US, a demolished building's leftover cost is added to the land's value instead (IRC §280B)."),
+      )
+      confirmRemove.show(
+        `🗑️ Remove ${b.type.name}?`,
+        button('Keep it', () => confirmRemove.close(), 'panel-button secondary'),
+        button('Remove', () => {
+          confirmRemove.close()
+          this.city.remove(b.id)
+        }, 'panel-button danger'),
+      )
+    }
+    const move = (b: PlacedBuilding) => {
+      Sheet.closeCurrent()
+      builder.setMode({ kind: 'move', carrying: b })
+    }
+    this.buildingPanel = new BuildingPanel(
+      container,
+      { city: this.city, services: this.services, taxes: this.taxes, docks: this.docks, describe: (b, now) => this.incomeView.describe(b, now) },
+      { collect: (b) => builder.tap(b), move, remove },
+    )
+    this.contextMenu = new ContextMenu(this.scene, this.cityView, this.incomeView, [
+      { icon: 'ℹ️', label: 'Details', run: (b) => this.buildingPanel.open(b) },
+      { icon: '✋', label: 'Move', run: move },
+      { icon: '🗑️', label: 'Remove', run: remove },
+    ])
+    builder.onSelect = (b) => this.contextMenu.show(b)
+    // A tap on the map while a sheet is open just closes the sheet.
+    builder.interceptClick = () => Sheet.closeCurrent()
+  }
+
+  private settings: Sheet | null = null
+
+  private openSettings(container: HTMLElement) {
+    if (!this.settings) {
+      this.settings = new Sheet(container, '⚙️ Settings')
+      this.settings.body.append(
+        el('p', '', 'Hearthvale saves your town on this device automatically. Nothing is sent anywhere.'),
+        el('p', 'muted', 'Models: City Kit (Suburban) by Kenney, CC0. Built with three.js.'),
+      )
+      this.settings.setButtons(button('Start a new town', () => this.newTown(), 'panel-button danger'))
+    }
+    this.settings.open()
   }
 
   private newTown() {

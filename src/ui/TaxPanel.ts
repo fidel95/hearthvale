@@ -9,6 +9,7 @@ import {
   SALES_TAX_RATE,
 } from '../game/taxRules'
 import { coins, el, percent } from './dom'
+import { Modal, Sheet, button } from './Sheet'
 
 // The Taxes window: this year's books so far, an estimate of the income tax
 // with a bracket-by-bracket breakdown, sales tax being held, property values,
@@ -80,58 +81,32 @@ function bracketChart(r: TaxReturn): HTMLElement {
 }
 
 export class TaxPanel {
-  private overlay = el('div', 'overlay')
-  private card = el('div', 'panel')
-  private body = el('div', 'panel-body')
-  private title = el('h2', '')
+  private sheet: Sheet
+  private taxDay: Modal
   private city: City
   private taxes: Taxes
   private clock: GameClock
-  private isOpen = false
 
   constructor(container: HTMLElement, city: City, taxes: Taxes, clock: GameClock) {
     this.city = city
     this.taxes = taxes
     this.clock = clock
-
-    const header = el('div', 'panel-header')
-    const close = el('button', 'panel-close', '✕')
-    close.setAttribute('aria-label', 'Close')
-    close.addEventListener('click', () => this.close())
-    header.append(this.title, close)
-    this.card.append(header, this.body)
-    this.overlay.append(this.card)
-    this.overlay.hidden = true
-    // Clicking the dimmed background closes the panel.
-    this.overlay.addEventListener('click', (e) => {
-      if (e.target === this.overlay) this.close()
-    })
-    window.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') this.close()
-    })
-    container.append(this.overlay)
+    this.sheet = new Sheet(container, 'Taxes')
+    this.taxDay = new Modal(container)
 
     // Keep the numbers live while the panel is open.
-    taxes.onChange(() => this.isOpen && this.render())
-    city.onChange((e) => e.kind === 'coins' && this.isOpen && this.render())
+    taxes.onChange(() => this.sheet.isOpen && this.render())
+    city.onChange((e) => e.kind === 'coins' && this.sheet.isOpen && this.render())
   }
 
   open() {
-    this.isOpen = true
     this.render()
-    this.overlay.hidden = false
-  }
-
-  close() {
-    this.isOpen = false
-    this.overlay.hidden = true
+    this.sheet.open()
   }
 
   // The yearly report shown on Tax Day.
   showTaxDay(r: TaxReturn) {
-    this.isOpen = false // it's a report, not the live panel
-    this.title.textContent = `📬 Tax Day: Year ${r.year}`
-    this.body.replaceChildren(
+    this.taxDay.body.replaceChildren(
       el('p', '', 'The tax year is over. Here is the return your accountant filed:'),
       table([
         ...returnRows(r),
@@ -149,13 +124,13 @@ export class TaxPanel {
       ),
       ...(this.city.coins < 0 ? [this.debtWarning()] : []),
     )
-    this.overlay.hidden = false
+    this.taxDay.show(`📬 Tax Day: Year ${r.year}`, button('Got it', () => this.taxDay.close()))
   }
 
   private render() {
     const r = this.taxes.estimate()
     const monthsLeft = 11 - this.clock.month
-    this.title.textContent = `Taxes · Year ${this.clock.year}, ${MONTH_NAMES[this.clock.month]}`
+    this.sheet.setTitle(`Taxes · Year ${this.clock.year}, ${MONTH_NAMES[this.clock.month]}`)
 
     const nextQuarterEnd = MONTH_NAMES[Math.floor(this.clock.month / 3) * 3 + 2]
     const properties = this.taxes.properties().sort((a, b) => b.annualTax - a.annualTax)
@@ -240,7 +215,7 @@ export class TaxPanel {
     }
 
     parts.push(this.explainer())
-    this.body.replaceChildren(...parts)
+    this.sheet.body.replaceChildren(...parts)
   }
 
   private debtWarning(): HTMLElement {

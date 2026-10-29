@@ -1,12 +1,12 @@
 import type { City, PlacedBuilding } from '../game/City'
 import { SHIPMENT_OPTIONS, type Docks } from '../game/Docks'
 import { coins, el, timeSpan } from './dom'
+import { Sheet } from './Sheet'
 
 // The window for ordering goods at a dock: each kind of ship, what it brings,
 // what it costs and how long it takes.
 export class DockPanel {
-  private overlay = el('div', 'overlay')
-  private body = el('div', 'panel-body')
+  private sheet: Sheet
   private city: City
   private docks: Docks
   private onNotice: (message: string) => void
@@ -15,23 +15,7 @@ export class DockPanel {
     this.city = city
     this.docks = docks
     this.onNotice = onNotice
-
-    const card = el('div', 'panel')
-    const header = el('div', 'panel-header')
-    const close = el('button', 'panel-close', '✕')
-    close.setAttribute('aria-label', 'Close')
-    close.addEventListener('click', () => this.close())
-    header.append(el('h2', '', '⚓ Order goods by sea'), close)
-    card.append(header, this.body)
-    this.overlay.append(card)
-    this.overlay.hidden = true
-    this.overlay.addEventListener('click', (e) => {
-      if (e.target === this.overlay) this.close()
-    })
-    window.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') this.close()
-    })
-    container.append(this.overlay)
+    this.sheet = new Sheet(container, '⚓ Order goods by sea')
   }
 
   open(dock: PlacedBuilding) {
@@ -47,11 +31,11 @@ export class DockPanel {
       item.disabled = !this.docks.canOrder(dock, option)
       item.addEventListener('click', () => {
         if (this.docks.order(dock, option, Date.now())) this.onNotice(`🚢 ${option.name} ordered. Arriving in ${timeSpan(option.seconds)}.`)
-        this.close()
+        this.sheet.close()
       })
       list.append(item)
     }
-    this.body.replaceChildren(
+    this.sheet.body.replaceChildren(
       el('p', '', `Storage: 📦 ${this.city.goods} of ${this.city.storageCapacity} (room for ${room}).`),
       list,
       el(
@@ -60,10 +44,6 @@ export class DockPanel {
         "Your shops sell a good for about 10 coins, so shipped goods earn a profit once sold. Paying for a shipment isn't a tax deduction: goods are inventory, and their cost is deducted as your shops sell them (cost of goods sold).",
       ),
     )
-    this.overlay.hidden = false
-  }
-
-  close() {
-    this.overlay.hidden = true
+    this.sheet.open()
   }
 }

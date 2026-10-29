@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
 import type { BuildingType } from './buildings'
 import type { CameraController } from './CameraController'
 import { duration, outOfEnergyMessage } from '../ui/dom'
@@ -14,8 +15,7 @@ import type { Player } from './Player'
 export type Mode =
   | { kind: 'select' }
   | { kind: 'build'; type: BuildingType }
-  | { kind: 'move'; carrying: PlacedBuilding | null }
-  | { kind: 'demolish' }
+  | { kind: 'move'; carrying: PlacedBuilding }
 
 const COLORS = { hover: '#ffffff', ok: '#4ade80', blocked: '#ef4444' }
 
@@ -25,8 +25,9 @@ function anchorFor(type: BuildingType, tile: Tile): Tile {
   return { x: tile.x - Math.floor(type.size.x / 2), z: tile.z - Math.floor(type.size.z / 2) }
 }
 
-// Handles building, moving and demolishing: the ghost preview, the colored
-// footprint under the pointer, and turning clicks into City changes.
+// Handles taps on the map: collecting and tending buildings, selecting one
+// for its context menu, placing new buildings (a ghost preview, then ✓ to buy)
+// and moving them. Shows the colored footprint under the pointer.
 export class Builder {
   mode: Mode = { kind: 'select' }
   onModeChange?: (mode: Mode) => void
@@ -37,6 +38,14 @@ export class Builder {
   onPlantRequest?: (plot: PlacedBuilding) => void
   // An idle dock was tapped: show the shipments to order.
   onDockRequest?: (dock: PlacedBuilding) => void
+  // The selected building changed (null: nothing selected).
+  onSelect?: (building: PlacedBuilding | null) => void
+  // Asked first on every map tap; return true to swallow the tap (Game uses
+  // it so a tap on the map just closes an open sheet).
+  interceptClick?: () => boolean
+
+  // The building whose context menu is showing.
+  selected: PlacedBuilding | null = null
 
   private scene: THREE.Scene
   private city: City
@@ -51,6 +60,11 @@ export class Builder {
   private area: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>
   // The last tile painted in a road drag, to fill in tiles a fast drag skips over.
   private lastPainted: Tile | null = null
+  // Where a new building would go, waiting for ✓ (buy) or ✗ (cancel).
+  private pending: Tile | null = null
+  private confirm: CSS2DObject
+  // An outline around the selected building.
+  private selection: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>
   // One shared see-through material for the ghost; we just recolor it.
   private ghostMaterial = new THREE.MeshLambertMaterial({ transparent: true, opacity: 0.6 })
 
@@ -82,6 +96,31 @@ export class Builder {
     )
     this.area.visible = false
     scene.add(this.area)
+    this.selection = new THREE.Mesh(
+      new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2),
+      new THREE.MeshBasicMaterial({ color: '#ffd84d', transparent: true, opacity: 0.5, depthWrite: false }),
+    )
+    this.selection.visible = false
+    scene.add(this.selection)
+
+    // The ✓ / ✗ buttons shown over a building waiting to be bought.
+    const confirmEl = document.createElement('div')
+    confirmEl.className = 'place-confirm'
+    const yes = document.createElement('button')
+    yes.className = 'place-yes'
+    yes.textContent = '✓'
+    yes.title = 'Buy and place'
+    yes.addEventListener('click', () => this.confirmPlacement())
+    const no = document.createElement('button')
+    no.className = 'place-no'
+    no.textContent = '✕'
+    no.title = 'Cancel'
+    no.addEventListener('click', () => this.setPending(null))
+    confirmEl.append(no, yes)
+    this.confirm = new CSS2DObject(confirmEl)
+    this.confirm.center.set(0.5, 1)
+    this.confirm.visible = false
+    scene.add(this.confirm)
 
     canvas.addEventListener('pointermove', (e) => this.updateHover(e.clientX, e.clientY))
     canvas.addEventListener('pointerleave', () => {
@@ -96,13 +135,21 @@ export class Builder {
       if (e.key === 'Escape') this.setMode({ kind: 'select' })
     })
     controls.onClick = (x, y) => this.onClick(x, y)
+    city.onChange((e) => {
+      if (e.kind === 'removed' && this.selected?.id === e.building.id) this.select(null)
+      if (e.kind === 'moved' && this.selected?.id === e.building.id) this.refresh()
+    })
   }
 
   setMode(mode: Mode) {
-    // Clean up the old mode: drop the ghost and un-hide anything we were carrying.
+    // Clean up the old mode: cancel any building waiting for ✓ (first, while
+    // the old mode's ghost still exists), drop the ghost and un-hide anything
+    // we were carrying.
+    this.setPending(null)
     if (this.ghost) this.scene.remove(this.ghost)
     this.ghost = null
-    if (this.mode.kind === 'move' && this.mode.carrying) this.cityView.setVisible(this.mode.carrying.id, true)
+    if (this.mode.kind === 'move') this.cityView.setVisible(this.mode.carrying.id, true)
+    if (mode.kind !== 'select') this.select(null)
 
     this.mode = mode
     const type = this.placingType()
@@ -110,12 +157,27 @@ export class Builder {
       this.ghost = createBuildingObject(type, this.ghostMaterial)
       this.scene.add(this.ghost)
     }
-    if (mode.kind === 'move' && mode.carrying) this.cityView.setVisible(mode.carrying.id, false)
+    if (mode.kind === 'move') this.cityView.setVisible(mode.carrying.id, false)
     // Roads are drawn by dragging; everything else drags the camera.
     this.controls.paint = mode.kind === 'build' && mode.type.category === 'road' ? (x, y, first) => this.paintRoad(x, y, first) : null
 
     this.refresh()
     this.onModeChange?.(mode)
+  }
+
+  select(building: PlacedBuilding | null) {
+    if (this.selected === building) return
+    this.selected = building
+    this.onSelect?.(building)
+    this.refresh()
+  }
+
+  // Does tapping this building do something right away (collect, harvest,
+  // plant, unload)? If not, a tap selects it instead.
+  hasQuickAction(b: PlacedBuilding, now: number): boolean {
+    if (b.type.category === 'farm') return cropState(b.crop, now).stage !== 'growing'
+    if (b.type.category === 'port') return this.docks.state(b, now).stage !== 'sailing'
+    return this.city.isReady(b, now) && this.city.hasStock(b)
   }
 
   // What tapping a building does when no tool is selected (also used by the
@@ -212,7 +274,7 @@ export class Builder {
   // The building type following the pointer, if any.
   private placingType(): BuildingType | null {
     if (this.mode.kind === 'build') return this.mode.type
-    if (this.mode.kind === 'move' && this.mode.carrying) return this.mode.carrying.type
+    if (this.mode.kind === 'move') return this.mode.carrying.type
     return null
   }
 
@@ -223,6 +285,7 @@ export class Builder {
   }
 
   private onClick(clientX: number, clientY: number) {
+    if (this.interceptClick?.()) return
     // Touch screens have no hover, so work out the tile from the tap itself.
     this.updateHover(clientX, clientY)
     const tile = this.hoverTile
@@ -232,32 +295,51 @@ export class Builder {
     switch (mode.kind) {
       case 'select': {
         const clicked = this.city.buildingAt(tile)
-        if (clicked) this.tap(clicked)
+        if (clicked && clicked !== this.selected && this.hasQuickAction(clicked, Date.now())) this.tap(clicked)
+        else this.select(clicked && clicked !== this.selected ? clicked : null)
         break
       }
-      case 'build':
-        // Stay in build mode so you can place several in a row.
+      case 'build': {
+        // Two steps: tap to put the building down, then ✓ to buy it (or tap
+        // somewhere else to try another spot). Roads skip this: they're drawn.
+        const anchor = anchorFor(mode.type, tile)
         if (!this.player.isUnlocked(mode.type)) this.onNotice?.(`${mode.type.name} unlocks at level ${mode.type.unlockLevel}`)
         else if (!this.city.canAfford(mode.type)) this.onNotice?.(`Not enough coins for a ${mode.type.name}`)
-        else if (!this.city.place(mode.type, anchorFor(mode.type, tile))) this.onNotice?.("It doesn't fit there")
+        else if (!this.city.canPlace(mode.type, anchor)) this.onNotice?.(mode.type.onShore ? 'It must stand on the shore, next to the sea' : "It doesn't fit there")
+        else if (mode.type.category === 'road') this.city.place(mode.type, anchor)
+        else this.setPending(anchor)
         break
-      case 'move':
-        if (!mode.carrying) {
-          const picked = this.city.buildingAt(tile)
-          if (picked) this.setMode({ kind: 'move', carrying: picked })
-        } else if (this.city.move(mode.carrying.id, anchorFor(mode.carrying.type, tile))) {
-          this.setMode({ kind: 'move', carrying: null })
+      }
+      case 'move': {
+        const moved = mode.carrying
+        if (this.city.move(moved.id, anchorFor(moved.type, tile))) {
+          this.setMode({ kind: 'select' })
+          this.select(moved)
         } else {
           this.onNotice?.("It doesn't fit there")
         }
         break
-      case 'demolish': {
-        const target = this.city.buildingAt(tile)
-        if (target) this.city.remove(target.id)
-        break
       }
     }
     this.refresh()
+  }
+
+  private setPending(tile: Tile | null) {
+    this.pending = tile
+    this.confirm.visible = tile !== null
+    if (tile && this.mode.kind === 'build') {
+      const { size } = this.mode.type
+      this.confirm.position.copy(footprintCenter(tile, size)).setY(Math.max(size.x, size.z) * 1.2 + 0.4)
+    }
+    this.refresh()
+  }
+
+  // ✓: buy the building waiting at the pending spot. Stay in build mode, so
+  // you can place another of the same.
+  private confirmPlacement() {
+    if (this.mode.kind !== 'build' || !this.pending) return
+    if (!this.city.place(this.mode.type, this.pending)) this.onNotice?.(`Not enough coins for a ${this.mode.type.name}`)
+    this.setPending(null)
   }
 
   // Redraw the footprint and ghost for the current mode and hovered tile.
@@ -265,15 +347,22 @@ export class Builder {
     this.footprint.visible = false
     this.area.visible = false
     if (this.ghost) this.ghost.visible = false
-    const tile = this.hoverTile
-    // The info card only shows in select mode, so it doesn't get in the way while building.
-    this.onHoverBuilding?.(tile && this.mode.kind === 'select' ? (this.city.buildingAt(tile) ?? null) : null)
+    this.selection.visible = this.selected !== null
+    if (this.selected) {
+      const { tile, type } = this.selected
+      this.selection.position.copy(footprintCenter(tile, type.size)).setY(0.025)
+      this.selection.scale.set(type.size.x + 0.3, 1, type.size.z + 0.3)
+    }
+    // A building waiting for ✓ stays put; otherwise placing follows the pointer.
+    const tile = this.pending ?? this.hoverTile
+    // The info card only shows in select mode with nothing selected, so it doesn't get in the way.
+    this.onHoverBuilding?.(tile && this.mode.kind === 'select' && !this.selected ? (this.city.buildingAt(tile) ?? null) : null)
     if (!tile) return
 
     const type = this.placingType()
     if (type) {
-      const anchor = anchorFor(type, tile)
-      const ignoreId = this.mode.kind === 'move' ? this.mode.carrying?.id : undefined
+      const anchor = this.pending ?? anchorFor(type, tile)
+      const ignoreId = this.mode.kind === 'move' ? this.mode.carrying.id : undefined
       // Moving is free; building new needs the coins.
       const affordable = this.mode.kind === 'move' || this.city.canAfford(type)
       const color = affordable && this.city.canPlace(type, anchor, ignoreId) ? COLORS.ok : COLORS.blocked
@@ -291,11 +380,8 @@ export class Builder {
       return
     }
 
-    // Not placing anything: highlight the building under the pointer, or just the tile.
-    const hovered = this.city.buildingAt(tile)
-    if (hovered && this.mode.kind === 'demolish') this.showFootprint(hovered.tile, hovered.type.size, COLORS.blocked)
-    else if (hovered && this.mode.kind === 'move') this.showFootprint(hovered.tile, hovered.type.size, COLORS.ok)
-    else this.showFootprint(tile, { x: 1, z: 1 }, COLORS.hover)
+    // Not placing anything: highlight the tile under the pointer.
+    this.showFootprint(tile, { x: 1, z: 1 }, COLORS.hover)
   }
 
   private showFootprint(tile: Tile, size: { x: number; z: number }, color: string) {

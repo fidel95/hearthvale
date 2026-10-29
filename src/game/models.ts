@@ -38,8 +38,10 @@ export function createBuildingObject(type: BuildingType, overrideMaterial?: THRE
     group.add(content)
   }
 
+  // userData.ready resolves once the content is in, for code that needs the
+  // finished object (the build menu's thumbnails).
   if (type.model) {
-    loadModel(type.model)
+    group.userData.ready = loadModel(type.model)
       .then((model) => fill(fitToFootprint(model.clone(), type)))
       .catch((err) => {
         console.warn(`Couldn't load ${type.model}, using placeholder`, err)
@@ -47,6 +49,7 @@ export function createBuildingObject(type: BuildingType, overrideMaterial?: THRE
       })
   } else {
     fill(createPlaceholder(type))
+    group.userData.ready = Promise.resolve()
   }
   return group
 }

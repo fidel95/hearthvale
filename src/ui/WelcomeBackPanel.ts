@@ -1,34 +1,16 @@
 import type { AwaySummary } from '../game/offline'
 import { coins, duration, el } from './dom'
+import { Modal, button } from './Sheet'
 
 // The "Welcome back" window: what happened while you were away, with a
 // button to collect everything that's waiting.
 export class WelcomeBackPanel {
-  private overlay = el('div', 'overlay')
-  private body = el('div', 'panel-body')
-  private collect = el('button', 'panel-button')
+  private modal: Modal
   private onCollectAll: () => void
 
   constructor(container: HTMLElement, onCollectAll: () => void) {
     this.onCollectAll = onCollectAll
-    const card = el('div', 'panel level-panel')
-    const header = el('div', 'panel-header')
-    header.append(el('h2', '', '👋 Welcome back!'))
-    const later = el('button', 'panel-button secondary', 'Later')
-    later.addEventListener('click', () => this.close())
-    this.collect.addEventListener('click', () => {
-      this.close()
-      this.onCollectAll()
-    })
-    const buttons = el('div', 'panel-buttons')
-    buttons.append(later, this.collect)
-    card.append(header, this.body, buttons)
-    this.overlay.append(card)
-    this.overlay.hidden = true
-    this.overlay.addEventListener('click', (e) => {
-      if (e.target === this.overlay) this.close()
-    })
-    container.append(this.overlay)
+    this.modal = new Modal(container, 'level-panel')
   }
 
   show(s: AwaySummary) {
@@ -42,19 +24,19 @@ export class WelcomeBackPanel {
 
     const list = el('ul', 'level-list')
     for (const line of lines) list.append(el('li', '', line))
-    this.body.replaceChildren(
+    this.modal.body.replaceChildren(
       el('p', '', `You were away for ${awayText(s.awayMs)}.`),
       list,
       el('p', 'muted', '📅 The calendar waited for you: taxes and utility bills only run while you play.'),
     )
     const waiting = s.readyBuildings + s.ripeCrops
-    this.collect.hidden = waiting === 0
-    this.collect.textContent = `Collect all (⚡ ${waiting})`
-    this.overlay.hidden = false
-  }
-
-  close() {
-    this.overlay.hidden = true
+    const later = button('Later', () => this.modal.close(), 'panel-button secondary')
+    const collect = button(`Collect all (⚡ ${waiting})`, () => {
+      this.modal.close()
+      this.onCollectAll()
+    })
+    if (waiting > 0) this.modal.show('👋 Welcome back!', later, collect)
+    else this.modal.show('👋 Welcome back!', later)
   }
 }
 

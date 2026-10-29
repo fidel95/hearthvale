@@ -1,239 +1,167 @@
-import { BUILDING_TYPES, type Category } from '../game/buildings'
 import type { Builder, Mode } from '../game/Builder'
 import type { City } from '../game/City'
 import { MONTH_NAMES, type GameClock } from '../game/GameClock'
 import type { Player } from '../game/Player'
 import type { Services } from '../game/Services'
-import { ROAD_BONUS } from '../game/communityRules'
-import { UTILITIES, UTILITY_INFO } from '../game/utilityRules'
+import { shortIcons } from '../game/utilityRules'
 import { duration, el } from './dom'
 
-// The HTML overlay on top of the canvas: coins, level, energy and calendar (top left),
-// hints and messages (top middle), New town (top right), the build catalog
-// and tool buttons (bottom). It changes the game only through Builder and
-// callbacks, and reads from City, Player and GameClock.
+// The HUD is built around the city: a slim bar of stats along the top, a
+// toolbar along the bottom, hints and messages under the top bar, and the map
+// free in between. Every stat in the top bar is also a button that opens the
+// window about it (coins → Taxes, population → Town, level → Quests, …).
+// The HUD changes the game only through Builder and callbacks.
 
 function hintFor(mode: Mode): string {
   switch (mode.kind) {
     case 'select':
       return ''
     case 'build':
-      return `Placing ${mode.type.name} · tap the map to place`
+      return mode.type.category === 'road' ? 'Drag to draw road' : `Tap where the ${mode.type.name} should go`
     case 'move':
-      return mode.carrying ? 'Tap where it should go' : 'Tap a building to move it'
-    case 'demolish':
-      return 'Tap a building to demolish it'
+      return 'Tap where it should go'
   }
 }
 
-// The build menu's tabs, and which categories each one shows.
-const CATALOG_TABS: { label: string; categories: Category[] }[] = [
-  { label: 'Homes', categories: ['home'] },
-  { label: 'Shops', categories: ['business', 'port'] },
-  { label: 'Farms', categories: ['farm', 'storage'] },
-  { label: 'Town', categories: ['road', 'community'] },
-  { label: 'Utilities', categories: ['utility'] },
-  { label: 'Decor', categories: ['decoration'] },
-]
-
 export interface HudCallbacks {
+  onOpenBuild: () => void
+  onOpenQuests: () => void
+  onOpenInventory: () => void
+  onOpenCollections: () => void
+  onOpenMap: () => void
   onOpenTaxes: () => void
   onOpenTown: () => void
-  onNewTown: () => void
+  onOpenSettings: () => void
+}
+
+// A top-bar stat: an icon, a value, and an optional extra shown on wider screens.
+function chip(icon: string, label: string, onClick: () => void) {
+  const button = el('button', 'chip')
+  button.setAttribute('aria-label', label)
+  const value = el('span', 'chip-value')
+  const extra = el('span', 'chip-extra')
+  button.append(el('span', 'chip-icon', icon), value, extra)
+  button.addEventListener('click', onClick)
+  return { button, value, extra }
 }
 
 export class Hud {
-  private coins = el('div', 'coins')
-  private level = el('div', 'level-label')
-  private xpBar = el('div', 'xp-fill')
-  private energy = el('div', 'energy')
-  private town = el('div', 'town-line')
-  private goods = el('div', 'town-line')
-  private date = el('div', 'date-label')
-  private monthBar = el('div', 'month-bar-fill')
+  private coins
+  private goods
+  private people
+  private energy
+  private level
+  private date
+  private xpBar = el('div', 'chip-bar-fill')
+  private monthBar = el('div', 'chip-bar-fill')
   private toasts = el('div', 'toasts')
   private shownMonth = -1
   private player: Player
 
-  constructor(
-    container: HTMLElement,
-    builder: Builder,
-    city: City,
-    player: Player,
-    services: Services,
-    callbacks: HudCallbacks,
-  ) {
+  constructor(container: HTMLElement, builder: Builder, city: City, player: Player, services: Services, callbacks: HudCallbacks) {
     this.player = player
     const hud = el('div', 'hud')
 
-    // ---- Top left: coins, level and XP, energy, and the calendar
-    const status = el('div', 'status')
-    const monthBar = el('div', 'month-bar')
-    monthBar.append(this.monthBar)
-    const xpBar = el('div', 'xp-bar')
-    xpBar.append(this.xpBar)
-    status.append(this.coins, this.level, xpBar, this.energy, this.town, this.goods, this.date, monthBar)
+    // ---- Top bar
+    this.coins = chip('🪙', 'Coins and taxes', callbacks.onOpenTaxes)
+    this.goods = chip('📦', 'Goods and inventory', callbacks.onOpenInventory)
+    this.people = chip('👥', 'Population and services', callbacks.onOpenTown)
+    this.energy = chip('⚡', 'Energy', () => {
+      const next = player.nextEnergyAt(Date.now())
+      this.toast(
+        `Energy: ${player.energy(Date.now())} of ${player.maxEnergy}. Collecting, harvesting, planting and unloading use 1. ${next ? `Next in ${duration(next - Date.now())}.` : 'Full!'}`,
+      )
+    })
+    this.level = chip('⭐', 'Level and quests', callbacks.onOpenQuests)
+    this.date = chip('📅', 'Calendar and taxes', callbacks.onOpenTaxes)
+    const xp = el('div', 'chip-bar')
+    xp.append(this.xpBar)
+    this.level.button.append(xp)
+    const month = el('div', 'chip-bar')
+    month.append(this.monthBar)
+    this.date.button.append(month)
+    const settings = el('button', 'chip chip-settings', '⚙️')
+    settings.setAttribute('aria-label', 'Settings')
+    settings.addEventListener('click', callbacks.onOpenSettings)
 
-    // ---- Top middle: what the current tool does, with a way out on touch screens (no Esc key)
+    const topbar = el('div', 'topbar')
+    const stats = el('div', 'topbar-stats')
+    stats.append(this.coins.button, this.goods.button, this.people.button, this.energy.button, this.level.button)
+    const right = el('div', 'topbar-right')
+    right.append(this.date.button, settings)
+    topbar.append(stats, right)
+
+    // ---- Under the top bar: what the current tool does (with a way out on
+    // touch screens, which have no Esc key) and short messages.
     const hint = el('div', 'hint')
     const hintText = el('span', '')
     const done = el('button', 'hint-done', 'Done')
     done.addEventListener('click', () => builder.setMode({ kind: 'select' }))
     hint.append(hintText, done)
     hint.hidden = true
+    const messages = el('div', 'hud-top')
+    messages.append(hint, this.toasts)
 
-    const top = el('div', 'hud-top')
-    top.append(hint, this.toasts)
-
-    // ---- Top right
-    const newTown = el('button', 'corner-button', 'New town')
-    newTown.addEventListener('click', callbacks.onNewTown)
-
-    // ---- Bottom: catalog and tools
-    const catalog = el('div', 'catalog')
-    catalog.hidden = true
-    const tabs = el('div', 'catalog-tabs')
-    const grid = el('div', 'catalog-grid')
-    catalog.append(tabs, grid)
-    // Every building is listed; ones above your level show what level unlocks them.
-    const catalogItems = BUILDING_TYPES.map((type) => {
-      const item = el('button', 'catalog-item')
-      const lock = el('span', 'catalog-meta catalog-lock', `🔒 Unlocks at level ${type.unlockLevel}`)
-      item.append(
-        el('span', 'catalog-name', type.name),
-        el('span', 'catalog-meta', `${type.size.x}×${type.size.z} · 🪙 ${type.cost}`),
-      )
-      if (type.income) item.append(el('span', 'catalog-meta', `Earns 🪙 ${type.income.coins} / ${type.income.seconds}s`))
-      if (type.category === 'farm') item.append(el('span', 'catalog-meta', 'Plant crops to sell'))
-      if (type.needs) {
-        const needs = UTILITIES.filter((u) => type.needs?.[u]).map((u) => `${UTILITY_INFO[u].icon}${type.needs![u]}`)
-        const people = type.residents ? `👥 ${type.residents} · ` : ''
-        item.append(el('span', 'catalog-meta', `${people}uses ${needs.join(' ')}`))
-      }
-      if (type.goodsPerSale) item.append(el('span', 'catalog-meta', `Sells 📦 ${type.goodsPerSale} goods each time`))
-      if (type.storage) item.append(el('span', 'catalog-meta', `Stores 📦 ${type.storage} goods`))
-      if (type.onShore) item.append(el('span', 'catalog-meta', 'Build on the shore · order shipments by sea'))
-      if (type.supplies) {
-        const { utility, amount } = type.supplies
-        item.append(el('span', 'catalog-meta', `Supplies ${UTILITY_INFO[utility].icon} ${amount}`))
-      }
-      if (type.amenity) {
-        const { bonus, radius } = type.amenity
-        item.append(el('span', 'catalog-meta', `+${bonus * 100}% for homes & shops within ${radius} tiles`))
-      }
-      if (type.category === 'road') item.append(el('span', 'catalog-meta', `Drag to draw · homes & shops beside a road earn +${ROAD_BONUS * 100}%`))
-      if (type.upkeep) item.append(el('span', 'catalog-meta', `🪙 ${type.upkeep}/month to run`))
-      item.append(lock)
-      item.addEventListener('click', () => {
-        catalog.hidden = true
-        builder.setMode({ kind: 'build', type })
-      })
-      grid.append(item)
-      return { item, lock, type }
-    })
-    const showTab = (tab: (typeof CATALOG_TABS)[number]) => {
-      for (const { item, type } of catalogItems) item.hidden = !tab.categories.includes(type.category)
-      for (const button of tabs.children) button.classList.toggle('active', button.textContent === tab.label)
+    // ---- Bottom toolbar
+    const toolbar = el('nav', 'toolbar')
+    const tools: [string, string, () => void][] = [
+      ['🔨', 'Build', callbacks.onOpenBuild],
+      ['📜', 'Quests', callbacks.onOpenQuests],
+      ['🎒', 'Inventory', callbacks.onOpenInventory],
+      ['🏆', 'Collections', callbacks.onOpenCollections],
+      ['🗺️', 'Map', callbacks.onOpenMap],
+    ]
+    for (const [icon, label, onClick] of tools) {
+      const b = el('button', 'tool')
+      b.append(el('span', 'tool-icon', icon), el('span', 'tool-label', label))
+      b.addEventListener('click', onClick)
+      toolbar.append(b)
     }
-    for (const tab of CATALOG_TABS) {
-      const button = el('button', 'catalog-tab', tab.label)
-      button.addEventListener('click', () => showTab(tab))
-      tabs.append(button)
-    }
-    showTab(CATALOG_TABS[0])
-    const refreshCatalog = () => {
-      for (const { item, lock, type } of catalogItems) {
-        const unlocked = player.isUnlocked(type)
-        item.classList.toggle('locked', !unlocked)
-        lock.hidden = unlocked
-        item.disabled = !unlocked || city.coins < type.cost
-      }
-    }
-
-    const tools = {
-      build: el('button', 'tool', 'Build'),
-      move: el('button', 'tool', 'Move'),
-      demolish: el('button', 'tool', 'Demolish'),
-    }
-    const taxes = el('button', 'tool', 'Taxes')
-    const town = el('button', 'tool', 'Town')
-    town.addEventListener('click', () => {
-      catalog.hidden = true
-      callbacks.onOpenTown()
-    })
-    tools.build.addEventListener('click', () => (catalog.hidden = !catalog.hidden))
-    tools.move.addEventListener('click', () => {
-      catalog.hidden = true
-      builder.setMode(builder.mode.kind === 'move' ? { kind: 'select' } : { kind: 'move', carrying: null })
-    })
-    tools.demolish.addEventListener('click', () => {
-      catalog.hidden = true
-      builder.setMode(builder.mode.kind === 'demolish' ? { kind: 'select' } : { kind: 'demolish' })
-    })
-    taxes.addEventListener('click', () => {
-      catalog.hidden = true
-      callbacks.onOpenTaxes()
-    })
-    const bar = el('div', 'toolbar')
-    bar.append(tools.build, tools.move, tools.demolish, taxes, town)
-
-    const bottom = el('div', 'hud-bottom')
-    bottom.append(catalog, bar)
 
     builder.onModeChange = (mode) => {
       hintText.textContent = hintFor(mode)
       hint.hidden = mode.kind === 'select'
-      for (const [kind, button] of Object.entries(tools)) button.classList.toggle('active', kind === mode.kind)
     }
     builder.onNotice = (message) => this.toast(message)
 
-    // Grey out what you can't afford, and bump the counter when coins change.
+    // ---- Keeping the numbers current
     const showCoins = () => {
-      this.coins.textContent = `🪙 ${city.coins.toLocaleString()}`
-      this.coins.classList.toggle('in-debt', city.coins < 0)
-      refreshCatalog()
+      this.coins.value.textContent = city.coins.toLocaleString()
+      this.coins.button.classList.toggle('bad', city.coins < 0)
     }
-    city.onChange((event) => {
-      if (event.kind !== 'coins') return
-      showCoins()
-      this.coins.classList.remove('bump')
-      void this.coins.offsetWidth // force the browser to notice the removal, so the animation restarts
-      this.coins.classList.add('bump')
-    })
-    showCoins()
-
+    const showGoods = () => {
+      this.goods.value.textContent = city.goods.toLocaleString()
+      this.goods.extra.textContent = `/${city.storageCapacity}`
+      this.goods.button.classList.toggle('bad', city.goods >= city.storageCapacity)
+    }
+    const showPeople = () => {
+      this.people.value.textContent = services.report.population.toLocaleString()
+      const short = shortIcons(services.report)
+      this.people.extra.textContent = short ? ` short ${short}` : ''
+      this.people.button.classList.toggle('bad', short !== '')
+    }
     const showLevel = () => {
-      this.level.textContent = `⭐ Level ${player.level} · ${player.xp.toLocaleString()} XP`
+      this.level.value.textContent = String(player.level)
+      this.level.extra.textContent = ` · ${player.xp.toLocaleString()} XP`
       this.xpBar.style.width = `${player.levelProgress * 100}%`
     }
-    // Any change (XP, a level-up, loading a save) can change the level and what's unlocked.
-    player.onChange(() => {
-      showLevel()
-
-    // Population, and each utility as used/supplied, red when it falls short.
-    const showTown = () => {
-      const r = services.report
-      const chips = UTILITIES.map((u) => {
-        const { demand, supply, level } = r.utilities[u]
-        return el('span', level < 1 ? 'short' : '', `${UTILITY_INFO[u].icon}${demand}/${supply}`)
-      })
-      this.town.replaceChildren(el('span', '', `👥 ${r.population}`), ...chips)
-    }
-    services.onChange(showTown)
-    showTown()
-
-    // Goods in storage, out of what fits. Red when full: harvests are being sold off instead.
-    const showGoods = () => {
-      const full = city.goods >= city.storageCapacity
-      this.goods.replaceChildren(el('span', full ? 'short' : '', `📦 ${city.goods}/${city.storageCapacity} goods`))
-    }
-    city.onChange((e) => (e.kind === 'goods' || e.kind === 'added' || e.kind === 'removed') && showGoods())
-    showGoods()
-      refreshCatalog()
+    city.onChange((e) => {
+      if (e.kind === 'coins') {
+        showCoins()
+        this.coins.button.classList.remove('bump')
+        void this.coins.button.offsetWidth // force the browser to notice, so the animation restarts
+        this.coins.button.classList.add('bump')
+      }
+      if (e.kind === 'goods' || e.kind === 'added' || e.kind === 'removed') showGoods()
     })
+    services.onChange(showPeople)
+    player.onChange(showLevel)
+    showCoins()
+    showGoods()
+    showPeople()
     showLevel()
 
-    hud.append(status, top, newTown, bottom)
+    hud.append(topbar, messages, toolbar)
     container.append(hud)
   }
 
@@ -242,18 +170,21 @@ export class Hud {
     // Energy refills with time, so it's checked every frame rather than on events.
     const energy = this.player.energy(now)
     const next = this.player.nextEnergyAt(now)
-    const text = `⚡ ${energy}/${this.player.maxEnergy}${next ? ` · +1 in ${duration(next - now)}` : ''}`
-    if (this.energy.textContent !== text) this.energy.textContent = text
-    this.energy.classList.toggle('empty', energy === 0)
+    const value = String(energy)
+    const extra = `/${this.player.maxEnergy}${next ? ` · ${duration(next - now)}` : ''}`
+    if (this.energy.value.textContent !== value) this.energy.value.textContent = value
+    if (this.energy.extra.textContent !== extra) this.energy.extra.textContent = extra
+    this.energy.button.classList.toggle('bad', energy === 0)
 
     if (clock.monthIndex !== this.shownMonth) {
       this.shownMonth = clock.monthIndex
-      this.date.textContent = `Year ${clock.year} · ${MONTH_NAMES[clock.month]}`
+      this.date.value.textContent = `${MONTH_NAMES[clock.month].slice(0, 3)}`
+      this.date.extra.textContent = ` · Year ${clock.year}`
     }
     this.monthBar.style.width = `${clock.monthProgress * 100}%`
   }
 
-  // A message that shows for a few seconds at the top of the screen.
+  // A message that shows for a few seconds under the top bar.
   toast(message: string, tone: 'info' | 'warn' = 'info') {
     const toast = el('div', `toast toast-${tone}`, message)
     this.toasts.append(toast)

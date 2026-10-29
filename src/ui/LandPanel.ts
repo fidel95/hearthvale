@@ -4,13 +4,13 @@ import { expansionLevel } from '../game/land'
 import type { Player } from '../game/Player'
 import { PROPERTY_TAX_RATE } from '../game/taxRules'
 import { coins, el } from './dom'
+import { Sheet, button } from './Sheet'
 
 // The window for buying a lot of land: what it costs, what it needs, and what
 // owning it means for taxes.
 export class LandPanel {
-  private overlay = el('div', 'overlay')
-  private body = el('div', 'panel-body')
-  private buy = el('button', 'panel-button', 'Buy')
+  private sheet: Sheet
+  private buy = button('Buy', () => this.confirm())
   private city: City
   private player: Player
   private onNotice: (message: string) => void
@@ -20,24 +20,8 @@ export class LandPanel {
     this.city = city
     this.player = player
     this.onNotice = onNotice
-
-    const card = el('div', 'panel land-panel')
-    const header = el('div', 'panel-header')
-    const close = el('button', 'panel-close', '✕')
-    close.setAttribute('aria-label', 'Close')
-    close.addEventListener('click', () => this.close())
-    header.append(el('h2', '', '🏷️ Land for sale'), close)
-    this.buy.addEventListener('click', () => this.confirm())
-    card.append(header, this.body, this.buy)
-    this.overlay.append(card)
-    this.overlay.hidden = true
-    this.overlay.addEventListener('click', (e) => {
-      if (e.target === this.overlay) this.close()
-    })
-    window.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') this.close()
-    })
-    container.append(this.overlay)
+    this.sheet = new Sheet(container, '🏷️ Land for sale')
+    this.sheet.setButtons(this.buy)
   }
 
   open(lot: Lot) {
@@ -56,7 +40,7 @@ export class LandPanel {
     ]) {
       facts.append(el('li', '', line))
     }
-    this.body.replaceChildren(
+    this.sheet.body.replaceChildren(
       facts,
       el(
         'p',
@@ -66,12 +50,12 @@ export class LandPanel {
     )
     this.buy.disabled = tooLow || tooPoor
     this.buy.textContent = tooLow ? `Reach level ${level} first` : tooPoor ? 'Not enough coins' : `Buy for ${coins(price)}`
-    this.overlay.hidden = false
+    this.sheet.open()
   }
 
   close() {
     this.lot = null
-    this.overlay.hidden = true
+    this.sheet.close()
   }
 
   private confirm() {

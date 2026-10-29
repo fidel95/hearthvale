@@ -151,8 +151,8 @@ export class IncomeView {
     lineEl.hidden = status === ''
   }
 
-  // The info card's title and status line.
-  private describe(b: PlacedBuilding, now: number): [string, string] {
+  // A building's name and a one-line status (also used by the context menu).
+  describe(b: PlacedBuilding, now: number): [string, string] {
     if (b.type.category === 'farm') {
       const state = cropState(b.crop, now)
       switch (state.stage) {

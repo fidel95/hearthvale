@@ -4,49 +4,26 @@ import type { Services } from '../game/Services'
 import { MAX_LOCATION_BONUS } from '../game/communityRules'
 import { COUNTY_SUPPLY, UTILITIES, UTILITY_INFO, incomeMultiplier } from '../game/utilityRules'
 import { coins, el, percent } from './dom'
+import { Sheet } from './Sheet'
 
 // The Town window: population, how well water, electricity and trash pickup
 // keep up with demand, what that does to income, and what the utilities cost
 // to run.
 export class TownPanel {
-  private overlay = el('div', 'overlay')
-  private body = el('div', 'panel-body')
+  private sheet: Sheet
   private city: City
   private services: Services
-  private isOpen = false
 
   constructor(container: HTMLElement, city: City, services: Services) {
     this.city = city
     this.services = services
-
-    const card = el('div', 'panel')
-    const header = el('div', 'panel-header')
-    const close = el('button', 'panel-close', '✕')
-    close.setAttribute('aria-label', 'Close')
-    close.addEventListener('click', () => this.close())
-    header.append(el('h2', '', '🏘️ Town services'), close)
-    card.append(header, this.body)
-    this.overlay.append(card)
-    this.overlay.hidden = true
-    this.overlay.addEventListener('click', (e) => {
-      if (e.target === this.overlay) this.close()
-    })
-    window.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') this.close()
-    })
-    container.append(this.overlay)
-    services.onChange(() => this.isOpen && this.render())
+    this.sheet = new Sheet(container, '🏘️ Town services')
+    services.onChange(() => this.sheet.isOpen && this.render())
   }
 
   open() {
-    this.isOpen = true
     this.render()
-    this.overlay.hidden = false
-  }
-
-  close() {
-    this.isOpen = false
-    this.overlay.hidden = true
+    this.sheet.open()
   }
 
   private render() {
@@ -125,6 +102,6 @@ export class TownPanel {
       ),
     )
     parts.push(effect, running)
-    this.body.replaceChildren(...parts)
+    this.sheet.body.replaceChildren(...parts)
   }
 }

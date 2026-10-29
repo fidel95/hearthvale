@@ -2,6 +2,7 @@ import type { City, PlacedBuilding } from '../game/City'
 import { CROP_TYPES, cropState, profitPerMinute, type CropType } from '../game/crops'
 import type { Player } from '../game/Player'
 import { coins, el, outOfEnergyMessage, timeSpan } from './dom'
+import { Sheet } from './Sheet'
 
 // The seed window that opens when you tap an empty farm plot. Each crop shows
 // what it costs, what it sells for, how long it takes and how long it stays
@@ -10,7 +11,7 @@ import { coins, el, outOfEnergyMessage, timeSpan } from './dom'
 // Crops above your level are shown locked, so you can see what's coming.
 
 export class CropPicker {
-  private overlay = el('div', 'overlay')
+  private sheet: Sheet
   private list = el('div', 'crop-grid')
   private allRow = el('label', 'crop-all')
   private allBox = el('input', '')
@@ -24,29 +25,11 @@ export class CropPicker {
     this.city = city
     this.player = player
     this.onNotice = onNotice
-
-    const card = el('div', 'panel crop-panel')
-    const header = el('div', 'panel-header')
-    const close = el('button', 'panel-close', '✕')
-    close.setAttribute('aria-label', 'Close')
-    close.addEventListener('click', () => this.close())
-    header.append(el('h2', '', '🌱 Plant a crop'), close)
-
+    this.sheet = new Sheet(container, '🌱 Plant a crop')
+    this.sheet.onClose = () => (this.plot = null)
     this.allBox.type = 'checkbox'
     this.allRow.append(this.allBox, this.allText)
-
-    const body = el('div', 'panel-body')
-    body.append(this.allRow, this.list)
-    card.append(header, body)
-    this.overlay.append(card)
-    this.overlay.hidden = true
-    this.overlay.addEventListener('click', (e) => {
-      if (e.target === this.overlay) this.close()
-    })
-    window.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') this.close()
-    })
-    container.append(this.overlay)
+    this.sheet.body.append(this.allRow, this.list)
 
     // Re-check what's affordable if coins change while the window is open.
     city.onChange((e) => e.kind === 'coins' && this.plot && this.render())
@@ -56,12 +39,11 @@ export class CropPicker {
     this.plot = plot
     this.allBox.checked = false
     this.render()
-    this.overlay.hidden = false
+    this.sheet.open()
   }
 
   close() {
-    this.plot = null
-    this.overlay.hidden = true
+    this.sheet.close()
   }
 
   // Every empty plot, with the one that was tapped first.
