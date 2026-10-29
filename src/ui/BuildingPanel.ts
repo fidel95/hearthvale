@@ -1,10 +1,11 @@
 import type { City, PlacedBuilding } from '../game/City'
-import { MAX_LEVEL, canUpgrade, levelFactor, upgradeCost } from '../game/construction'
+import { MAX_LEVEL, canUpgrade, levelFactor } from '../game/construction'
 import { cropState } from '../game/crops'
 import type { Docks } from '../game/Docks'
 import type { Inventory } from '../game/Inventory'
 import { MATERIALS, MATERIAL_IDS, materialsText, type Materials } from '../game/items'
 import type { Player } from '../game/Player'
+import { upgradeQuote } from '../game/projects'
 import type { Services } from '../game/Services'
 import type { Taxes } from '../game/Taxes'
 import { UTILITIES, UTILITY_INFO } from '../game/utilityRules'
@@ -130,7 +131,7 @@ export class BuildingPanel {
     if (this.city.isBuilt(b) && (b.type.category === 'home' || b.type.category === 'business')) {
       if (canUpgrade(b.type, b.level)) {
         const next = b.level + 1
-        const cost = upgradeCost(b.type, next)
+        const cost = this.upgradeQuote(b)!
         parts.push(
           section(
             `⬆️ Upgrade to ${'★'.repeat(next)}`,
@@ -139,7 +140,12 @@ export class BuildingPanel {
               '',
               `Income${b.type.residents ? ', residents' : ''}${b.type.stockCapacity ? ', shelf space' : ''}: +${Math.round((levelFactor(b.level) - 1) * 100)}% now → +${Math.round((levelFactor(next) - 1) * 100)}% of the base building`,
             ),
-            el('p', '', `Costs ${coins(cost.coins)} and ${materialsText(cost.materials)} · needs level ${cost.playerLevel}`),
+            el(
+              'p',
+              '',
+              `Costs ${coins(cost.coins)} and ${materialsText(cost.materials)} · needs level ${cost.playerLevel}` +
+                (!cost.result.ok && cost.result.reason === 'room' ? ' · needs room for more residents' : ''),
+            ),
             this.materialsList(cost.materials),
             el('p', 'muted', 'An upgrade is an improvement: its cost is added to what the building is depreciated on, and a building that earns more is assessed higher.'),
           ),
@@ -199,13 +205,14 @@ export class BuildingPanel {
       restock.disabled = b.stock >= this.city.production.stockCapacity(b) || this.city.goods === 0
       buttons.push(restock)
     }
-    if (this.city.isBuilt(b) && canUpgrade(b.type, b.level)) {
-      const cost = upgradeCost(b.type, b.level + 1)
-      const missing = this.inventory.missing(cost.materials)
+    const quote = this.upgradeQuote(b)
+    if (quote) {
+      // projects.ts decides; the button only reflects it.
+      const missing = quote.missing
       const upgrade = button('⬆️ Upgrade', () => a.upgrade(b))
-      upgrade.disabled = this.player.level < cost.playerLevel || this.city.coins < cost.coins || Object.keys(missing).length > 0
+      upgrade.disabled = !quote.result.ok
       buttons.push(upgrade)
-      if (Object.keys(missing).length && this.player.level >= cost.playerLevel) {
+      if (Object.keys(missing).length && this.player.level >= quote.playerLevel) {
         buttons.push(button(`Buy materials ${coins(this.inventory.priceOf(missing))}`, () => a.buyMaterials(missing), 'panel-button secondary'))
       }
     }
@@ -277,6 +284,10 @@ export class BuildingPanel {
       return stage === 'arrived' ? '🚢 Unload' : stage === 'idle' ? '⚓ Order goods' : null
     }
     return null
+  }
+
+  private upgradeQuote(b: PlacedBuilding) {
+    return upgradeQuote(this.city, this.inventory, this.player, b, (n) => this.services.roomFor(n))
   }
 }
 

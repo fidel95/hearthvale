@@ -10,6 +10,10 @@ import type { Player } from './Player'
 // place: the building (City), materials (Inventory) and sometimes a level
 // (Player). These functions check everything first and only then change
 // anything, so a half-done upgrade can't happen.
+//
+// The quotes answer "what would it take, and can I do it now?" for the
+// interface, from the same checks the actions use, so a button can't say yes
+// when the action would say no.
 
 export type ProjectResult =
   | { ok: true }
@@ -25,7 +29,41 @@ export function finishConstruction(city: City, inventory: Inventory, b: PlacedBu
   return { ok: true }
 }
 
+export interface Quote {
+  coins: number
+  materials: Materials
+  playerLevel: number
+  missing: Materials // materials still to get
+  result: ProjectResult // what trying it now would give
+}
+
+// The cost of the next upgrade and whether it can be done now; null if the
+// building can't be upgraded (fully upgraded, or still being built).
 // roomFor: is there population capacity for the residents an upgrade adds?
+export function upgradeQuote(
+  city: City,
+  inventory: Inventory,
+  player: Player,
+  b: PlacedBuilding,
+  roomFor: (residents: number) => boolean = () => true,
+): Quote | null {
+  if (!canUpgrade(b.type, b.level) || !city.isBuilt(b)) return null
+  const cost = upgradeCost(b.type, b.level + 1)
+  const extra = Math.round((b.type.residents ?? 0) * (levelFactor(b.level + 1) - levelFactor(b.level)))
+  const missing = inventory.missing(cost.materials)
+  const result: ProjectResult =
+    player.level < cost.playerLevel
+      ? { ok: false, reason: 'level' }
+      : !roomFor(extra)
+        ? { ok: false, reason: 'room' }
+        : !city.economy.canAfford(cost.coins)
+          ? { ok: false, reason: 'coins' }
+          : Object.keys(missing).length
+            ? { ok: false, reason: 'materials', missing }
+            : { ok: true }
+  return { ...cost, missing, result }
+}
+
 export function upgradeBuilding(
   city: City,
   inventory: Inventory,
@@ -33,27 +71,38 @@ export function upgradeBuilding(
   b: PlacedBuilding,
   roomFor: (residents: number) => boolean = () => true,
 ): ProjectResult {
-  if (!canUpgrade(b.type, b.level) || !city.isBuilt(b)) return { ok: false, reason: 'not-ready' }
-  const cost = upgradeCost(b.type, b.level + 1)
-  if (player.level < cost.playerLevel) return { ok: false, reason: 'level' }
-  const extra = Math.round((b.type.residents ?? 0) * (levelFactor(b.level + 1) - levelFactor(b.level)))
-  if (!roomFor(extra)) return { ok: false, reason: 'room' }
-  if (city.coins < cost.coins) return { ok: false, reason: 'coins' }
-  if (!inventory.hasAll(cost.materials)) return { ok: false, reason: 'materials', missing: inventory.missing(cost.materials) }
-  const materialsCost = inventory.use(cost.materials)!
-  city.production.upgrade(b.id, cost.coins, materialsCost)
+  const quote = upgradeQuote(city, inventory, player, b, roomFor)
+  if (!quote) return { ok: false, reason: 'not-ready' }
+  if (!quote.result.ok) return quote.result
+  const materialsCost = inventory.use(quote.materials)!
+  city.production.upgrade(b.id, quote.coins, materialsCost)
   return { ok: true }
+}
+
+// The next lot: its price, materials and level, and whether it can be bought now.
+export function landQuote(city: City, inventory: Inventory, player: Player): Quote {
+  const n = city.expansions + 1
+  const materials = expansionMaterials(n)
+  const playerLevel = expansionLevel(n)
+  const coins = city.nextLotPrice
+  const missing = inventory.missing(materials)
+  const result: ProjectResult =
+    player.level < playerLevel
+      ? { ok: false, reason: 'level' }
+      : !city.economy.canAfford(coins)
+        ? { ok: false, reason: 'coins' }
+        : Object.keys(missing).length
+          ? { ok: false, reason: 'materials', missing }
+          : { ok: true }
+  return { coins, materials, playerLevel, missing, result }
 }
 
 // Buying land: the level, the coins and the materials, all checked first.
 export function buyLand(city: City, inventory: Inventory, player: Player, lot: Lot): ProjectResult {
   if (!city.canBuyLot(lot)) return { ok: false, reason: 'not-ready' }
-  const n = city.expansions + 1
-  if (player.level < expansionLevel(n)) return { ok: false, reason: 'level' }
-  if (city.coins < city.nextLotPrice) return { ok: false, reason: 'coins' }
-  const materials = expansionMaterials(n)
-  if (!inventory.hasAll(materials)) return { ok: false, reason: 'materials', missing: inventory.missing(materials) }
-  const cost = inventory.use(materials)!
+  const quote = landQuote(city, inventory, player)
+  if (!quote.result.ok) return quote.result
+  const cost = inventory.use(quote.materials)!
   city.buyLot(lot, cost)
   return { ok: true }
 }

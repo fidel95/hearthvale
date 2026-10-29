@@ -79,7 +79,7 @@ export class CropPicker {
           el('span', 'catalog-meta', `Ready in ${timeSpan(crop.growSeconds)} · fresh for ${timeSpan(crop.freshSeconds)}`),
           el('span', 'crop-profit', `Profit ${coins(profit)} · ${coins(profitPerMinute(crop))}/min · ⭐ ${crop.xp}`),
         )
-        item.disabled = this.city.coins < crop.seedCost
+        item.disabled = !this.city.economy.canAfford(crop.seedCost)
         item.addEventListener('click', () => this.plant(crop))
         return item
       }),

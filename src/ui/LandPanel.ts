@@ -2,8 +2,7 @@ import type { City } from '../game/City'
 import type { Lot } from '../game/grid'
 import type { Inventory } from '../game/Inventory'
 import { materialsText } from '../game/items'
-import { expansionLevel, expansionMaterials } from '../game/land'
-import { buyLand } from '../game/projects'
+import { buyLand, landQuote } from '../game/projects'
 import type { Player } from '../game/Player'
 import { PROPERTY_TAX_RATE } from '../game/taxRules'
 import { coins, el } from './dom'
@@ -32,13 +31,10 @@ export class LandPanel {
 
   open(lot: Lot) {
     this.lot = lot
-    const price = this.city.nextLotPrice
-    const level = expansionLevel(this.city.expansions + 1)
-    const materials = expansionMaterials(this.city.expansions + 1)
-    const missing = this.inventory.missing(materials)
+    // The rules live in landQuote; this window only shows its answer.
+    const { coins: price, materials, playerLevel: level, missing, result } = landQuote(this.city, this.inventory, this.player)
     const short = Object.keys(missing).length > 0
-    const tooLow = this.player.level < level
-    const tooPoor = this.city.coins < price
+    const tooLow = !result.ok && result.reason === 'level'
 
     const facts = el('ul', 'level-list')
     for (const line of [
@@ -62,14 +58,14 @@ export class LandPanel {
     }, 'panel-button secondary')
     buyMaterials.hidden = !short || tooLow
     this.sheet.setButtons(buyMaterials, this.buy)
-    this.buy.disabled = tooLow || tooPoor || short
-    this.buy.textContent = tooLow
-      ? `Reach level ${level} first`
-      : tooPoor
-        ? 'Not enough coins'
-        : short
-          ? `Needs ${materialsText(missing)} more`
-          : `Buy for ${coins(price)}`
+    this.buy.disabled = !result.ok
+    this.buy.textContent = result.ok
+      ? `Buy for ${coins(price)}`
+      : result.reason === 'level'
+        ? `Reach level ${level} first`
+        : result.reason === 'coins'
+          ? 'Not enough coins'
+          : `Needs ${materialsText(missing)} more`
     this.sheet.open()
   }
 
