@@ -221,6 +221,15 @@ button {
   cursor: pointer;
 }
 
+.hint-done.hint-danger {
+  background: var(--bad);
+}
+
+.hint-done:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
 .toasts {
   display: flex;
   flex-direction: column;

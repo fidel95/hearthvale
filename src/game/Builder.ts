@@ -18,6 +18,7 @@ export type Mode =
   | { kind: 'build'; type: BuildingType }
   | { kind: 'move'; carrying: PlacedBuilding }
   | { kind: 'restore'; building: PlacedBuilding } // placing a stored building back
+  | { kind: 'removeRoads'; picked: Set<number> } // picking road tiles to remove together
 
 const COLORS = { hover: '#ffffff', ok: '#4ade80', blocked: '#ef4444' }
 
@@ -34,6 +35,8 @@ function anchorFor(type: BuildingType, tile: Tile, rotation: Rotation): Tile {
 export class Builder {
   mode: Mode = { kind: 'select' }
   onModeChange?: (mode: Mode) => void
+  // While picking roads to remove: how many are picked.
+  onRoadsPicked?: (count: number) => void
   onHoverBuilding?: (building: PlacedBuilding | null) => void
   // Short messages for the player, e.g. why a click did nothing.
   onNotice?: (message: string) => void
@@ -75,6 +78,10 @@ export class Builder {
   private lastPainted: Tile | null = null
   // Where a new building would go, waiting for ✓ (buy) or ✗ (cancel).
   private pending: Tile | null = null
+  // Roads picked for removal are marked in red.
+  private pickedMarks = new THREE.Group()
+  private pickedMaterial = new THREE.MeshBasicMaterial({ color: '#ef4444', transparent: true, opacity: 0.55, depthWrite: false })
+  private dragUnpicks = false
   // While dragging a building: where its corner is relative to the tile under
   // the finger, so the spot you grabbed stays under your finger.
   private dragOffset: Tile | null = null
@@ -120,6 +127,7 @@ export class Builder {
     )
     this.selection.visible = false
     scene.add(this.selection)
+    scene.add(this.pickedMarks)
 
     // The ✓ / ✗ buttons shown over a building waiting to be bought.
     const confirmEl = document.createElement('div')
@@ -186,8 +194,15 @@ export class Builder {
     // A moved building keeps its turn; new ones start facing the default way.
     this.rotation = mode.kind === 'move' ? mode.carrying.rotation : 0
     if (mode.kind === 'move') this.cityView.setVisible(mode.carrying.id, false)
-    // Roads are drawn by dragging; everything else drags the camera.
-    this.controls.paint = mode.kind === 'build' && mode.type.category === 'road' ? (x, y, first) => this.paintRoad(x, y, first) : null
+    // Roads are drawn by dragging, and picked for removal by dragging;
+    // everything else drags the camera.
+    this.controls.paint =
+      mode.kind === 'build' && mode.type.category === 'road'
+        ? (x, y, first) => this.paintRoad(x, y, first)
+        : mode.kind === 'removeRoads'
+          ? (x, y, first) => this.dragPick(x, y, first)
+          : null
+    this.showPicked()
 
     this.refresh()
     this.onModeChange?.(mode)
@@ -371,6 +386,49 @@ export class Builder {
     return this.dragOffset ? { x: tile.x + this.dragOffset.x, z: tile.z + this.dragOffset.z } : anchorFor(type, tile, this.rotation)
   }
 
+  // ---- Picking roads to remove
+
+  // The roads picked so far (still on the map).
+  pickedRoads(): PlacedBuilding[] {
+    if (this.mode.kind !== 'removeRoads') return []
+    return [...this.mode.picked].map((id) => this.city.get(id)).filter((b): b is PlacedBuilding => b !== undefined)
+  }
+
+  private roadAt(clientX: number, clientY: number): PlacedBuilding | null {
+    const point = this.controls.groundPointAt(clientX, clientY)
+    const tile = point && worldToTile(point)
+    const b = tile ? this.city.buildingAt(tile) : undefined
+    return b && b.type.category === 'road' ? b : null
+  }
+
+  private togglePick(road: PlacedBuilding) {
+    if (this.mode.kind !== 'removeRoads') return
+    if (this.mode.picked.has(road.id)) this.mode.picked.delete(road.id)
+    else this.mode.picked.add(road.id)
+    this.showPicked()
+  }
+
+  // Dragging picks every road it passes over; a drag that starts on a
+  // picked road un-picks instead, so a stretch can be taken back the same way.
+  private dragPick(clientX: number, clientY: number, first: boolean) {
+    if (this.mode.kind !== 'removeRoads') return
+    const road = this.roadAt(clientX, clientY)
+    if (first) this.dragUnpicks = road !== null && this.mode.picked.has(road.id)
+    if (!road) return
+    if (this.dragUnpicks) this.mode.picked.delete(road.id)
+    else this.mode.picked.add(road.id)
+    this.showPicked()
+  }
+
+  // A red square on every picked road.
+  private showPicked() {
+    const roads = this.pickedRoads()
+    while (this.pickedMarks.children.length > roads.length) this.pickedMarks.remove(this.pickedMarks.children[0])
+    while (this.pickedMarks.children.length < roads.length) this.pickedMarks.add(new THREE.Mesh(this.selection.geometry, this.pickedMaterial))
+    roads.forEach((r, i) => this.pickedMarks.children[i].position.copy(footprintCenter(r.tile, { x: 1, z: 1 })).setY(0.04))
+    this.onRoadsPicked?.(roads.length)
+  }
+
   private updateHover(clientX: number, clientY: number) {
     const point = this.controls.groundPointAt(clientX, clientY)
     this.hoverTile = point && worldToTile(point)
@@ -407,6 +465,12 @@ export class Builder {
         const check = this.placement.check(mode.building.type, { tile: anchor, rotation: this.rotation }, { free: true })
         if (check.ok) this.setPending(anchor)
         else this.onNotice?.(check.problems[0])
+        break
+      }
+      case 'removeRoads': {
+        const road = this.city.buildingAt(tile)
+        if (road?.type.category === 'road') this.togglePick(road)
+        else if (road) this.onNotice?.('Only roads can be picked here. Tap a road, or drag along several.')
         break
       }
       case 'move': {

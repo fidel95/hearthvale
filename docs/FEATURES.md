@@ -67,7 +67,7 @@ Every item in the design spec, with its status and where it lives.
 
 | Feature | | Where |
 |---|---|---|
-| Place and remove road tiles | ✅ | Drag to draw; remove from the context menu |
+| Place and remove road tiles | ✅ | Drag to draw; remove one or many (tap or drag to pick, then Remove) |
 | Roads occupy cells | ✅ | They're 1×1 buildings |
 | Buildings declare road needs | ✅ | `requiresRoad` |
 | Show disconnected buildings | ✅ | 🚧 bubble, info card, details |

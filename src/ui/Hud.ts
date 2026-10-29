@@ -22,6 +22,8 @@ function hintFor(mode: Mode): string {
       return 'Drag it, or tap where it should go'
     case 'restore':
       return `Tap where the ${mode.building.type.name} should go`
+    case 'removeRoads':
+      return 'Tap roads to pick them, or drag along them'
   }
 }
 
@@ -37,6 +39,7 @@ export interface HudCallbacks {
   onOpenHelp: () => void
   onRecenter: () => void
   onOpenAdmin: () => void // shown when admin tools are on (always in development builds)
+  onRemoveRoads: () => void // remove the roads picked in removeRoads mode
 }
 
 // A top-bar stat: an icon, a value, and an optional extra shown on wider screens.
@@ -124,7 +127,14 @@ export class Hud {
     const placeInfo = el('span', 'hint-info')
     const done = el('button', 'hint-done', 'Done')
     done.addEventListener('click', () => builder.setMode({ kind: 'select' }))
-    hint.append(hintText, placeInfo, done)
+    // While picking roads: remove the ones picked.
+    const removeRoads = el('button', 'hint-done hint-danger', '')
+    removeRoads.addEventListener('click', callbacks.onRemoveRoads)
+    builder.onRoadsPicked = (count) => {
+      removeRoads.textContent = `🗑️ Remove ${count}`
+      removeRoads.disabled = count === 0
+    }
+    hint.append(hintText, placeInfo, removeRoads, done)
     builder.onPlacementInfo = (text) => {
       placeInfo.textContent = text ?? ''
       placeInfo.hidden = !text
@@ -156,6 +166,8 @@ export class Hud {
     builder.onModeChange = (mode) => {
       hintText.textContent = hintFor(mode)
       hint.hidden = mode.kind === 'select'
+      removeRoads.hidden = mode.kind !== 'removeRoads'
+      done.textContent = mode.kind === 'removeRoads' ? 'Cancel' : 'Done'
     }
     builder.onNotice = (message) => this.toast(message)
 

@@ -173,15 +173,15 @@ export class City {
 
   // The road rule: a road on any tile touching one side of the footprint.
   // (ignoring: pretend this road tile is gone, to check what removing it would cut off.)
-  hasRoadAccess(b: PlacedBuilding, ignoring?: Tile): boolean {
-    return edgeTiles(b).some((t) => this.isRoad(t) && !(ignoring && t.x === ignoring.x && t.z === ignoring.z))
+  // ignoring: road tiles to treat as gone (to ask "what if these were removed?").
+  hasRoadAccess(b: PlacedBuilding, ignoring: Tile[] = []): boolean {
+    return edgeTiles(b).some((t) => this.isRoad(t) && !ignoring.some((i) => i.x === t.x && i.z === t.z))
   }
 
-  // Buildings that need a road and would lose their only one if this road tile went.
-  cutOffBy(road: PlacedBuilding): PlacedBuilding[] {
-    return [...this.buildings.values()].filter(
-      (b) => b.type.requiresRoad && this.hasRoadAccess(b) && !this.hasRoadAccess(b, road.tile),
-    )
+  // Buildings that need a road and would lose every one if these road tiles went.
+  cutOffBy(...roads: PlacedBuilding[]): PlacedBuilding[] {
+    const tiles = roads.map((r) => r.tile)
+    return [...this.buildings.values()].filter((b) => b.type.requiresRoad && this.hasRoadAccess(b) && !this.hasRoadAccess(b, tiles))
   }
 
   // Working: built, and connected if it needs a road.

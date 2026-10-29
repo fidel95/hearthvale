@@ -176,8 +176,11 @@ describe('road access', () => {
     const bakery = city.place(b('bakery'), at(0, 0), { free: true })!
     const only = road(city)!
     expect(city.cutOffBy(only)).toEqual([bakery])
-    city.place(b('road'), at(0, 2), { free: true }) // a second road along its south side
+    const second = city.place(b('road'), at(0, 2), { free: true })! // a second road along its south side
     expect(city.cutOffBy(only)).toEqual([])
+    expect(city.cutOffBy(second)).toEqual([])
+    // Removing both at once would cut it off.
+    expect(city.cutOffBy(only, second)).toEqual([bakery])
   })
 
   it("homes don't need a road (they just earn more beside one)", () => {

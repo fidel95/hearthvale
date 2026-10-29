@@ -196,6 +196,7 @@ export class Game {
       onOpenHelp: () => help.open(),
       onRecenter: () => this.recenter(),
       onOpenAdmin: () => this.adminPanel(container).open(),
+      onRemoveRoads: () => this.removePickedRoads(),
     })
     this.setUpSelection(container, builder)
     new Coach(container, this.tutorial)
@@ -340,24 +341,35 @@ export class Game {
   // and the actions both offer.
   private setUpSelection(container: HTMLElement, builder: Builder) {
     const confirmRemove = new Modal(container)
-    const remove = (b: PlacedBuilding) => {
-      // Removing a road can cut shops off: say which, before it happens.
-      const cut = b.type.category === 'road' ? this.city.cutOffBy(b) : []
+    // Ask before tearing down one building, or a set of road tiles.
+    const confirmRemoval = (list: PlacedBuilding[], onDone?: () => void) => {
+      if (list.length === 0) return
+      const roads = list.every((b) => b.type.category === 'road')
+      const what = list.length === 1 ? `this ${list[0].type.name}` : `these ${list.length} road tiles`
+      // Removing roads can cut shops off: say which, before it happens.
+      const cut = roads ? this.city.cutOffBy(...list) : []
       confirmRemove.body.replaceChildren(
-        el('p', '', `Tear down this ${b.type.name}? You get nothing back for it.`),
+        el('p', '', `Tear down ${what}? You get nothing back for ${list.length === 1 ? 'it' : 'them'}.`),
         ...(cut.length
-          ? [el('p', 'warning', `🚧 This road is the only one beside: ${cut.map((c) => c.type.name).join(', ')}. ${cut.length === 1 ? 'It' : 'They'} will stop selling until reconnected.`)]
+          ? [el('p', 'warning', `🚧 ${cut.map((c) => c.type.name).join(', ')} would be left with no road beside ${cut.length === 1 ? 'it' : 'them'}, and stop selling until reconnected.`)]
           : []),
         el('p', 'muted', "No tax deduction either: in the US, a demolished building's leftover cost is added to the land's value instead (IRC §280B)."),
       )
       confirmRemove.show(
-        `🗑️ Remove ${b.type.name}?`,
-        button('Keep it', () => confirmRemove.close(), 'panel-button secondary'),
+        list.length === 1 ? `🗑️ Remove ${list[0].type.name}?` : `🗑️ Remove ${list.length} roads?`,
+        button('Keep', () => confirmRemove.close(), 'panel-button secondary'),
         button('Remove', () => {
           confirmRemove.close()
-          this.city.remove(b.id)
+          for (const b of list) this.city.remove(b.id)
+          onDone?.()
         }, 'panel-button danger'),
       )
+    }
+    this.removePickedRoads = () => confirmRemoval(builder.pickedRoads(), () => builder.setMode({ kind: 'select' }))
+    // Roads: open the road picker with this one picked, so several can go at once.
+    const remove = (b: PlacedBuilding) => {
+      if (b.type.category === 'road') builder.setMode({ kind: 'removeRoads', picked: new Set([b.id]) })
+      else confirmRemoval([b])
     }
     const move = (b: PlacedBuilding) => {
       Sheet.closeCurrent()
@@ -466,6 +478,7 @@ export class Game {
   }
 
   private admin: AdminPanel | null = null
+  private removePickedRoads: () => void = () => {}
 
   private adminPanel(container: HTMLElement): AdminPanel {
     this.admin ??= new AdminPanel(container, this.settings, {
