@@ -1195,6 +1195,99 @@
       "coinsPerEnergy": null,
       "roads": "—",
       "upgrades": "—"
+    },
+    {
+      "id": "clock-tower",
+      "name": "Clock Tower",
+      "category": "landmark",
+      "role": "late",
+      "unlockLevel": 11,
+      "quests": [],
+      "footprint": "2×2",
+      "tiles": 4,
+      "cost": 3000,
+      "materials": "🧱 15 🪟 4 🔩 6",
+      "materialsValue": 455,
+      "totalCost": 3455,
+      "buildSeconds": 300,
+      "cycleSeconds": null,
+      "coinsPerCycle": null,
+      "goodsPerCycle": 0,
+      "netPerCycle": null,
+      "xpPerCycle": null,
+      "buildXp": 210,
+      "residents": 0,
+      "needs": "",
+      "upkeepPerMonth": 0,
+      "effect": "",
+      "paybackCycles": null,
+      "paybackMinutes": null,
+      "coinsPerMinute": null,
+      "coinsPerEnergy": null,
+      "roads": "—",
+      "upgrades": "—"
+    },
+    {
+      "id": "lighthouse",
+      "name": "Lighthouse",
+      "category": "landmark",
+      "role": "late",
+      "unlockLevel": 12,
+      "quests": [],
+      "footprint": "2×2",
+      "tiles": 4,
+      "cost": 4000,
+      "materials": "🧱 12 🪟 10 🔩 6",
+      "materialsValue": 530,
+      "totalCost": 4530,
+      "buildSeconds": 360,
+      "cycleSeconds": null,
+      "coinsPerCycle": null,
+      "goodsPerCycle": 0,
+      "netPerCycle": null,
+      "xpPerCycle": null,
+      "buildXp": 280,
+      "residents": 0,
+      "needs": "",
+      "upkeepPerMonth": 0,
+      "effect": "",
+      "paybackCycles": null,
+      "paybackMinutes": null,
+      "coinsPerMinute": null,
+      "coinsPerEnergy": null,
+      "roads": "—",
+      "upgrades": "—"
+    },
+    {
+      "id": "botanical-garden",
+      "name": "Botanical Garden",
+      "category": "landmark",
+      "role": "late",
+      "unlockLevel": 13,
+      "quests": [],
+      "footprint": "3×3",
+      "tiles": 9,
+      "cost": 5000,
+      "materials": "🪵 12 🪟 16 🔩 4",
+      "materialsValue": 564,
+      "totalCost": 5564,
+      "buildSeconds": 420,
+      "cycleSeconds": null,
+      "coinsPerCycle": null,
+      "goodsPerCycle": 0,
+      "netPerCycle": null,
+      "xpPerCycle": null,
+      "buildXp": 350,
+      "residents": 0,
+      "needs": "",
+      "upkeepPerMonth": 0,
+      "effect": "",
+      "paybackCycles": null,
+      "paybackMinutes": null,
+      "coinsPerMinute": null,
+      "coinsPerEnergy": null,
+      "roads": "—",
+      "upgrades": "—"
     }
   ],
   "crops": [
@@ -1485,12 +1578,17 @@
     {
       "level": 11,
       "totalXp": 550,
-      "newMechanics": [],
+      "newMechanics": [
+        "landmarks"
+      ],
       "unlocks": [
         "Modern House",
-        "Solar Farm"
+        "Solar Farm",
+        "Clock Tower"
       ],
-      "quests": []
+      "quests": [
+        "A Town to Be Proud Of"
+      ]
     },
     {
       "level": 12,
@@ -1499,7 +1597,8 @@
       "unlocks": [
         "Manor",
         "Supermarket",
-        "Town Hall"
+        "Town Hall",
+        "Lighthouse"
       ],
       "quests": []
     }

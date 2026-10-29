@@ -188,6 +188,7 @@ export type Mechanic =
   | 'land'
   | 'shipping'
   | 'neighbors'
+  | 'landmarks'
 
 // The mechanics a building brings with it.
 export function mechanicsOf(type: BuildingType): Mechanic[] {
@@ -201,6 +202,7 @@ export function mechanicsOf(type: BuildingType): Mechanic[] {
     storage: 'storage',
     community: 'community',
     port: 'shipping',
+    landmark: 'landmarks',
   }
   return type.build ? [byCategory[type.category], 'construction'] : [byCategory[type.category]]
 }

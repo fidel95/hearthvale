@@ -389,7 +389,8 @@ export class Game {
       if (!result.ok && result.reason === 'materials') this.buildingPanel.open(b)
     }
     builder.onFinishRequest = finish
-    builder.roomFor = (n) => this.services.roomFor(n)
+    builder.placementBlocker = (type) => this.services.placementBlocker(type)
+    this.docks.speedBonus = () => this.services.shipSpeedBonus()
     this.buildingPanel = new BuildingPanel(
       container,
       {

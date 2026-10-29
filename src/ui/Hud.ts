@@ -157,7 +157,7 @@ export class Hud {
       const r = services.report
       this.people.value.textContent = r.population.toLocaleString()
       const short = shortIcons(r)
-      this.people.extra.textContent = `/${r.capacity}${short ? ` short ${short}` : ''}`
+      this.people.extra.textContent = `/${r.capacity} · 😊 ${services.rating().total}${short ? ` short ${short}` : ''}`
       this.people.button.classList.toggle('bad', short !== '')
     }
     const showLevel = () => {
@@ -166,7 +166,10 @@ export class Hud {
       this.xpBar.style.width = `${player.levelProgress * 100}%`
     }
     city.onChange((e) => {
-      if (e.kind === 'debt') showCoins()
+      if (e.kind === 'debt') {
+        showCoins()
+        showPeople() // the rating counts unpaid bills
+      }
       if (e.kind === 'coins') {
         showCoins()
         this.coins.button.classList.remove('bump')

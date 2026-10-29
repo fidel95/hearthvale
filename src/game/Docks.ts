@@ -39,6 +39,8 @@ export type DockState =
 export class Docks {
   private shipments = new Map<number, Shipment>()
   private city: City
+  // How much sooner ships arrive (the Lighthouse); Game wires it to Services.
+  speedBonus: () => number = () => 0
 
   constructor(city: City) {
     this.city = city
@@ -78,7 +80,7 @@ export class Docks {
       units: option.units,
       cost: option.cost,
       orderedAt: now,
-      arrivesAt: now + option.seconds * 1000,
+      arrivesAt: now + option.seconds * 1000 * (1 - this.speedBonus()),
     })
     return true
   }

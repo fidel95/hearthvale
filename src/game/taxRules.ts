@@ -115,6 +115,7 @@ export const RECOVERY_YEARS: Record<Category, number | null> = {
   road: 15, // land improvements: roads, sidewalks
   storage: 39, // nonresidential real property (a barn overrides it: farm building)
   port: 15, // docks and wharves are land improvements
+  landmark: 39, // nonresidential real property
 }
 
 // Depreciation for one full month. In the month a building is placed you get

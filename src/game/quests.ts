@@ -4,6 +4,7 @@ import type { Inventory } from './Inventory'
 import type { Neighbors } from './Neighbors'
 import type { Materials } from './items'
 import { MATERIAL_IDS } from './items'
+import data from '../data/quests.json'
 import type { Player } from './Player'
 import type { Services } from './Services'
 import type { Taxes } from './Taxes'
@@ -39,13 +40,23 @@ export interface World {
   services: Services
 }
 
+// What a "have X" task measures in the town, as plain data:
+// { building: 'bakery' } counts Bakeries, { category: 'home' } counts homes,
+// and the others read a number from the town.
+export type Measure =
+  | { building: string }
+  | { category: string }
+  | { population: true }
+  | { goods: true }
+  | { rating: true }
+
 export interface Task {
   label: string
   count: number
   // Either a stat counted since the quest started...
   stat?: StatId
   // ...or something about the town right now.
-  have?: (w: World) => number
+  have?: Measure
 }
 
 export interface Reward {
@@ -64,175 +75,6 @@ export interface Quest {
   level?: number // the player level needed to start it
 }
 
-const count = (w: World, test: (id: string, category: string) => boolean) =>
-  [...w.city.all()].filter((b) => w.city.isBuilt(b) && test(b.type.id, b.type.category)).length
-
-export const QUESTS: Quest[] = [
-  {
-    id: 'welcome',
-    title: 'Welcome to Hearthvale',
-    intro: 'Every town starts small. Collect the rent and bring in your first harvest.',
-    tasks: [
-      { label: 'Collect rent 3 times', stat: 'rent', count: 3 },
-      { label: 'Harvest a crop', stat: 'harvests', count: 1 },
-    ],
-    reward: { coins: 100, xp: 10 },
-  },
-  {
-    id: 'growing',
-    title: 'A Growing Town',
-    intro: 'More homes mean more rent. Keep the fields busy too.',
-    after: 'welcome',
-    tasks: [
-      { label: 'Have 3 homes', have: (w) => count(w, (_, c) => c === 'home'), count: 3 },
-      { label: 'Plant 3 crops', stat: 'plantings', count: 3 },
-    ],
-    reward: { coins: 150, xp: 15, materials: { lumber: 3 } },
-  },
-  {
-    id: 'shop',
-    title: 'Open for Business',
-    intro: 'Shops sell goods from their shelves. Stock one up and make some sales.',
-    after: 'welcome',
-    level: 2,
-    tasks: [
-      { label: 'Build a Bakery', have: (w) => count(w, (id) => id === 'bakery'), count: 1 },
-      { label: 'Restock a shop', stat: 'restocks', count: 1 },
-      { label: 'Make 3 sales', stat: 'sales', count: 3 },
-    ],
-    reward: { coins: 200, xp: 20, materials: { bricks: 4 } },
-  },
-  {
-    id: 'utilities',
-    title: 'Keep the Taps Running',
-    intro: 'The county only supplies a small town. Build your own water supply before you outgrow it.',
-    after: 'growing',
-    level: 4,
-    tasks: [
-      { label: 'Build a Water Tower', have: (w) => count(w, (id) => id === 'water-tower'), count: 1 },
-      { label: 'Reach 16 residents', have: (w) => w.services.report.population, count: 16 },
-    ],
-    reward: { coins: 250, xp: 20, materials: { steel: 4 } },
-  },
-  {
-    id: 'storage',
-    title: 'Room for the Harvest',
-    intro: 'Once you have a shop, harvests become goods. A barn holds more of them.',
-    after: 'shop',
-    level: 5,
-    tasks: [
-      { label: 'Build a Barn', have: (w) => count(w, (id) => id === 'barn'), count: 1 },
-      { label: 'Store 50 goods', have: (w) => w.city.goods, count: 50 },
-    ],
-    reward: { coins: 250, xp: 25, materials: { lumber: 4 } },
-  },
-  {
-    id: 'decorate',
-    title: 'Green Thumb',
-    intro: 'Trees, flowers and benches make homes and shops beside them earn a little more (up to +10% from decorations).',
-    after: 'growing',
-    level: 2,
-    tasks: [{ label: 'Have 4 decorations', have: (w) => count(w, (_, c) => c === 'decoration'), count: 4 }],
-    reward: { coins: 120, xp: 12 },
-  },
-  {
-    id: 'roads',
-    title: 'Paving the Way',
-    intro: 'Homes and shops beside a road earn more, and residents prefer to walk on them.',
-    after: 'growing',
-    tasks: [{ label: 'Have 10 road tiles', have: (w) => count(w, (_, c) => c === 'road'), count: 10 }],
-    reward: { coins: 150, xp: 15 },
-  },
-  {
-    id: 'builder',
-    title: 'Master Builder',
-    intro: 'Bigger buildings take time to build, then materials to finish. Build a Townhouse.',
-    after: 'shop',
-    level: 3,
-    tasks: [
-      { label: 'Build a Townhouse', have: (w) => count(w, (id) => id === 'townhouse'), count: 1 },
-      { label: 'Finish a construction', stat: 'finished', count: 1 },
-    ],
-    reward: { coins: 300, xp: 30, materials: { glass: 3 } },
-  },
-  {
-    id: 'neighborly',
-    title: 'Good Neighbors',
-    intro: 'New neighbors have moved in nearby. Open the Map, then Neighbors, and pay one a visit.',
-    after: 'community',
-    level: 7,
-    tasks: [{ label: 'Help neighbors 3 times', stat: 'helps', count: 3 }],
-    reward: { coins: 300, xp: 30, materials: { lumber: 4 } },
-  },
-  {
-    id: 'renovator',
-    title: 'Renovator',
-    intro: 'Homes and shops can be upgraded to earn more. Upgrading is an improvement: its cost is depreciated, not deducted.',
-    after: 'builder',
-    level: 10,
-    tasks: [{ label: 'Upgrade a building', stat: 'upgrades', count: 1 }],
-    reward: { coins: 400, xp: 40, materials: { bricks: 4, glass: 3 } },
-  },
-  {
-    id: 'land',
-    title: 'Room to Grow',
-    intro: 'Buy the land next door. Land is taxed every year, but never depreciated.',
-    after: 'utilities',
-    level: 8,
-    tasks: [{ label: 'Buy a lot of land', stat: 'lots', count: 1 }],
-    reward: { coins: 400, xp: 25 },
-  },
-  {
-    id: 'community',
-    title: 'Community Spirit',
-    intro: 'Parks, schools and fire stations make nearby homes worth more.',
-    after: 'utilities',
-    level: 6,
-    tasks: [
-      { label: 'Build a Park', have: (w) => count(w, (id) => id === 'park'), count: 1 },
-      { label: 'Reach 24 residents', have: (w) => w.services.report.population, count: 24 },
-    ],
-    reward: { coins: 400, xp: 30 },
-  },
-  {
-    id: 'collector',
-    title: 'Treasure Hunter',
-    intro: 'Collectibles turn up as you play. Complete a set and hand it in.',
-    after: 'growing',
-    tasks: [{ label: 'Hand in a collection', stat: 'sets', count: 1 }],
-    reward: { coins: 300, xp: 30 },
-  },
-  {
-    id: 'taxes',
-    title: 'Good Citizen',
-    intro: 'Tax Day comes after December. Open Taxes (tap your coins) to see what you will owe.',
-    after: 'welcome',
-    tasks: [{ label: 'File a tax return', stat: 'returns', count: 1 }],
-    reward: { coins: 200, xp: 20 },
-  },
-  {
-    id: 'harbor',
-    title: 'Harbor Town',
-    intro: 'Build a dock on the shore and bring goods in by sea.',
-    after: 'land',
-    level: 9,
-    tasks: [
-      { label: 'Build a Dock', have: (w) => count(w, (id) => id === 'dock'), count: 1 },
-      { label: 'Unload a ship', stat: 'unloads', count: 1 },
-    ],
-    reward: { coins: 500, xp: 40, materials: { steel: 4 } },
-  },
-  {
-    id: 'tycoon',
-    title: 'Tycoon',
-    intro: 'Earn 5,000 coins from rent and sales. Mind the brackets on Tax Day!',
-    after: 'builder',
-    level: 8,
-    tasks: [{ label: 'Earn 🪙 5,000 from rent and sales', stat: 'earned', count: 5000 }],
-    reward: { coins: 1000, xp: 60 },
-  },
-]
-
 // Lifetime milestones, each with three tiers.
 export interface Achievement {
   id: string
@@ -242,19 +84,21 @@ export interface Achievement {
   tiers: [number, number, number]
 }
 
-export const ACHIEVEMENTS: Achievement[] = [
-  { id: 'landlord', name: 'Landlord', icon: '🏠', stat: 'rent', tiers: [10, 50, 250] },
-  { id: 'shopkeeper', name: 'Shopkeeper', icon: '🏪', stat: 'sales', tiers: [10, 50, 250] },
-  { id: 'farmer', name: 'Farmer', icon: '🌾', stat: 'harvests', tiers: [10, 50, 250] },
-  { id: 'builder', name: 'Builder', icon: '🔨', stat: 'built', tiers: [5, 25, 100] },
-  { id: 'explorer', name: 'Explorer', icon: '🗺️', stat: 'lots', tiers: [1, 5, 15] },
-  { id: 'captain', name: 'Captain', icon: '🚢', stat: 'unloads', tiers: [1, 10, 50] },
-  { id: 'collector', name: 'Collector', icon: '🏆', stat: 'sets', tiers: [1, 5, 20] },
-  { id: 'taxpayer', name: 'Taxpayer', icon: '🧾', stat: 'returns', tiers: [1, 5, 10] },
-  { id: 'neighbor', name: 'Good Neighbor', icon: '🤝', stat: 'helps', tiers: [10, 50, 200] },
-]
+// The quests and achievements themselves are data, in src/data/quests.json.
+export const QUESTS = data.quests as Quest[]
+export const ACHIEVEMENTS = data.achievements as Achievement[]
+export const ACHIEVEMENT_XP = data.achievementXp
 
-export const ACHIEVEMENT_XP = [10, 25, 50]
+// The number a "have X" task is measured by.
+export function measure(w: World, m: Measure): number {
+  const built = [...w.city.all()].filter((b) => w.city.isBuilt(b))
+  if ('building' in m) return built.filter((b) => b.type.id === m.building).length
+  if ('category' in m) return built.filter((b) => b.type.category === m.category).length
+  if ('population' in m) return w.services.report.population
+  if ('goods' in m) return w.city.goods
+  return w.services.rating().total
+}
+
 const MAX_ACTIVE = 3
 
 export interface QuestsSave {
@@ -354,7 +198,7 @@ export class Quests {
 
   // How far along a task is, from 0 up to its count.
   progress(quest: Quest, task: Task): number {
-    const value = task.stat ? this.stat(task.stat) - (this.active.get(quest.id)?.[task.stat] ?? 0) : task.have!(this.world)
+    const value = task.stat ? this.stat(task.stat) - (this.active.get(quest.id)?.[task.stat] ?? 0) : measure(this.world, task.have!)
     return Math.min(task.count, value)
   }
 

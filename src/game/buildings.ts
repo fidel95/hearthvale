@@ -15,6 +15,7 @@ export type Category =
   | 'road'
   | 'storage'
   | 'port'
+  | 'landmark'
 
 export type PlaceholderShape =
   | 'house'
@@ -38,6 +39,9 @@ export type PlaceholderShape =
   | 'statue'
   | 'library'
   | 'townhall'
+  | 'clocktower'
+  | 'lighthouse'
+  | 'garden'
 
 export interface BuildingType {
   id: string
@@ -73,6 +77,12 @@ export interface BuildingType {
   build?: { seconds: number; materials?: Materials }
   // Room for this many more goods in the town's storage.
   storage?: number
+  // Landmarks: only one of each, a minimum city rating to build it, and a
+  // town-wide bonus to all rent and sales (and, for the Lighthouse, faster ships).
+  unique?: boolean
+  minRating?: number
+  townBonus?: number
+  shipSpeedBonus?: number
   // Needs a road touching one side of its footprint to work (shops: customers
   // have to get there). See City.hasRoadAccess.
   requiresRoad?: boolean
@@ -591,6 +601,52 @@ export const BUILDING_TYPES: BuildingType[] = [
     placeholder: { shape: 'townhall', color: '#ece6da', accent: '#3b4a6b', height: 1.6 },
   },
 
+  // ---- Landmarks: long-term goals, one of each, with a town-wide effect.
+  {
+    id: 'clock-tower',
+    name: 'Clock Tower',
+    category: 'landmark',
+    size: { x: 2, z: 2 },
+    cost: 3000,
+    unlockLevel: 11,
+    build: { seconds: 300, materials: { bricks: 15, steel: 6, glass: 4 } },
+    unique: true,
+    minRating: 60,
+    townBonus: 0.05,
+    populationCapacity: 30,
+    attractsVisitors: { lingerSeconds: 5 },
+    placeholder: { shape: 'clocktower', color: '#d8c7a5', accent: '#3b4a6b', height: 3 },
+  },
+  {
+    id: 'lighthouse',
+    name: 'Lighthouse',
+    category: 'landmark',
+    size: { x: 2, z: 2 },
+    cost: 4000,
+    unlockLevel: 12,
+    build: { seconds: 360, materials: { bricks: 12, glass: 10, steel: 6 } },
+    unique: true,
+    minRating: 65,
+    onShore: true,
+    townBonus: 0.03,
+    shipSpeedBonus: 0.25,
+    placeholder: { shape: 'lighthouse', color: '#f4f1ea', accent: '#c8463a', height: 3.2 },
+  },
+  {
+    id: 'botanical-garden',
+    name: 'Botanical Garden',
+    category: 'landmark',
+    size: { x: 3, z: 3 },
+    cost: 5000,
+    unlockLevel: 13,
+    build: { seconds: 420, materials: { glass: 16, lumber: 12, steel: 4 } },
+    unique: true,
+    minRating: 75,
+    townBonus: 0.05,
+    populationCapacity: 50,
+    attractsVisitors: { lingerSeconds: 10 },
+    placeholder: { shape: 'garden', color: '#6fbf5a', accent: '#cfe8f2', height: 1.4 },
+  },
 ]
 
 export const BUILDINGS_BY_ID = new Map(BUILDING_TYPES.map((b) => [b.id, b]))

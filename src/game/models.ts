@@ -277,6 +277,37 @@ function createPlaceholder(type: BuildingType): THREE.Group {
       add(new THREE.ConeGeometry(0.45, 0.4, 4).rotateY(Math.PI / 4), accent, 0, height * 1.15, 0)
       break
     }
+    case 'clocktower': {
+      // A tall square tower with a clock face on each visible side and a spire.
+      add(new THREE.BoxGeometry(w * 0.6, height * 0.75, d * 0.6), color, 0, 0, 0)
+      for (const [x, z, ry] of [[0, d * 0.3 + 0.01, 0], [w * 0.3 + 0.01, 0, Math.PI / 2]] as const) {
+        const face = new THREE.CylinderGeometry(0.28, 0.28, 0.03, 20).rotateX(Math.PI / 2).rotateY(ry)
+        add(face, '#ffffff', x, height * 0.55, z)
+      }
+      add(new THREE.BoxGeometry(w * 0.66, 0.1, d * 0.66), accent, 0, height * 0.75, 0)
+      add(new THREE.ConeGeometry(w * 0.42, height * 0.35, 4).rotateY(Math.PI / 4), accent, 0, height * 0.75 + 0.1, 0)
+      break
+    }
+    case 'lighthouse': {
+      // A striped tapering tower with a lamp room on top.
+      for (let i = 0; i < 4; i++) {
+        const r0 = 0.5 - i * 0.07
+        add(new THREE.CylinderGeometry(r0 - 0.07, r0, height * 0.18, 16), i % 2 ? accent : color, 0, i * height * 0.18, 0)
+      }
+      add(new THREE.CylinderGeometry(0.26, 0.26, height * 0.12, 16), '#ffe9a3', 0, height * 0.72, 0)
+      add(new THREE.ConeGeometry(0.32, height * 0.14, 16), accent, 0, height * 0.84, 0)
+      break
+    }
+    case 'garden': {
+      // Lawns and paths around a glasshouse.
+      add(new THREE.BoxGeometry(w * 0.95, 0.05, d * 0.95), color, 0, 0, 0)
+      add(new THREE.BoxGeometry(w * 0.95, 0.055, 0.35), '#d9c79a', 0, 0, 0)
+      add(new THREE.BoxGeometry(0.35, 0.055, d * 0.95), '#d9c79a', 0, 0, 0)
+      add(new THREE.BoxGeometry(w * 0.5, height * 0.5, d * 0.4), accent, 0, 0.05, -d * 0.2)
+      add(new THREE.CylinderGeometry(w * 0.25, w * 0.25, d * 0.4, 12, 1, false, 0, Math.PI).rotateZ(Math.PI / 2).rotateY(Math.PI / 2), accent, 0, 0.05 + height * 0.5, -d * 0.2)
+      for (const [x, z] of [[-1, 1], [1, 1]]) add(new THREE.IcosahedronGeometry(0.35, 0), '#3f8f3a', x * w * 0.3, 0.05, z * d * 0.3)
+      break
+    }
     case 'tree': {
       add(new THREE.CylinderGeometry(0.07, 0.09, height * 0.4, 6), color, 0, 0, 0)
       add(new THREE.IcosahedronGeometry(0.38, 0), accent, 0, height * 0.35, 0)

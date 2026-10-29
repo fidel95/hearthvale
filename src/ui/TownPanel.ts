@@ -28,8 +28,27 @@ export class TownPanel {
 
   private render() {
     const report = this.services.report
+    // The city rating, part by part, each with what would raise it.
+    const rating = this.services.rating()
+    const ratingSection = el('section', 'tax-section')
+    ratingSection.append(el('h3', '', `😊 City rating: ${rating.total} / 100`))
+    for (const p of rating.parts) {
+      const row = el('div', 'rating-row')
+      const track = el('div', 'bracket-track')
+      const fill = el('div', `bracket-fill${p.points < p.max ? ' partial' : ''}`)
+      fill.style.width = `${(p.points / p.max) * 100}%`
+      track.append(fill)
+      row.append(el('span', '', p.label), track, el('span', 'muted', `${p.points}/${p.max}`))
+      ratingSection.append(row)
+      if (p.points < p.max) ratingSection.append(el('p', 'muted rating-hint', `↑ ${p.hint}`))
+    }
+    ratingSection.append(el('p', 'muted', 'Landmarks need a minimum rating to be built. Nothing else depends on it, so a low rating never costs you anything.'))
+    const bonus = this.services.townBonus()
+
     const parts: HTMLElement[] = [
       el('p', 'town-population', `👥 ${report.population} residents · room for ${report.capacity}`),
+      ratingSection,
+      ...(bonus > 0 ? [el('p', '', `🏛️ Landmarks add +${percent(bonus)} to all rent and sales.`)] : []),
       el('p', 'muted', `Every town has room for ${BASE_POPULATION_CAPACITY} residents. Parks, fire stations and schools make room for more; new homes and upgrades need room to fit.`),
     ]
 

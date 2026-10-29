@@ -60,8 +60,9 @@ export class Builder {
   onPlacementInfo?: (text: string | null) => void
   // Settings: when false, a tap buys and places right away, without the ✓ step.
   confirmPurchases = true
-  // Asked before placing a home: is there room for its residents? (Game wires it to Services.)
-  roomFor: (residents: number) => boolean = () => true
+  // Asked before placing: a reason it can't be built (no room for residents,
+  // one-of-a-kind already built, city rating too low), or null. Game wires it to Services.
+  placementBlocker: (type: BuildingType) => string | null = () => null
   private cityView: CityView
   private controls: CameraController
   private hoverTile: Tile | null = null
@@ -356,7 +357,7 @@ export class Builder {
         const anchor = anchorFor(mode.type, tile, this.rotation)
         if (!this.player.isUnlocked(mode.type)) this.onNotice?.(`${mode.type.name} unlocks at level ${mode.type.unlockLevel}`)
         else if (!this.city.canAfford(mode.type)) this.onNotice?.(`Not enough coins for a ${mode.type.name}`)
-        else if (!this.roomFor(mode.type.residents ?? 0)) this.onNotice?.('No room for more residents: build a Park, Fire Station or School to grow the town')
+        else if (this.placementBlocker(mode.type)) this.onNotice?.(this.placementBlocker(mode.type)!)
         else if (!this.city.canPlace(mode.type, anchor, undefined, this.rotation)) this.onNotice?.(mode.type.onShore ? 'It must stand on the shore, next to the sea' : "It doesn't fit there")
         else if (mode.type.category === 'road' || !this.confirmPurchases) this.city.place(mode.type, anchor, { rotation: this.rotation })
         else this.setPending(anchor)

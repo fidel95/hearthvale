@@ -1,0 +1,513 @@
+{
+  "quests": [
+    {
+      "id": "welcome",
+      "title": "Welcome to Hearthvale",
+      "intro": "Every town starts small. Collect the rent and bring in your first harvest.",
+      "tasks": [
+        {
+          "label": "Collect rent 3 times",
+          "count": 3,
+          "stat": "rent"
+        },
+        {
+          "label": "Harvest a crop",
+          "count": 1,
+          "stat": "harvests"
+        }
+      ],
+      "reward": {
+        "coins": 100,
+        "xp": 10
+      }
+    },
+    {
+      "id": "growing",
+      "title": "A Growing Town",
+      "intro": "More homes mean more rent. Keep the fields busy too.",
+      "after": "welcome",
+      "tasks": [
+        {
+          "label": "Have 3 homes",
+          "count": 3,
+          "have": {
+            "category": "home"
+          }
+        },
+        {
+          "label": "Plant 3 crops",
+          "count": 3,
+          "stat": "plantings"
+        }
+      ],
+      "reward": {
+        "coins": 150,
+        "xp": 15,
+        "materials": {
+          "lumber": 3
+        }
+      }
+    },
+    {
+      "id": "shop",
+      "title": "Open for Business",
+      "intro": "Shops sell goods from their shelves, and need a road beside them. Stock one up and make some sales.",
+      "after": "welcome",
+      "level": 2,
+      "tasks": [
+        {
+          "label": "Build a Bakery",
+          "count": 1,
+          "have": {
+            "building": "bakery"
+          }
+        },
+        {
+          "label": "Restock a shop",
+          "count": 1,
+          "stat": "restocks"
+        },
+        {
+          "label": "Make 3 sales",
+          "count": 3,
+          "stat": "sales"
+        }
+      ],
+      "reward": {
+        "coins": 200,
+        "xp": 20,
+        "materials": {
+          "bricks": 4
+        }
+      }
+    },
+    {
+      "id": "utilities",
+      "title": "Keep the Taps Running",
+      "intro": "The county only supplies a small town. Build your own water supply before you outgrow it.",
+      "after": "growing",
+      "level": 4,
+      "tasks": [
+        {
+          "label": "Build a Water Tower",
+          "count": 1,
+          "have": {
+            "building": "water-tower"
+          }
+        },
+        {
+          "label": "Reach 16 residents",
+          "count": 16,
+          "have": {
+            "population": true
+          }
+        }
+      ],
+      "reward": {
+        "coins": 250,
+        "xp": 20,
+        "materials": {
+          "steel": 4
+        }
+      }
+    },
+    {
+      "id": "storage",
+      "title": "Room for the Harvest",
+      "intro": "Once you have a shop, harvests become goods. A barn holds more of them.",
+      "after": "shop",
+      "level": 5,
+      "tasks": [
+        {
+          "label": "Build a Barn",
+          "count": 1,
+          "have": {
+            "building": "barn"
+          }
+        },
+        {
+          "label": "Store 50 goods",
+          "count": 50,
+          "have": {
+            "goods": true
+          }
+        }
+      ],
+      "reward": {
+        "coins": 250,
+        "xp": 25,
+        "materials": {
+          "lumber": 4
+        }
+      }
+    },
+    {
+      "id": "decorate",
+      "title": "Green Thumb",
+      "intro": "Trees, flowers and benches make homes and shops beside them earn a little more (up to +10% from decorations).",
+      "after": "growing",
+      "level": 2,
+      "tasks": [
+        {
+          "label": "Have 4 decorations",
+          "count": 4,
+          "have": {
+            "category": "decoration"
+          }
+        }
+      ],
+      "reward": {
+        "coins": 120,
+        "xp": 12
+      }
+    },
+    {
+      "id": "roads",
+      "title": "Paving the Way",
+      "intro": "Shops need a road beside them, homes beside a road earn more, and residents prefer to walk on them.",
+      "after": "growing",
+      "tasks": [
+        {
+          "label": "Have 10 road tiles",
+          "count": 10,
+          "have": {
+            "category": "road"
+          }
+        }
+      ],
+      "reward": {
+        "coins": 150,
+        "xp": 15
+      }
+    },
+    {
+      "id": "builder",
+      "title": "Master Builder",
+      "intro": "Bigger buildings take time to build, then materials to finish. Build a Townhouse.",
+      "after": "shop",
+      "level": 3,
+      "tasks": [
+        {
+          "label": "Build a Townhouse",
+          "count": 1,
+          "have": {
+            "building": "townhouse"
+          }
+        },
+        {
+          "label": "Finish a construction",
+          "count": 1,
+          "stat": "finished"
+        }
+      ],
+      "reward": {
+        "coins": 300,
+        "xp": 30,
+        "materials": {
+          "glass": 3
+        }
+      }
+    },
+    {
+      "id": "neighborly",
+      "title": "Good Neighbors",
+      "intro": "New neighbors have moved in nearby. Open the Map, then Neighbors, and pay one a visit.",
+      "after": "community",
+      "level": 7,
+      "tasks": [
+        {
+          "label": "Help neighbors 3 times",
+          "count": 3,
+          "stat": "helps"
+        }
+      ],
+      "reward": {
+        "coins": 300,
+        "xp": 30,
+        "materials": {
+          "lumber": 4
+        }
+      }
+    },
+    {
+      "id": "renovator",
+      "title": "Renovator",
+      "intro": "Homes and shops can be upgraded to earn more. Upgrading is an improvement: its cost is depreciated, not deducted.",
+      "after": "builder",
+      "level": 10,
+      "tasks": [
+        {
+          "label": "Upgrade a building",
+          "count": 1,
+          "stat": "upgrades"
+        }
+      ],
+      "reward": {
+        "coins": 400,
+        "xp": 40,
+        "materials": {
+          "bricks": 4,
+          "glass": 3
+        }
+      }
+    },
+    {
+      "id": "land",
+      "title": "Room to Grow",
+      "intro": "Buy the land next door. Land is taxed every year, but never depreciated.",
+      "after": "utilities",
+      "level": 8,
+      "tasks": [
+        {
+          "label": "Buy a lot of land",
+          "count": 1,
+          "stat": "lots"
+        }
+      ],
+      "reward": {
+        "coins": 400,
+        "xp": 25
+      }
+    },
+    {
+      "id": "community",
+      "title": "Community Spirit",
+      "intro": "Parks, schools and fire stations make nearby homes worth more, and make room for more residents.",
+      "after": "utilities",
+      "level": 6,
+      "tasks": [
+        {
+          "label": "Build a Park",
+          "count": 1,
+          "have": {
+            "building": "park"
+          }
+        },
+        {
+          "label": "Reach 24 residents",
+          "count": 24,
+          "have": {
+            "population": true
+          }
+        }
+      ],
+      "reward": {
+        "coins": 400,
+        "xp": 30
+      }
+    },
+    {
+      "id": "collector",
+      "title": "Treasure Hunter",
+      "intro": "Collectibles turn up as you play. Complete a set and hand it in.",
+      "after": "growing",
+      "tasks": [
+        {
+          "label": "Hand in a collection",
+          "count": 1,
+          "stat": "sets"
+        }
+      ],
+      "reward": {
+        "coins": 300,
+        "xp": 30
+      }
+    },
+    {
+      "id": "taxes",
+      "title": "Good Citizen",
+      "intro": "Tax Day comes after December. Open Taxes (tap your coins) to see what you will owe.",
+      "after": "welcome",
+      "tasks": [
+        {
+          "label": "File a tax return",
+          "count": 1,
+          "stat": "returns"
+        }
+      ],
+      "reward": {
+        "coins": 200,
+        "xp": 20
+      }
+    },
+    {
+      "id": "harbor",
+      "title": "Harbor Town",
+      "intro": "Build a dock on the shore and bring goods in by sea.",
+      "after": "land",
+      "level": 9,
+      "tasks": [
+        {
+          "label": "Build a Dock",
+          "count": 1,
+          "have": {
+            "building": "dock"
+          }
+        },
+        {
+          "label": "Unload a ship",
+          "count": 1,
+          "stat": "unloads"
+        }
+      ],
+      "reward": {
+        "coins": 500,
+        "xp": 40,
+        "materials": {
+          "steel": 4
+        }
+      }
+    },
+    {
+      "id": "tycoon",
+      "title": "Tycoon",
+      "intro": "Earn 5,000 coins from rent and sales. Mind the brackets on Tax Day!",
+      "after": "builder",
+      "level": 8,
+      "tasks": [
+        {
+          "label": "Earn 🪙 5,000 from rent and sales",
+          "count": 5000,
+          "stat": "earned"
+        }
+      ],
+      "reward": {
+        "coins": 1000,
+        "xp": 60
+      }
+    },
+    {
+      "id": "landmark",
+      "title": "A Town to Be Proud Of",
+      "intro": "Landmarks are long-term goals: expensive, one of a kind, and they need a well-run town. Check your city rating in the Town window.",
+      "after": "tycoon",
+      "level": 11,
+      "tasks": [
+        {
+          "label": "Reach a city rating of 60",
+          "count": 60,
+          "have": {
+            "rating": true
+          }
+        },
+        {
+          "label": "Build a landmark",
+          "count": 1,
+          "have": {
+            "category": "landmark"
+          }
+        }
+      ],
+      "reward": {
+        "coins": 1500,
+        "xp": 80
+      }
+    }
+  ],
+  "achievements": [
+    {
+      "id": "landlord",
+      "name": "Landlord",
+      "icon": "🏠",
+      "stat": "rent",
+      "tiers": [
+        10,
+        50,
+        250
+      ]
+    },
+    {
+      "id": "shopkeeper",
+      "name": "Shopkeeper",
+      "icon": "🏪",
+      "stat": "sales",
+      "tiers": [
+        10,
+        50,
+        250
+      ]
+    },
+    {
+      "id": "farmer",
+      "name": "Farmer",
+      "icon": "🌾",
+      "stat": "harvests",
+      "tiers": [
+        10,
+        50,
+        250
+      ]
+    },
+    {
+      "id": "builder",
+      "name": "Builder",
+      "icon": "🔨",
+      "stat": "built",
+      "tiers": [
+        5,
+        25,
+        100
+      ]
+    },
+    {
+      "id": "explorer",
+      "name": "Explorer",
+      "icon": "🗺️",
+      "stat": "lots",
+      "tiers": [
+        1,
+        5,
+        15
+      ]
+    },
+    {
+      "id": "captain",
+      "name": "Captain",
+      "icon": "🚢",
+      "stat": "unloads",
+      "tiers": [
+        1,
+        10,
+        50
+      ]
+    },
+    {
+      "id": "collector",
+      "name": "Collector",
+      "icon": "🏆",
+      "stat": "sets",
+      "tiers": [
+        1,
+        5,
+        20
+      ]
+    },
+    {
+      "id": "taxpayer",
+      "name": "Taxpayer",
+      "icon": "🧾",
+      "stat": "returns",
+      "tiers": [
+        1,
+        5,
+        10
+      ]
+    },
+    {
+      "id": "neighbor",
+      "name": "Good Neighbor",
+      "icon": "🤝",
+      "stat": "helps",
+      "tiers": [
+        10,
+        50,
+        200
+      ]
+    }
+  ],
+  "achievementXp": [
+    10,
+    25,
+    50
+  ]
+}

@@ -22,6 +22,7 @@ const COLORS: Record<string, string> = {
   decoration: '#3f8f3a',
   storage: '#a4553f',
   port: '#8a6a4a',
+  landmark: '#b06ad0',
 }
 
 export class MapPanel {

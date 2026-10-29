@@ -20,6 +20,7 @@ const TABS: { label: string; categories: Category[] }[] = [
   { label: '🌾 Farms', categories: ['farm', 'storage'] },
   { label: '🛣️ Roads', categories: ['road'] },
   { label: '🌳 Decor', categories: ['decoration'] },
+  { label: '🏛️ Landmarks', categories: ['landmark'] },
 ]
 
 // One line on what a building does, for its card.
@@ -51,6 +52,10 @@ function details(type: BuildingType): string[] {
   if (type.category === 'road') lines.push(`Drag to draw. Homes and shops beside a road earn +${ROAD_BONUS * 100}%`)
   if (type.onShore) lines.push('Must be built on the shore. Order shipments of goods here')
   if (type.requiresRoad) lines.push('🛣️ Needs a road touching one of its sides to open')
+  if (type.townBonus) lines.push(`+${Math.round(type.townBonus * 100)}% to all rent and sales in town`)
+  if (type.shipSpeedBonus) lines.push(`Ships arrive ${Math.round(type.shipSpeedBonus * 100)}% sooner`)
+  if (type.minRating) lines.push(`Needs a city rating of ${type.minRating} (see Town)`)
+  if (type.unique) lines.push('One of a kind: you can only build one')
   const needs = UTILITIES.filter((u) => type.needs?.[u]).map((u) => `${UTILITY_INFO[u].icon} ${type.needs![u]}`)
   if (needs.length) lines.push(`Uses ${needs.join(' ')}`)
   if (type.upkeep) lines.push(`Costs 🪙 ${type.upkeep} a month to run`)
@@ -132,16 +137,10 @@ export class BuildMenu {
     for (const { card, status, type } of this.cards) {
       const locked = !this.player.isUnlocked(type)
       const short = type.cost - this.city.coins
-      const noRoom = !this.services.roomFor(type.residents ?? 0)
+      const blocker = this.services.placementBlocker(type)
       card.classList.toggle('locked', locked)
-      card.classList.toggle('unaffordable', !locked && (short > 0 || noRoom))
-      status.textContent = locked
-        ? `🔒 Reach level ${type.unlockLevel}`
-        : short > 0
-          ? `Need 🪙 ${short.toLocaleString()} more`
-          : noRoom
-            ? '👥 No room: build community buildings'
-            : ''
+      card.classList.toggle('unaffordable', !locked && (short > 0 || blocker !== null))
+      status.textContent = locked ? `🔒 Reach level ${type.unlockLevel}` : short > 0 ? `Need 🪙 ${short.toLocaleString()} more` : (blocker ?? '')
       status.hidden = status.textContent === ''
     }
     if (this.chosen) this.choose(this.chosen)
@@ -156,7 +155,7 @@ export class BuildMenu {
 
     const locked = !this.player.isUnlocked(type)
     const short = type.cost - this.city.coins
-    const noRoom = !this.services.roomFor(type.residents ?? 0)
+    const blocker = this.services.placementBlocker(type)
     const list = el('ul', 'build-details')
     for (const line of details(type)) list.append(el('li', '', line))
     const place = button(
@@ -164,15 +163,13 @@ export class BuildMenu {
         ? `🔒 Reach level ${type.unlockLevel}`
         : short > 0
           ? `Need 🪙 ${short.toLocaleString()} more`
-          : noRoom
-            ? '👥 No room for more residents'
-            : `Place for 🪙 ${type.cost.toLocaleString()}`,
+          : (blocker ?? `Place for 🪙 ${type.cost.toLocaleString()}`),
       () => {
         this.sheet.close()
         this.onPlace(type)
       },
     )
-    place.disabled = locked || short > 0 || noRoom
+    place.disabled = locked || short > 0 || blocker !== null
     const title = el('div', 'build-preview-title')
     title.append(el('strong', '', type.name), el('span', 'muted', ` · ${type.size.x}×${type.size.z} tiles`))
     this.preview.replaceChildren(title, list, place)

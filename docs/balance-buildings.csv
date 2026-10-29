@@ -37,3 +37,6 @@ fire-station,Fire Station,community,late,9,,2×2,4,600,🧱 8 🔩 2,170,770,180
 school,School,community,late,10,,3×2,6,900,🧱 10 🪵 6 🪟 4,302,1202,240,,,0,,,63,0,💧3 🔌3 🗑️2,30,+15% within 6 tiles,,,,,—,—
 library,Library,community,middle,7,,2×2,4,500,🧱 6 🪵 4,138,638,120,,,0,,,35,0,💧1 🔌2 🗑️1,10,+5% within 8 tiles,,,,,—,—
 town-hall,Town Hall,community,late,12,,3×3,9,1500,🧱 12 🪟 6 🔩 4,400,1900,300,,,0,,,105,0,💧3 🔌4 🗑️2,40,+5% within 12 tiles,,,,,—,—
+clock-tower,Clock Tower,landmark,late,11,,2×2,4,3000,🧱 15 🪟 4 🔩 6,455,3455,300,,,0,,,210,0,,0,,,,,,—,—
+lighthouse,Lighthouse,landmark,late,12,,2×2,4,4000,🧱 12 🪟 10 🔩 6,530,4530,360,,,0,,,280,0,,0,,,,,,—,—
+botanical-garden,Botanical Garden,landmark,late,13,,3×3,9,5000,🪵 12 🪟 16 🔩 4,564,5564,420,,,0,,,350,0,,0,,,,,,—,—
