@@ -19,6 +19,7 @@ import { LandView } from './LandView'
 import { WELCOME_BACK_AFTER_MS, awaySummary } from './offline'
 import { PeopleView } from './PeopleView'
 import { RoadView } from './RoadView'
+import { ShipView } from './ShipView'
 import { Player } from './Player'
 import { Services } from './Services'
 import { AutoSaver, clearSave, readSave } from './save'
@@ -54,6 +55,8 @@ export class Game {
   private cityView: CityView
   private peopleView: PeopleView
   private roadView: RoadView
+  private landView: LandView
+  private shipView: ShipView
   private incomeView: IncomeView
   private hud: Hud
   private saver: AutoSaver
@@ -86,6 +89,8 @@ export class Game {
     // Everything that listens to City must exist before the town is loaded,
     // or it misses the 'added' events.
     const landView = new LandView(this.scene, this.city)
+    this.landView = landView
+    this.shipView = new ShipView(this.scene)
     this.cityView = new CityView(this.scene, this.city)
     this.peopleView = new PeopleView(this.scene, this.city)
     this.roadView = new RoadView(this.scene, this.city)
@@ -150,6 +155,9 @@ export class Game {
     const now = Date.now()
     this.cityView.update(now)
     this.roadView.update()
+    const seconds = frameTime / 1000
+    this.landView.update(seconds)
+    this.shipView.update(Math.min(dt, 100) / 1000, seconds)
     // Capped, so a tab coming back from the background doesn't teleport everyone.
     this.peopleView.update(Math.min(dt, 100) / 1000)
     this.incomeView.update(now)

@@ -10,14 +10,19 @@ import {
   footprintCenter,
   lotCorner,
   lotKey,
+  tileToWorld,
   type Lot,
 } from './grid'
+import { coastZ, isWater } from './terrain'
 
 // Draws the ground: the whole world as muted land, the lots the town owns as
-// bright grass with a tile grid, and a "for sale" sign on every lot you could
-// buy next. Rebuilt whenever the land changes (rare), so it can be simple.
+// bright grass with a tile grid, a sandy beach along the coast, the sea with
+// gentle waves, and a "for sale" sign on every lot you could buy next. The
+// land is rebuilt whenever it changes (rare), so it can be simple.
 
-const COLORS = { owned: '#7cc46a', unowned: '#a3b98c', grid: '#5a9a4c' }
+const COLORS = { owned: '#7cc46a', unowned: '#a3b98c', grid: '#5a9a4c', sand: '#e9d9a6', sea: '#3d8fc6' }
+// How far the sea reaches past the edges of the world, so it fades into the distance.
+const SEA_BEYOND = 40
 
 export class LandView {
   // Called when a "for sale" sign is clicked.
@@ -28,6 +33,7 @@ export class LandView {
   private owned: THREE.Mesh | null = null
   private grid: THREE.LineSegments | null = null
   private signs = new Map<string, CSS2DObject>()
+  private sea: THREE.Mesh<THREE.BufferGeometry, THREE.MeshStandardMaterial>
 
   constructor(scene: THREE.Scene, city: City) {
     this.scene = scene
@@ -40,6 +46,8 @@ export class LandView {
     )
     world.receiveShadow = true
     scene.add(world)
+    this.sea = this.createSea()
+    scene.add(this.sea, this.createBeach())
 
     city.onChange((event) => {
       if (event.kind === 'land') this.rebuild()
@@ -62,7 +70,15 @@ export class LandView {
     const lines: number[] = []
     for (const { lot } of this.city.ownedLots()) {
       const center = footprintCenter(lotCorner(lot), LOT_FOOTPRINT)
-      squares.push(new THREE.PlaneGeometry(LOT_SIZE, LOT_SIZE).rotateX(-Math.PI / 2).translate(center.x, 0.005, center.z))
+      // Grass up to the shore in each column of the lot (the sea covers the rest).
+      for (let i = 0; i < LOT_SIZE; i++) {
+        const x = lotCorner(lot).x + i
+        const z0 = lotCorner(lot).z
+        const dry = Math.min(LOT_SIZE, coastZ(x) - z0)
+        if (dry <= 0) continue
+        const strip = tileToWorld({ x, z: z0 })
+        squares.push(new THREE.PlaneGeometry(1, dry).rotateX(-Math.PI / 2).translate(strip.x, 0.005, strip.z - 0.5 + dry / 2))
+      }
       // Tile grid lines for this lot, as pairs of points.
       const x0 = center.x - LOT_SIZE / 2
       const z0 = center.z - LOT_SIZE / 2
@@ -89,6 +105,60 @@ export class LandView {
       }
     }
     this.refreshSigns()
+  }
+
+  // Called every frame: a slow swell across the sea.
+  update(seconds: number) {
+    const pos = this.sea.geometry.getAttribute('position') as THREE.BufferAttribute
+    for (let i = 0; i < pos.count; i++) {
+      const x = pos.getX(i)
+      const z = pos.getZ(i)
+      // Kept above the ground plane (y = 0) even in the troughs.
+      pos.setY(i, 0.06 + 0.03 * Math.sin(seconds * 1.2 + x * 0.6 + z * 0.4))
+    }
+    // flatShading works out lighting per triangle on the GPU, so moving the
+    // vertices is enough: no need to recompute normals every frame.
+    pos.needsUpdate = true
+  }
+
+  // The sea: one strip per world column, from the coast out past the world's
+  // edge, cut into 1-tile segments so the waves have vertices to move.
+  private createSea() {
+    const strips: THREE.BufferGeometry[] = []
+    for (let x = -SEA_BEYOND; x < GRID_SIZE + SEA_BEYOND; x++) {
+      const from = x >= 0 && x < GRID_SIZE ? coastZ(x) : coastZ(Math.max(0, Math.min(GRID_SIZE - 1, x)))
+      const length = GRID_SIZE + SEA_BEYOND - from
+      const start = tileToWorld({ x, z: from })
+      strips.push(new THREE.PlaneGeometry(1, length, 1, length).rotateX(-Math.PI / 2).translate(start.x, 0, start.z - 0.5 + length / 2))
+    }
+    const geometry = mergeGeometries(strips)
+    for (const g of strips) g.dispose()
+    return new THREE.Mesh(
+      geometry,
+      new THREE.MeshStandardMaterial({ color: COLORS.sea, roughness: 0.35, metalness: 0.1, flatShading: true }),
+    )
+  }
+
+  // Sand on every land tile that touches the sea.
+  private createBeach() {
+    const tiles: THREE.BufferGeometry[] = []
+    for (let x = 0; x < GRID_SIZE; x++) {
+      for (let z = coastZ(x) - 2; z < coastZ(x); z++) {
+        const tile = { x, z }
+        const touches = [
+          { x: x + 1, z },
+          { x: x - 1, z },
+          { x, z: z + 1 },
+        ].some(isWater)
+        if (!touches) continue
+        const c = tileToWorld(tile)
+        tiles.push(new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2).translate(c.x, 0.012, c.z))
+      }
+    }
+    const mesh = new THREE.Mesh(mergeGeometries(tiles), new THREE.MeshStandardMaterial({ color: COLORS.sand }))
+    mesh.receiveShadow = true
+    for (const g of tiles) g.dispose()
+    return mesh
   }
 
   private addSign(lot: Lot) {

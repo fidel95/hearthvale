@@ -1,7 +1,21 @@
 import { BUILDINGS_BY_ID, RENAMED_BUILDING_IDS, type BuildingType } from './buildings'
 import { CROPS_BY_ID, cropState, type CropType, type PlantedCrop } from './crops'
-import { GRID_SIZE, footprintTiles, inBounds, lotInWorld, lotKey, lotNeighbors, lotOf, type Lot, type Tile } from './grid'
+import {
+  GRID_SIZE,
+  LOT_FOOTPRINT,
+  footprintTiles,
+  inBounds,
+  lotCorner,
+  lotInWorld,
+  lotKey,
+  lotNeighbors,
+  lotOf,
+  type Lot,
+  type Tile,
+} from './grid'
 import { START_LOTS, START_LOT_VALUE, expansionPrice } from './land'
+import { edgeTiles } from './communityRules'
+import { isWater } from './terrain'
 
 // The city's state: coins, which buildings exist and which tiles they cover.
 // No three.js in here. CityView watches for changes and draws them, which
@@ -121,9 +135,12 @@ export class City {
     return expansionPrice(this.expansions + 1)
   }
 
-  // A lot can be bought if it's in the world, not owned yet, and next to land you own.
+  // A lot can be bought if it's in the world, not owned yet, next to land you
+  // own, and not entirely sea.
   canBuyLot(lot: Lot): boolean {
-    return lotInWorld(lot) && !this.ownsLot(lot) && lotNeighbors(lot).some((n) => this.ownsLot(n))
+    if (!lotInWorld(lot) || this.ownsLot(lot) || !lotNeighbors(lot).some((n) => this.ownsLot(n))) return false
+    const corner = lotCorner(lot)
+    return footprintTiles(corner, LOT_FOOTPRINT).some((t) => !isWater(t))
   }
 
   buyLot(lot: Lot): boolean {
@@ -144,11 +161,15 @@ export class City {
 
   // ignoreId lets a building being moved overlap its own current spot.
   canPlace(type: BuildingType, tile: Tile, ignoreId?: number): boolean {
-    return footprintTiles(tile, type.size).every((t) => {
-      if (!inBounds(t) || !this.ownsTile(t)) return false
+    const fits = footprintTiles(tile, type.size).every((t) => {
+      if (!inBounds(t) || !this.ownsTile(t) || isWater(t)) return false
       const id = this.occupied[t.z * GRID_SIZE + t.x]
       return id === null || id === ignoreId
     })
+    if (!fits) return false
+    // Docks stand on the shore: at least two of the tiles along their edges must be sea.
+    if (type.onShore) return edgeTiles({ type, tile }).filter(isWater).length >= 2
+    return true
   }
 
   // free: true skips the cost, for the starting town.

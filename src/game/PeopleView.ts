@@ -2,6 +2,7 @@ import * as THREE from 'three'
 import type { City, PlacedBuilding } from './City'
 import { inBounds, tileToWorld, type Tile } from './grid'
 import { findPath } from './pathfinding'
+import { isWater } from './terrain'
 
 // Residents walking around town. Purely for looks: nothing here changes the
 // game, and nothing is saved. Each home sends out about one walker per two
@@ -82,7 +83,7 @@ export class PeopleView {
 
   // A walker can stand on owned land that's empty or a road.
   private passable = (tile: Tile) => {
-    if (!inBounds(tile) || !this.city.ownsTile(tile)) return false
+    if (!inBounds(tile) || !this.city.ownsTile(tile) || isWater(tile)) return false
     const here = this.city.buildingAt(tile)
     return !here || here.type.category === 'road'
   }

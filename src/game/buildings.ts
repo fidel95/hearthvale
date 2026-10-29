@@ -39,6 +39,8 @@ export interface BuildingType {
   upkeep?: number
   // Community buildings: homes and shops within `radius` tiles earn `bonus` more (communityRules.ts).
   amenity?: { bonus: number; radius: number }
+  // Must be built on the shore, next to the sea (docks).
+  onShore?: boolean
   // Depreciation period in years, when it differs from its category's (taxRules.ts).
   recoveryYears?: number
   // How to draw it when there's no model (or the model fails to load).
