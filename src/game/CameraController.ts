@@ -11,20 +11,29 @@ const MAX_ZOOM = 3
 // Below this it's a click, so tiny hand jitters don't swallow clicks.
 const DRAG_THRESHOLD = 5
 
+type ScreenPoint = { x: number; y: number }
+
+// Pans and zooms the camera with mouse (drag + wheel) or touch (drag + pinch),
+// and reports clicks/taps that weren't part of a drag.
 export class CameraController {
   // The ground point at the center of the screen. Panning moves this.
   readonly target = new THREE.Vector3()
 
-  // Called when the user clicks (presses and releases without dragging).
+  // Called when the user clicks or taps (presses and releases without dragging).
   onClick?: (clientX: number, clientY: number) => void
 
   private camera: THREE.OrthographicCamera
   private canvas: HTMLCanvasElement
   private raycaster = new THREE.Raycaster()
   private groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0) // the y = 0 plane
-  private pointerDown: { x: number; y: number } | null = null
+
+  // Every finger (or the mouse) currently pressed on the canvas.
+  private pointers = new Map<number, ScreenPoint>()
+  // The current press-move-release gesture, from first press to last release.
+  private gesture: { start: ScreenPoint; moved: boolean; multiTouch: boolean } | null = null
+  // The ground point that should stay under the pointer (or between two fingers).
   private grabPoint: THREE.Vector3 | null = null
-  private dragging = false
+  private pinchStart: { distance: number; zoom: number } | null = null
 
   constructor(camera: THREE.OrthographicCamera, canvas: HTMLCanvasElement) {
     this.camera = camera
@@ -32,7 +41,9 @@ export class CameraController {
 
     canvas.addEventListener('pointerdown', (e) => this.onPointerDown(e))
     canvas.addEventListener('pointermove', (e) => this.onPointerMove(e))
-    canvas.addEventListener('pointerup', (e) => this.onPointerUp(e))
+    canvas.addEventListener('pointerup', (e) => this.onPointerUp(e, true))
+    // The browser cancels a touch when, say, a notification takes over the screen.
+    canvas.addEventListener('pointercancel', (e) => this.onPointerUp(e, false))
     // passive: false lets us call preventDefault so the page itself doesn't scroll
     canvas.addEventListener('wheel', (e) => this.onWheel(e), { passive: false })
 
@@ -54,55 +65,94 @@ export class CameraController {
   }
 
   private onPointerDown(e: PointerEvent) {
-    if (e.button !== 0) return // left mouse button, or a finger
+    if (e.pointerType === 'mouse' && e.button !== 0) return // left button only; right-click is "cancel"
     this.canvas.setPointerCapture(e.pointerId) // keep getting events if the pointer leaves the canvas
-    this.pointerDown = { x: e.clientX, y: e.clientY }
-    this.grabPoint = this.groundPointAt(e.clientX, e.clientY)
-    this.dragging = false
+    this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
+
+    if (this.pointers.size === 1) {
+      this.gesture = { start: { x: e.clientX, y: e.clientY }, moved: false, multiTouch: false }
+      this.grabPoint = this.groundPointAt(e.clientX, e.clientY)
+    } else if (this.gesture) {
+      // A second finger landed: this gesture is now a pinch, never a tap.
+      this.gesture.multiTouch = true
+      this.startPinch()
+    }
   }
 
   private onPointerMove(e: PointerEvent) {
-    if (!this.pointerDown || !this.grabPoint) return
+    if (!this.pointers.has(e.pointerId) || !this.gesture) return
+    this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
 
-    const moved = Math.hypot(e.clientX - this.pointerDown.x, e.clientY - this.pointerDown.y)
-    if (!this.dragging && moved < DRAG_THRESHOLD) return
-    this.dragging = true
+    if (this.pinchStart) {
+      const [a, b] = [...this.pointers.values()]
+      const zoom = this.pinchStart.zoom * (distance(a, b) / this.pinchStart.distance)
+      this.setZoom(zoom)
+      const mid = midpoint(a, b)
+      this.keepGrabPointUnder(mid.x, mid.y)
+      return
+    }
+
+    const moved = Math.hypot(e.clientX - this.gesture.start.x, e.clientY - this.gesture.start.y)
+    if (!this.gesture.moved && moved < DRAG_THRESHOLD) return
+    this.gesture.moved = true
     this.canvas.style.cursor = 'grabbing'
-
-    // "Grab the ground": whatever ground point was under the pointer at the start
-    // of the drag should stay under the pointer. Find where the pointer is now and
-    // shift the camera by the difference.
-    const now = this.groundPointAt(e.clientX, e.clientY)
-    if (!now) return
-    this.target.add(this.grabPoint.clone().sub(now))
-    this.apply()
+    this.keepGrabPointUnder(e.clientX, e.clientY)
   }
 
-  private onPointerUp(e: PointerEvent) {
-    if (!this.pointerDown) return
-    if (!this.dragging) this.onClick?.(e.clientX, e.clientY)
-    this.pointerDown = null
+  private onPointerUp(e: PointerEvent, released: boolean) {
+    if (!this.pointers.delete(e.pointerId)) return
+
+    if (this.pointers.size === 1) {
+      // Lifted one finger of a pinch: carry on dragging with the other one.
+      this.pinchStart = null
+      const [rest] = [...this.pointers.values()]
+      this.grabPoint = this.groundPointAt(rest.x, rest.y)
+      if (this.gesture) this.gesture.moved = true
+      return
+    }
+    if (this.pointers.size > 0) return
+
+    const g = this.gesture
+    if (released && g && !g.moved && !g.multiTouch) this.onClick?.(e.clientX, e.clientY)
+    this.gesture = null
     this.grabPoint = null
-    this.dragging = false
+    this.pinchStart = null
     this.canvas.style.cursor = ''
   }
 
   private onWheel(e: WheelEvent) {
     e.preventDefault()
-
     // Zoom toward the cursor: remember the ground point under it, zoom,
     // then pan so that same point is back under the cursor.
-    const before = this.groundPointAt(e.clientX, e.clientY)
-
+    this.grabPoint = this.groundPointAt(e.clientX, e.clientY)
     // Multiplying (instead of adding) makes each scroll step feel the same
     // whether you're zoomed in or out.
-    const zoom = this.camera.zoom * Math.exp(-e.deltaY * 0.001)
+    this.setZoom(this.camera.zoom * Math.exp(-e.deltaY * 0.001))
+    this.keepGrabPointUnder(e.clientX, e.clientY)
+    if (!this.gesture) this.grabPoint = null
+  }
+
+  private startPinch() {
+    const [a, b] = [...this.pointers.values()]
+    this.pinchStart = { distance: Math.max(1, distance(a, b)), zoom: this.camera.zoom }
+    const mid = midpoint(a, b)
+    this.grabPoint = this.groundPointAt(mid.x, mid.y)
+  }
+
+  // "Grab the ground": whatever ground point was under the pointer when the
+  // gesture began should stay under it. Find what's there now and shift the
+  // camera by the difference. Zooming uses the same trick around the cursor.
+  private keepGrabPointUnder(clientX: number, clientY: number) {
+    if (!this.grabPoint) return
+    const now = this.groundPointAt(clientX, clientY)
+    if (!now) return
+    this.target.add(this.grabPoint.clone().sub(now))
+    this.apply()
+  }
+
+  private setZoom(zoom: number) {
     this.camera.zoom = THREE.MathUtils.clamp(zoom, MIN_ZOOM, MAX_ZOOM)
     this.camera.updateProjectionMatrix()
-
-    const after = this.groundPointAt(e.clientX, e.clientY)
-    if (before && after) this.target.add(before.sub(after))
-    this.apply()
   }
 
   // Keep the view over the map, then move the camera to match the target.
@@ -117,4 +167,12 @@ export class CameraController {
     // renders, so refresh it now or the next ray uses the old camera position.
     this.camera.updateMatrixWorld()
   }
+}
+
+function distance(a: ScreenPoint, b: ScreenPoint): number {
+  return Math.hypot(a.x - b.x, a.y - b.y)
+}
+
+function midpoint(a: ScreenPoint, b: ScreenPoint): ScreenPoint {
+  return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }
 }

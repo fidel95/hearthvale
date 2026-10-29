@@ -7,6 +7,7 @@ import { createBuildingObject } from './models'
 // it never decides anything about the game itself.
 export class CityView {
   private objects = new Map<number, THREE.Object3D>()
+  private tops = new Map<number, number>() // cached results of topOf
   private scene: THREE.Scene
 
   constructor(scene: THREE.Scene, city: City) {
@@ -26,6 +27,7 @@ export class CityView {
         case 'removed':
           this.scene.remove(this.objects.get(event.building.id)!)
           this.objects.delete(event.building.id)
+          this.tops.delete(event.building.id)
           break
       }
     })
@@ -41,12 +43,17 @@ export class CityView {
     return this.objects.get(id)?.visible ?? false
   }
 
-  // Height of the building's top, for placing labels above it.
-  // Falls back to a typical height if the model hasn't loaded yet.
+  // Height of the building's top, for placing labels above it. Measuring
+  // means walking every mesh, so we remember the answer once the model has
+  // loaded. Until then we guess a typical height.
   topOf(id: number): number {
+    const cached = this.tops.get(id)
+    if (cached !== undefined) return cached
     const obj = this.objects.get(id)
     const box = obj ? new THREE.Box3().setFromObject(obj) : null
-    return box && !box.isEmpty() ? box.max.y : 1.2
+    if (!box || box.isEmpty()) return 1.2
+    this.tops.set(id, box.max.y)
+    return box.max.y
   }
 
   private position(b: PlacedBuilding) {

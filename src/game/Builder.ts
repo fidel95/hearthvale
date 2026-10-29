@@ -27,6 +27,8 @@ export class Builder {
   mode: Mode = { kind: 'select' }
   onModeChange?: (mode: Mode) => void
   onHoverBuilding?: (building: PlacedBuilding | null) => void
+  // Short messages for the player, e.g. why a click did nothing.
+  onNotice?: (message: string) => void
 
   private scene: THREE.Scene
   private city: City
@@ -112,7 +114,8 @@ export class Builder {
       }
       case 'build':
         // Stay in build mode so you can place several in a row.
-        this.city.place(mode.type, anchorFor(mode.type, tile))
+        if (!this.city.canAfford(mode.type)) this.onNotice?.(`Not enough coins for a ${mode.type.name}`)
+        else if (!this.city.place(mode.type, anchorFor(mode.type, tile))) this.onNotice?.("It doesn't fit there")
         break
       case 'move':
         if (!mode.carrying) {
@@ -120,6 +123,8 @@ export class Builder {
           if (picked) this.setMode({ kind: 'move', carrying: picked })
         } else if (this.city.move(mode.carrying.id, anchorFor(mode.carrying.type, tile))) {
           this.setMode({ kind: 'move', carrying: null })
+        } else {
+          this.onNotice?.("It doesn't fit there")
         }
         break
       case 'demolish': {

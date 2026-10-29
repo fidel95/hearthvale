@@ -35,6 +35,7 @@ export class IncomeView {
 
     const infoEl = document.createElement('div')
     infoEl.className = 'info-card'
+    infoEl.append(document.createElement('strong'), document.createElement('span'))
     this.info = new CSS2DObject(infoEl)
     this.info.center.set(0.5, 1) // anchor the card's bottom-middle to the point
     this.info.visible = false
@@ -90,10 +91,11 @@ export class IncomeView {
         ? `Ready! Click to collect 🪙 ${b.type.income.coins}`
         : `🪙 ${b.type.income.coins} in ${formatTime(b.readyAt - now)}`
     }
-    const el = this.info.element
     // Only touch the DOM when the text changes; rewriting it every frame is wasteful.
-    const html = `<strong>${b.type.name}</strong>${status ? `<span>${status}</span>` : ''}`
-    if (el.innerHTML !== html) el.innerHTML = html
+    const [title, line] = this.info.element.children as unknown as [HTMLElement, HTMLElement]
+    if (title.textContent !== b.type.name) title.textContent = b.type.name
+    if (line.textContent !== status) line.textContent = status
+    line.hidden = status === ''
   }
 
   private abovePoint(b: PlacedBuilding): THREE.Vector3 {
@@ -124,9 +126,11 @@ export class IncomeView {
     this.bubbles.delete(id)
   }
 
-  private popup(building: PlacedBuilding, text: string) {
+  // A short message that floats up from a building and fades out.
+  // variant 'tax' is the smaller grey one for sales tax.
+  popup(building: PlacedBuilding, text: string, variant: 'coins' | 'tax' = 'coins') {
     const el = document.createElement('div')
-    el.className = 'popup'
+    el.className = `popup popup-${variant}`
     el.textContent = text
     const popup = new CSS2DObject(el)
     popup.center.set(0.5, 1)

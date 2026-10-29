@@ -1,9 +1,10 @@
-import type { BuildingType } from './buildings'
+import { BUILDINGS_BY_ID, type BuildingType } from './buildings'
 import { GRID_SIZE, footprintTiles, inBounds, type Tile } from './grid'
 
 // The city's state: coins, which buildings exist and which tiles they cover.
 // No three.js in here. CityView watches for changes and draws them, which
-// keeps the rules testable and makes saving (Stage 6) a matter of dumping this data.
+// keeps the rules testable (City.test.ts) and makes saving a matter of
+// dumping this data (toSave / load).
 
 const STARTING_COINS = 600
 
@@ -13,8 +14,16 @@ export interface PlacedBuilding {
   tile: Tile // the footprint's lowest corner tile
   // When its income can next be collected, as a Date.now() timestamp.
   // Real clock time (not "seconds since the game started") so timers keep
-  // running while the game is closed, which Stage 6 relies on.
+  // running while the game is closed: rent is waiting when you come back.
   readyAt: number
+}
+
+// The plain-JSON form of a City, for the save file. Buildings store their
+// type's id, not the whole type, so catalog changes apply to old saves.
+export interface CitySave {
+  coins: number
+  nextId: number
+  buildings: { id: number; typeId: string; tile: Tile; readyAt: number }[]
 }
 
 export type CityEvent =
@@ -33,7 +42,8 @@ export class City {
   private listeners: ((event: CityEvent) => void)[] = []
   private _coins = STARTING_COINS
 
-  // A getter with no setter: other code can read coins but only City changes them.
+  // A getter with no setter: other code can read coins but must go through
+  // place / collect / adjustCoins to change them.
   get coins() {
     return this._coins
   }
@@ -79,7 +89,7 @@ export class City {
     this.buildings.set(building.id, building)
     this.mark(building, building.id)
     this.emit({ kind: 'added', building })
-    if (!free) this.addCoins(-type.cost)
+    if (!free) this.adjustCoins(-type.cost)
     return building
   }
 
@@ -115,12 +125,44 @@ export class City {
     // so leaving money uncollected doesn't stack up extra payouts.
     building.readyAt = now + seconds * 1000
     this.emit({ kind: 'collected', building, amount: coins })
-    this.addCoins(coins)
+    this.adjustCoins(coins)
     return coins
   }
 
-  private addCoins(delta: number) {
+  // Add (or, with a negative delta, take away) coins. Unlike building, taxes
+  // may push coins below zero: that's debt, and it accrues late penalties.
+  adjustCoins(delta: number) {
+    if (delta === 0) return
     this._coins += delta
+    this.emit({ kind: 'coins', coins: this._coins })
+  }
+
+  toSave(): CitySave {
+    return {
+      coins: this._coins,
+      nextId: this.nextId,
+      buildings: [...this.buildings.values()].map((b) => ({ id: b.id, typeId: b.type.id, tile: b.tile, readyAt: b.readyAt })),
+    }
+  }
+
+  // Rebuild a City from a save. Meant for a fresh, empty City. Buildings whose
+  // type no longer exists, or that would overlap, are skipped with a warning
+  // rather than breaking the whole save.
+  load(save: CitySave) {
+    for (const saved of save.buildings) {
+      const type = BUILDINGS_BY_ID.get(saved.typeId)
+      if (!type || !this.canPlace(type, saved.tile)) {
+        console.warn('Skipping saved building that no longer fits:', saved)
+        continue
+      }
+      const building = { id: saved.id, type, tile: saved.tile, readyAt: saved.readyAt }
+      this.buildings.set(building.id, building)
+      this.mark(building, building.id)
+      this.emit({ kind: 'added', building })
+      this.nextId = Math.max(this.nextId, building.id + 1)
+    }
+    this.nextId = Math.max(this.nextId, save.nextId)
+    this._coins = save.coins
     this.emit({ kind: 'coins', coins: this._coins })
   }
 

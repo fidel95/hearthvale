@@ -1,9 +1,14 @@
+/* Hearthvale styles. Colors live in variables so the whole look can be
+   retuned in one place. */
 :root {
-  --panel: rgba(255, 252, 245, 0.95);
+  --panel: rgba(255, 252, 245, 0.96);
   --ink: #3b2f22;
   --ink-soft: #7a6a55;
   --accent: #e08a2c;
   --border: #e3d6bf;
+  --good: #3a8f5c;
+  --bad: #c2412d;
+  --gold: #ffd84d;
 }
 
 * {
@@ -27,53 +32,202 @@ body {
 
 #app canvas {
   display: block;
-  touch-action: none; /* let our pointer code handle touch drags, not the browser */
+  touch-action: none; /* let our pointer code handle touch drags and pinches, not the browser */
 }
 
-/* The HUD covers the screen but lets clicks fall through to the canvas,
+[hidden] {
+  display: none !important;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+}
+
+/* ---- HUD layout ----
+   The HUD covers the screen but lets clicks fall through to the canvas,
    except on its actual panels and buttons. */
+
 .hud {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 16px;
 }
 
+.status,
 .hint,
+.toast,
+.corner-button,
 .catalog,
 .toolbar {
   pointer-events: auto;
 }
 
+.status {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 8px 14px 10px;
+  min-width: 150px;
+}
+
+.hud-top {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  translate: -50% 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: max-content;
+  max-width: calc(100% - 32px);
+}
+
+.corner-button {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--panel);
+  font-size: 13px;
+  cursor: pointer;
+}
+
 .hud-bottom {
-  margin-top: auto;
-  width: 100%;
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: 16px;
   display: flex;
   flex-direction: column;
   align-items: center;
 }
 
-.hud [hidden] {
-  display: none;
+/* Phones: the top-middle messages move below the status box instead of overlapping it. */
+@media (max-width: 640px) {
+  .hud-top {
+    top: 104px;
+  }
 }
 
+/* ---- Coins and calendar ---- */
+
+.coins {
+  font-weight: 700;
+  font-size: 18px;
+  font-variant-numeric: tabular-nums; /* digits all the same width, so the box doesn't jiggle */
+}
+
+.coins.in-debt {
+  color: var(--bad);
+}
+
+.coins.bump {
+  animation: bump 0.25s ease-out;
+}
+
+@keyframes bump {
+  50% {
+    scale: 1.08;
+  }
+}
+
+.date-label {
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+
+.month-bar {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+.month-bar-fill {
+  height: 100%;
+  background: var(--accent);
+}
+
+/* ---- Hints and toasts ---- */
+
 .hint {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   background: var(--ink);
   color: #fff;
-  padding: 8px 14px;
+  padding: 6px 6px 6px 14px;
   border-radius: 999px;
   font-size: 14px;
 }
 
+.hint-done {
+  border: none;
+  border-radius: 999px;
+  padding: 4px 12px;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.toasts {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.toast {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--good);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 14px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+  animation: toast 3.5s ease-in-out forwards;
+}
+
+.toast-warn {
+  border-left-color: var(--bad);
+}
+
+@keyframes toast {
+  0% {
+    opacity: 0;
+    translate: 0 -8px;
+  }
+  8%,
+  85% {
+    opacity: 1;
+    translate: 0 0;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* ---- Build catalog and toolbar ---- */
+
 .catalog {
   margin-bottom: 12px;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
   gap: 8px;
-  width: min(600px, 100%);
+  width: min(640px, 100%);
+  max-height: 45vh;
+  overflow-y: auto;
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 14px;
@@ -89,8 +243,7 @@ body {
   border: 1px solid var(--border);
   border-radius: 10px;
   background: #fff;
-  font: inherit;
-  color: inherit;
+  text-align: left;
   cursor: pointer;
 }
 
@@ -98,32 +251,36 @@ body {
   border-color: var(--accent);
 }
 
+.catalog-item:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  border-color: var(--border);
+}
+
 .catalog-name {
   font-weight: 600;
 }
 
 .catalog-meta {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--ink-soft);
 }
 
 .toolbar {
   display: flex;
-  gap: 8px;
+  gap: 4px;
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 14px;
-  padding: 8px;
+  padding: 6px;
 }
 
 .tool {
-  padding: 10px 18px;
+  padding: 10px 16px;
   border: none;
   border-radius: 10px;
   background: transparent;
-  font: inherit;
   font-weight: 600;
-  color: inherit;
   cursor: pointer;
 }
 
@@ -136,39 +293,16 @@ body {
   color: #fff;
 }
 
-/* ---- Coins ---- */
-
-.coins {
-  position: absolute;
-  top: 16px;
-  left: 16px;
-  pointer-events: auto;
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  padding: 8px 16px;
-  font-weight: 700;
-  font-size: 18px;
-  font-variant-numeric: tabular-nums; /* digits all the same width, so the pill doesn't jiggle */
-}
-
-.coins.bump {
-  animation: bump 0.25s ease-out;
-}
-
-@keyframes bump {
-  50% {
-    transform: scale(1.12);
+@media (max-width: 400px) {
+  .tool {
+    padding: 10px 11px;
   }
 }
 
-.catalog-item:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-  border-color: var(--border);
-}
-
-/* ---- Labels over buildings (positioned by CSS2DRenderer) ---- */
+/* ---- Labels over buildings (positioned by CSS2DRenderer) ----
+   CSS2DRenderer positions labels by setting `transform` every frame, so to
+   nudge or animate them we use the separate `translate`/`scale` properties,
+   which stack on top of it instead of overwriting it. (Margins do nothing here.) */
 
 .labels {
   position: absolute;
@@ -176,9 +310,6 @@ body {
   pointer-events: none;
 }
 
-/* CSS2DRenderer positions labels by setting `transform` every frame, so to
-   nudge or animate them we use the separate `translate`/`scale` properties,
-   which stack on top of it instead of overwriting it. (Margins do nothing here.) */
 /* The button is an invisible, motionless click target... */
 .bubble {
   pointer-events: auto;
@@ -201,7 +332,7 @@ body {
   pointer-events: none;
   border-radius: 50%;
   border: 2px solid #fff;
-  background: #ffd84d;
+  background: var(--gold);
   box-shadow: 0 3px 8px rgba(0, 0, 0, 0.25);
   font-size: 20px;
   line-height: 1;
@@ -218,7 +349,7 @@ body {
   height: 10px;
   translate: -50% 0;
   rotate: 45deg;
-  background: #ffd84d;
+  background: var(--gold);
   border-right: 2px solid #fff;
   border-bottom: 2px solid #fff;
   z-index: -1;
@@ -236,19 +367,42 @@ body {
 
 .popup {
   /* CSS2DRenderer sets z-index inline every frame to sort labels by depth;
-     !important wins over that so pop-ups always show on top of info cards. */
+     !important wins over that so pop-ups always show on top. */
   z-index: 1000 !important;
   font-weight: 800;
+  white-space: nowrap;
+  animation: float-up 1s ease-out forwards;
+}
+
+.popup-coins {
   font-size: 22px;
-  color: #ffd84d;
+  color: var(--gold);
   -webkit-text-stroke: 1px #6b4108;
   text-shadow: 0 2px 0 #6b4108, 0 0 8px rgba(0, 0, 0, 0.35);
-  animation: float-up 1s ease-out forwards;
+}
+
+/* Sales tax: smaller, grey, and starting lower so it doesn't cover the coins pop-up. */
+.popup-tax {
+  font-size: 13px;
+  color: #fff;
+  background: rgba(59, 47, 34, 0.85);
+  padding: 2px 8px;
+  border-radius: 999px;
+  translate: 0 24px;
+  animation-name: float-up-tax;
+  animation-duration: 1.6s;
 }
 
 @keyframes float-up {
   to {
     translate: 0 -50px;
+    opacity: 0;
+  }
+}
+
+@keyframes float-up-tax {
+  to {
+    translate: 0 -10px;
     opacity: 0;
   }
 }
@@ -268,4 +422,153 @@ body {
 
 .info-card.over-bubble {
   translate: 0 -62px;
+}
+
+/* ---- Panels (Taxes, Tax Day) ---- */
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(30, 24, 16, 0.35);
+  z-index: 10;
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  width: min(560px, 100%);
+  max-height: calc(100% - 32px);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+.panel-header h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.panel-close {
+  border: none;
+  background: none;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+
+.panel-body {
+  overflow-y: auto;
+  padding: 4px 18px 18px;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.tax-section h3 {
+  margin: 16px 0 6px;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-soft);
+}
+
+.tax-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.tax-table td {
+  padding: 3px 0;
+}
+
+.tax-table .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  padding-left: 12px;
+}
+
+.tax-table .total td {
+  font-weight: 700;
+  border-top: 1px solid var(--border);
+  padding-top: 5px;
+}
+
+.tax-table .minus td,
+.tax-table .muted td {
+  color: var(--ink-soft);
+}
+
+.muted {
+  color: var(--ink-soft);
+}
+
+.warning {
+  margin: 14px 0 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #fbe4df;
+  color: var(--bad);
+  font-weight: 600;
+}
+
+.brackets {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.bracket {
+  display: grid;
+  grid-template-columns: 40px 1fr auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.bracket-rate {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.bracket-track {
+  height: 10px;
+  border-radius: 5px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+.bracket-fill {
+  height: 100%;
+  background: var(--accent);
+}
+
+.bracket-detail {
+  font-size: 12px;
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.explainer summary {
+  margin-top: 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.explainer p {
+  margin: 8px 0;
 }

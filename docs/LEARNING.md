@@ -1,0 +1,158 @@
+# Learning journal
+
+What each stage of Hearthvale teaches, where to find it in the code, and
+exercises to try. Read the files alongside this; the comments in the code pick
+up where this leaves off.
+
+---
+
+## Stage 0: a 3D scene in the browser
+
+**Files:** `index.html`, `src/main.ts`, `src/game/Game.ts`
+
+- **The toolchain.** Vite serves TypeScript straight to the browser in
+  development and bundles it for production. `tsconfig.json` turns on `strict`
+  mode, so TypeScript catches `null`s and typos before you run anything.
+- **The three.js trio:**
+  - the *scene* holds every object,
+  - the *camera* decides what's visible,
+  - the *renderer* draws the scene through the camera onto a `<canvas>`.
+- **Orthographic vs. perspective cameras.** A perspective camera makes distant
+  things smaller, like your eyes. An orthographic one doesn't. Put an
+  orthographic camera at `(20, 20, 20)` looking at the origin and you get the
+  isometric view classic city builders use.
+- **Lights and shadows.** A `HemisphereLight` gives soft sky/ground fill. A
+  `DirectionalLight` is the sun; it casts shadows from objects with `castShadow`
+  onto objects with `receiveShadow`.
+- **The game loop.** `setAnimationLoop` calls `tick()` once per screen refresh.
+
+**Try it:** change the camera offset in `CameraController.ts` to
+`(20, 30, 20)`. What happens to the view angle? Then change the sun's position
+in `Game.addLights` and watch the shadows move.
+
+---
+
+## Stage 1: from a mouse click to a tile
+
+**Files:** `src/game/CameraController.ts`, `src/game/grid.ts`
+
+- **Coordinate spaces.** A click arrives as screen pixels; three.js wants
+  *normalized device coordinates* (−1 to 1, with +Y up); the game wants tiles.
+  `groundPointAt` and `worldToTile` convert between them.
+- **Raycasting.** Shoot a ray from the camera through the clicked pixel and
+  find where it hits the ground plane (`y = 0`). It's just a line-plane
+  intersection; no meshes involved.
+- **"Grab the ground" panning.** Remember the ground point under the pointer
+  when the drag starts, then keep moving the camera so that point stays under
+  the pointer. Zoom-toward-cursor and pinch zoom reuse the same trick.
+- **Click vs. drag.** A press only becomes a drag after moving 5 px, so shaky
+  clicks still count as clicks.
+- **Pointer events.** One API for mouse, pen and touch. Each finger has its
+  own `pointerId`, which is how pinch works. `setPointerCapture` keeps events
+  coming when the pointer leaves the canvas.
+
+**Try it:** add keyboard panning with the arrow keys. Hint: change
+`controls.target` and call the same code `apply()` uses.
+
+---
+
+## Stage 2: data-driven buildings
+
+**Files:** `buildings.ts`, `City.ts`, `CityView.ts`, `models.ts`, `Builder.ts`
+
+- **Data, not code.** Every building is an entry in `BUILDING_TYPES`. Adding a
+  building means adding data; placement, income, taxes and the UI all pick it
+  up.
+- **Separating state from view.** `City` stores what's where and enforces the
+  rules, with no 3D code. `CityView` listens for its events and keeps 3D
+  objects in sync. Because of that split, `City` can be unit tested and saved
+  as JSON.
+- **An occupancy grid.** A flat array with one slot per tile (`z * 20 + x`)
+  answers "what's here?" in one step, with no raycasting against models.
+- **Discriminated unions.** `Mode` and `CityEvent` are unions with a `kind`
+  field. Inside `switch (mode.kind)` TypeScript knows exactly which fields
+  exist; for example, `mode.type` is only reachable in build mode.
+- **Async loading with a cache.** `models.ts` stores *promises* in a `Map`, so
+  ten cottages trigger one download. Objects appear immediately as empty groups
+  and fill in when the model arrives.
+- **Fitting arbitrary models.** Measure a model's bounding box, scale it to the
+  footprint, then move it so its base sits on the ground.
+
+**Try it:** add a building. Pick a model from `public/models/suburban/`, add an
+entry with `model: suburban('building-type-m')`, and give it a size, a cost and
+income. No other code changes are needed.
+
+---
+
+## Stage 3: an economy on timers
+
+**Files:** `City.ts` (`collect`, `readyAt`), `IncomeView.ts`, `ui/Hud.ts`
+
+- **Timestamps, not countdowns.** Each building stores `readyAt`, a moment in
+  time. Nothing decrements every frame; we just compare `now >= readyAt`. It's
+  cheaper, survives background tabs, and makes offline progress free.
+- **HTML in a 3D world.** `CSS2DRenderer` moves ordinary HTML elements to the
+  screen position of 3D points every frame, so the bubbles get CSS styling
+  and animation.
+- **One-way data flow.** `City` changes coins and announces it. The counter,
+  the catalog's greyed-out buttons and the tax window each update themselves.
+- **Bugs worth remembering:**
+  - Clicks on an element that is itself animating fell through to the canvas.
+    The fix: a still button with an animated child.
+  - `CSS2DRenderer` positions with `transform`, so `margin` does nothing; use
+    the `translate` property.
+
+**Try it:** make homes pay a bonus if collected within 5 seconds of being
+ready. Where should that rule live: in `City`, in `IncomeView`, or in
+`buildings.ts` data? (Answer: the rule goes in `City.collect`, the bonus amount
+in the building data.)
+
+---
+
+## Stage 3.5: saving, a calendar and taxes
+
+**Files:** `save.ts`, `GameClock.ts`, `taxRules.ts`, `Taxes.ts`, `ui/TaxPanel.ts`,
+the `*.test.ts` files, and [TAXES.md](TAXES.md)
+
+- **Serialization.** Save *data*, not objects: buildings are saved by `typeId`,
+  so changing a building's stats updates old saves. Loading rebuilds the town
+  by replaying `added` events, so the views need no special loading code.
+- **Defensive storage.** `localStorage` can throw (private mode) or hold
+  garbage, so every access is in `try/catch`, and the format carries a
+  `version` for future upgrades.
+- **Debouncing.** Autosave waits one second after the last change, so a burst
+  of changes is one write. It also saves immediately on `pagehide`.
+- **Two clocks.** Income uses real time; the calendar uses play time. The
+  [architecture doc](ARCHITECTURE.md#two-kinds-of-time) explains why mixing
+  them up would be a disaster.
+- **Pure functions.** `taxRules.ts` has no state: same input, same output. That
+  makes it trivial to test and easy to trust.
+- **Accrual accounting.** Property tax and depreciation build up month by
+  month and are paid later. Sales tax is a *liability*: coins you hold but
+  owe.
+- **Unit tests.** `npm test` runs 26 tests in under a second. They pin down
+  the rules (brackets, rounding, quarter ends, Tax Day, penalties, saves), so
+  refactors can't silently break them.
+- **Real-world modeling.** Every tax rule has a real counterpart, and
+  [TAXES.md](TAXES.md) explains each one. While building it we caught a
+  mistake: demolition losses aren't deductible in the US (IRC §280B). Good
+  documentation forces you to check your assumptions.
+
+**Try it:**
+
+1. Change `SALES_TAX_RATE` to `0.1`, run `npm test`, and read which tests fail
+   and why. Then put it back.
+2. Run `npm run dev`, open `http://localhost:5173/?speed=60`, build a few
+   shops, and watch a year go by in 12 seconds. Open the Taxes window before
+   and after Tax Day.
+3. Add the 25% cap on late penalties (see "What the game simplifies" in
+   TAXES.md), with a test.
+
+---
+
+## Coming next
+
+- **Stage 4, farms:** crops with growth stages and spoilage, which are state
+  machines driven by timestamps. Farm income will be a new line on the return.
+- **Stage 5:** energy, XP and levels.
+- **Stage 8:** a supply chain, with cost of goods sold as a real deduction.
