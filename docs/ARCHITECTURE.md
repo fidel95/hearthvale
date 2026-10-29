@@ -415,6 +415,11 @@ category (`rail`, the one new mechanic at level 14) and is drawn by `RailView`
 like roads; `isTrack()` covers both wherever roads and track behave alike
 (drawn by dragging, removed with the picker, walkable for residents).
 
+`FlightView` flies the airport's plane through a fixed cycle (wait, takeoff
+roll, a Catmull-Rom curve round the town, landing roll, turn round) in the
+airport's own coordinates, then turns and moves it to where the airport
+stands. It banks the plane by how fast its heading changes.
+
 ## People
 
 `PeopleView` is purely visual: nothing is saved and nothing affects the

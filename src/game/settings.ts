@@ -41,7 +41,7 @@ export const DEFAULT_SETTINGS: Settings = {
 export const SETTING_LABELS: Record<SwitchSetting, string> = {
   showGrid: 'Show the tile grid',
   showPeople: 'Show residents walking around',
-  showTraffic: 'Show cars, buses, trains and soldiers',
+  showTraffic: 'Show cars, buses, trains, planes and soldiers',
   confirmPurchases: 'Confirm (✓) before buying a building',
   reduceMotion: 'Reduce motion',
   music: 'Background music',

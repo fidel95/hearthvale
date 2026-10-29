@@ -346,6 +346,27 @@ function createPlaceholder(type: BuildingType): THREE.Group {
       add(new THREE.BoxGeometry(w * 0.95, 0.05, d * 0.32), accent, 0, 0.08 + height * 0.6, d * 0.32)
       break
     }
+    case 'airport': {
+      // A runway along the south side (dashed center line, striped ends), and
+      // to the north a terminal, a control tower and a hangar. The runway's
+      // middle is at z = d * 0.23; FlightView flies planes from it.
+      const runwayZ = d * 0.23
+      add(new THREE.BoxGeometry(w * 0.98, 0.04, d * 0.98), '#9fb59a', 0, 0, 0)
+      add(new THREE.BoxGeometry(w * 0.97, 0.03, d * 0.42), color, 0, 0.04, runwayZ)
+      for (let x = -w / 2 + 1; x < w / 2 - 0.9; x += 0.5) add(new THREE.BoxGeometry(0.25, 0.005, 0.04), '#ffffff', x, 0.07, runwayZ)
+      for (const end of [-1, 1]) {
+        for (const z of [-0.36, -0.2, 0.2, 0.36]) add(new THREE.BoxGeometry(0.3, 0.005, 0.07), '#ffffff', end * (w / 2 - 0.35), 0.07, runwayZ + z)
+      }
+      add(new THREE.BoxGeometry(w * 0.3, height * 0.6, d * 0.28), accent, -w * 0.18, 0.04, -d * 0.3)
+      add(new THREE.BoxGeometry(w * 0.3, 0.06, d * 0.32), '#2f7fe0', -w * 0.18, 0.04 + height * 0.6, -d * 0.3)
+      add(new THREE.CylinderGeometry(0.12, 0.16, height * 1.6, 8), accent, w * 0.08, 0.04, -d * 0.32)
+      add(new THREE.CylinderGeometry(0.26, 0.2, 0.22, 8), '#6fb7e0', w * 0.08, 0.04 + height * 1.6, -d * 0.32)
+      add(new THREE.CylinderGeometry(0.28, 0.28, 0.04, 8), '#4a4f57', w * 0.08, 0.26 + height * 1.6, -d * 0.32)
+      // A half cylinder, open end toward the runway.
+      const hangar = new THREE.CylinderGeometry(0.5, 0.5, 1.1, 10, 1, false, 0, Math.PI).rotateX(Math.PI / 2).rotateZ(Math.PI / 2)
+      add(hangar, '#b8bfc7', w * 0.33, 0.04, -d * 0.28)
+      break
+    }
     case 'barn': {
       // A red barn: walls, a steep two-sided roof (a 4-sided cone stretched long) and white trim.
       add(new THREE.BoxGeometry(w * 0.8, height * 0.6, d * 0.85), color, 0, 0, 0)

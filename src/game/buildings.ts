@@ -17,6 +17,7 @@ export type Category =
   | 'port'
   | 'landmark'
   | 'rail' // railway track and the train station
+  | 'air' // the airport
 
 export type PlaceholderShape =
   | 'house'
@@ -47,6 +48,7 @@ export type PlaceholderShape =
   | 'armybase'
   | 'rail'
   | 'station'
+  | 'airport'
 
 export interface BuildingType {
   id: string
@@ -709,6 +711,23 @@ export const BUILDING_TYPES: BuildingType[] = [
     requiresRail: true,
     recoveryYears: 39, // the station building: nonresidential real property
     placeholder: { shape: 'station', color: '#e9d3b0', accent: '#2f5fc4', height: 1.2 },
+  },
+  {
+    id: 'airport',
+    name: 'Airport',
+    category: 'air',
+    size: { x: 7, z: 3 },
+    cost: 8000,
+    unlockLevel: 15,
+    build: { seconds: 360, materials: { steel: 12, glass: 6, bricks: 10 } },
+    needs: { water: 3, power: 5, trash: 3 },
+    upkeep: 60,
+    unique: true,
+    townBonus: 0.05, // visitors flying in spend money all over town
+    attractsVisitors: { lingerSeconds: 8 },
+    requiresRoad: true, // passengers need to get there
+    recoveryYears: 15, // mostly runway and aprons: land improvements
+    placeholder: { shape: 'airport', color: '#4a4f57', accent: '#e8eef2', height: 0.9 },
   },
 ]
 

@@ -4,7 +4,7 @@ import { Modal, button } from './Sheet'
 
 type LevelUp = Extract<PlayerEvent, { kind: 'levelUp' }>
 
-const CATEGORY_ICON = { home: '🏠', business: '🏪', farm: '🌱', decoration: '🌳', utility: '🏭', community: '🏫', road: '🛣️', storage: '📦', port: '⚓', landmark: '🏛️', rail: '🚆' }
+const CATEGORY_ICON = { home: '🏠', business: '🏪', farm: '🌱', decoration: '🌳', utility: '🏭', community: '🏫', road: '🛣️', storage: '📦', port: '⚓', landmark: '🏛️', rail: '🚆', air: '✈️' }
 
 // The window that celebrates a new level: the coin reward, the energy refill
 // and everything that just unlocked.

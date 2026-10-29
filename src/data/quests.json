@@ -449,6 +449,26 @@
         "coins": 2000,
         "xp": 100
       }
+    },
+    {
+      "id": "airport",
+      "title": "Cleared for Takeoff",
+      "intro": "An airport is the biggest thing a town can build: a runway, a terminal and planes coming and going, bringing visitors from far away.",
+      "after": "railway",
+      "level": 15,
+      "tasks": [
+        {
+          "label": "Build the Airport",
+          "count": 1,
+          "have": {
+            "building": "airport"
+          }
+        }
+      ],
+      "reward": {
+        "coins": 3000,
+        "xp": 150
+      }
     }
   ],
   "achievements": [

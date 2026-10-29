@@ -117,6 +117,7 @@ export const RECOVERY_YEARS: Record<Category, number | null> = {
   port: 15, // docks and wharves are land improvements
   landmark: 39, // nonresidential real property
   rail: 7, // railroad track is 7-year property, IRC §168(e)(3)(C)(i) (the station overrides it)
+  air: 15, // runways, taxiways and aprons are land improvements (asset class 00.3)
 }
 
 // Depreciation for one full month. In the month a building is placed you get

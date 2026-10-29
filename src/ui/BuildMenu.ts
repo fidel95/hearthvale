@@ -19,7 +19,7 @@ const TABS: { label: string; categories: Category[] }[] = [
   { label: '🏪 Businesses', categories: ['business', 'port'] },
   { label: '🏫 Community', categories: ['community', 'utility'] },
   { label: '🌾 Farms', categories: ['farm', 'storage'] },
-  { label: '🛣️ Transport', categories: ['road', 'rail'] },
+  { label: '🛣️ Transport', categories: ['road', 'rail', 'air'] },
   { label: '🌳 Decor', categories: ['decoration'] },
   { label: '🏛️ Landmarks', categories: ['landmark'] },
 ]
@@ -58,7 +58,8 @@ function details(type: BuildingType): string[] {
   if (type.id === 'rail') lines.push('Drag to lay track. A Train Station beside it runs a train to the end of the line and back')
   if (type.requiresRail) lines.push('🛤️ Needs railway track touching one of its sides; its train runs along the track')
   if (type.id === 'bus-stop') lines.push('🚌 Buses drive from stop to stop on your roads')
-  if (type.id === 'army-base') lines.push('🪖 A squad marches through town and a jeep patrols the roads')
+  if (type.id === 'army-base') lines.push('🪖 A squad drills on the parade ground and a jeep patrols the roads')
+  if (type.id === 'airport') lines.push('✈️ Planes take off, fly round the town and land')
   if (type.townBonus) lines.push(`+${Math.round(type.townBonus * 100)}% to all rent and sales in town`)
   if (type.shipSpeedBonus) lines.push(`Ships arrive ${Math.round(type.shipSpeedBonus * 100)}% sooner`)
   if (type.minRating) lines.push(`Needs a city rating of ${type.minRating} (see Town)`)

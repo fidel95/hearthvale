@@ -322,7 +322,9 @@ month, up to 25%, plus interest.
 
 **Railroad track** is 7-year property under IRC §168(e)(3)(C)(i), far
 shorter than the station building beside it (39 years), so in the game track
-depreciates quickly while the station takes decades.
+depreciates quickly while the station takes decades. An **airport** is mostly
+runway, taxiways and aprons, which are land improvements (asset class 00.3,
+15 years), so the game depreciates it over 15.
 
 **In the game:** coins never go below zero. A bill bigger than the coins you
 have takes them all, and the rest is owed (shown as "owe" beside your coins).

@@ -1414,6 +1414,39 @@
       "coinsPerEnergy": null,
       "roads": "—",
       "upgrades": "—"
+    },
+    {
+      "id": "airport",
+      "name": "Airport",
+      "category": "air",
+      "role": "late",
+      "unlockLevel": 15,
+      "quests": [
+        "Cleared for Takeoff"
+      ],
+      "footprint": "7×3",
+      "tiles": 21,
+      "cost": 8000,
+      "materials": "🧱 10 🪟 6 🔩 12",
+      "materialsValue": 570,
+      "totalCost": 8570,
+      "buildSeconds": 360,
+      "cycleSeconds": null,
+      "coinsPerCycle": null,
+      "goodsPerCycle": 0,
+      "netPerCycle": null,
+      "xpPerCycle": null,
+      "buildXp": 560,
+      "residents": 0,
+      "needs": "💧3 🔌5 🗑️3",
+      "upkeepPerMonth": 60,
+      "effect": "",
+      "paybackCycles": null,
+      "paybackMinutes": null,
+      "coinsPerMinute": null,
+      "coinsPerEnergy": null,
+      "roads": "—",
+      "upgrades": "—"
     }
   ],
   "crops": [

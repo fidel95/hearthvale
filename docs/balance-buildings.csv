@@ -44,3 +44,4 @@ bus-stop,Bus Stop,community,middle,7,,1×1,1,150,,0,150,0,,,0,,,7,0,,3,+4% withi
 army-base,Army Base,community,late,12,,3×3,9,2500,🧱 8 🔩 6,270,2770,240,,,0,,,175,0,💧3 🔌3 🗑️2,40,+5% within 6 tiles,,,,,—,—
 rail,Railway Track,rail,late,14,,1×1,1,20,,0,20,0,,,0,,,0,0,,0,,,,,,—,—
 train-station,Train Station,rail,late,14,The Railway Comes to Town,3×2,6,3000,🧱 10 🪟 4 🔩 8,430,3430,300,,,0,,,210,0,💧2 🔌3 🗑️2,30,,,,,,—,—
+airport,Airport,air,late,15,Cleared for Takeoff,7×3,21,8000,🧱 10 🪟 6 🔩 12,570,8570,360,,,0,,,560,0,💧3 🔌5 🗑️3,60,,,,,,—,—

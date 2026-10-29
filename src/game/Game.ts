@@ -48,6 +48,7 @@ import { PeopleView } from './PeopleView'
 import { RailView } from './RailView'
 import { RoadView } from './RoadView'
 import { TrafficView } from './TrafficView'
+import { FlightView } from './FlightView'
 import { ShipView } from './ShipView'
 import { AutoSaver } from './save'
 import { UTILITY_INFO } from './utilityRules'
@@ -105,6 +106,7 @@ export class Game {
   private roadView: RoadView
   private railView: RailView
   private trafficView: TrafficView
+  private flightView: FlightView
   private landView: LandView
   private shipView: ShipView
   private incomeView: IncomeView
@@ -146,6 +148,7 @@ export class Game {
     this.roadView = new RoadView(this.scene, this.city)
     this.railView = new RailView(this.scene, this.city)
     this.trafficView = new TrafficView(this.scene, this.city)
+    this.flightView = new FlightView(this.scene, this.city)
     const builder = new Builder(this.scene, this.city, this.player, this.docks, this.cityView, this.controls, this.renderer.domElement)
     this.incomeView = new IncomeView(this.scene, this.city, this.cityView, this.services, this.docks, (b) => builder.tap(b))
     builder.onHoverBuilding = (b) => this.incomeView.setHovered(b)
@@ -216,6 +219,7 @@ export class Game {
       landView.calmSea = s.reduceMotion
       this.peopleView.setVisible(s.showPeople)
       this.trafficView.setVisible(s.showTraffic)
+      this.flightView.setVisible(s.showTraffic)
       builder.confirmPurchases = s.confirmPurchases
       document.body.classList.toggle('reduce-motion', s.reduceMotion)
       this.cityView.popIn = this.loaded && !s.reduceMotion
@@ -306,6 +310,7 @@ export class Game {
     this.roadView.update()
     this.railView.update()
     this.trafficView.update(Math.min(dt, 100) / 1000)
+    this.flightView.update(Math.min(dt, 100) / 1000)
     this.controls.update(Math.min(dt, 100) / 1000)
     const seconds = frameTime / 1000
     this.landView.update(seconds)
