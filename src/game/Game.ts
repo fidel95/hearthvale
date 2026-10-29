@@ -49,6 +49,9 @@ import { RailView } from './RailView'
 import { RoadView } from './RoadView'
 import { TrafficView } from './TrafficView'
 import { FlightView } from './FlightView'
+import { LeisureView } from './LeisureView'
+import { addMountains } from './MountainView'
+import { WeatherView } from './WeatherView'
 import { ShipView } from './ShipView'
 import { AutoSaver } from './save'
 import { UTILITY_INFO } from './utilityRules'
@@ -107,6 +110,9 @@ export class Game {
   private railView: RailView
   private trafficView: TrafficView
   private flightView: FlightView
+  private leisureView: LeisureView
+  private weather: WeatherView
+  private ambient = new THREE.HemisphereLight('#e8f4ff', '#8fbf6a', 1.3)
   private landView: LandView
   private shipView: ShipView
   private incomeView: IncomeView
@@ -149,6 +155,9 @@ export class Game {
     this.railView = new RailView(this.scene, this.city)
     this.trafficView = new TrafficView(this.scene, this.city)
     this.flightView = new FlightView(this.scene, this.city)
+    this.leisureView = new LeisureView(this.scene, this.city)
+    addMountains(this.scene)
+    this.weather = new WeatherView(this.scene, () => this.controls.target, [this.sun, this.ambient])
     const builder = new Builder(this.scene, this.city, this.player, this.docks, this.cityView, this.controls, this.renderer.domElement)
     this.incomeView = new IncomeView(this.scene, this.city, this.cityView, this.services, this.docks, (b) => builder.tap(b))
     builder.onHoverBuilding = (b) => this.incomeView.setHovered(b)
@@ -220,6 +229,9 @@ export class Game {
       this.peopleView.setVisible(s.showPeople)
       this.trafficView.setVisible(s.showTraffic)
       this.flightView.setVisible(s.showTraffic)
+      this.leisureView.setVisible(s.showPeople)
+      this.weather.enabled = s.weather
+      this.weather.showDrops = !s.reduceMotion
       builder.confirmPurchases = s.confirmPurchases
       document.body.classList.toggle('reduce-motion', s.reduceMotion)
       this.cityView.popIn = this.loaded && !s.reduceMotion
@@ -230,6 +242,12 @@ export class Game {
       this.clock.speed = devSpeed() !== 1 ? devSpeed() : (admin?.calendarSpeed ?? 1)
     })
     window.setInterval(() => this.applyPowers(), 500)
+    // Rain: umbrellas up, the beach empties, and a word about it.
+    this.weather.onChange = (raining) => {
+      this.peopleView.setRaining(raining)
+      this.leisureView.raining = raining
+      this.hud.toast(raining ? '🌧️ It\'s starting to rain. Umbrellas out!' : '☀️ The rain has stopped.', 'info')
+    }
     this.showTaxEvents(taxPanel)
     const cropPicker = new CropPicker(container, this.city, this.player, (message) => this.hud.toast(message))
     builder.onPlantRequest = (plot) => cropPicker.open(plot)
@@ -311,6 +329,9 @@ export class Game {
     this.railView.update()
     this.trafficView.update(Math.min(dt, 100) / 1000)
     this.flightView.update(Math.min(dt, 100) / 1000)
+    this.leisureView.update(Math.min(dt, 100) / 1000)
+    this.weather.update(Math.min(dt, 100) / 1000)
+    this.sound.setRain(this.weather.intensity)
     this.controls.update(Math.min(dt, 100) / 1000)
     const seconds = frameTime / 1000
     this.landView.update(seconds)
@@ -505,6 +526,7 @@ export class Game {
       goods: () => this.city.economy.addGoods(100, 0),
       energy: () => this.fillEnergy(),
       finishTimers: () => this.finishTimers(),
+      toggleRain: () => this.weather.toggle(),
       nextMonth: () => {
         for (const month of this.clock.skipMonth()) {
           this.services.endOfMonth()
@@ -680,7 +702,7 @@ export class Game {
 
   private addLights() {
     // Sky-blue light from above and warm green bounce from below keep shadows colorful, not gray.
-    this.scene.add(new THREE.HemisphereLight('#e8f4ff', '#8fbf6a', 1.3))
+    this.scene.add(this.ambient)
 
     // Shadows are drawn into a square texture covering the sun's "shadow
     // camera" box. Covering the whole 60×60 world would make them blurry, so

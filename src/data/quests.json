@@ -469,6 +469,53 @@
         "coins": 3000,
         "xp": 150
       }
+    },
+    {
+      "id": "beach",
+      "title": "Fun in the Sun",
+      "intro": "A beach on your shore draws sunbathers and swimmers, and makes the homes nearby nicer. Build one where the sand meets the sea.",
+      "after": "harbor",
+      "level": 9,
+      "tasks": [
+        {
+          "label": "Build a Public Beach",
+          "count": 1,
+          "have": {
+            "building": "public-beach"
+          }
+        },
+        {
+          "label": "Build a Playground",
+          "count": 1,
+          "have": {
+            "building": "playground"
+          }
+        }
+      ],
+      "reward": {
+        "coins": 400,
+        "xp": 30
+      }
+    },
+    {
+      "id": "slopes",
+      "title": "Hit the Slopes",
+      "intro": "A Ski Resort sells lift tickets all year round. It needs a road for visitors and plenty of room.",
+      "after": "tycoon",
+      "level": 13,
+      "tasks": [
+        {
+          "label": "Build a Ski Resort",
+          "count": 1,
+          "have": {
+            "building": "ski-resort"
+          }
+        }
+      ],
+      "reward": {
+        "coins": 1500,
+        "xp": 90
+      }
     }
   ],
   "achievements": [

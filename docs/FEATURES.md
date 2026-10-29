@@ -75,6 +75,8 @@ Every item in the design spec, with its status and where it lives.
 | Consistent adjacency rule | ✅ | A road on any tile touching one side (`City.hasRoadAccess`) |
 | Warn before a removal breaks access | ✅ | The Remove window lists what it cuts off |
 | Connectivity visualization | ⏳ | |
+| Parks, beach, ski resort | ✅ | Playground, Sports Field, Central Park, Public Beach (on the shore), Ski Resort; beach goers and skiers (`LeisureView.ts`) |
+| Mountains and weather | ✅ | Snowy mountains beyond the edge (`MountainView.ts`); rain showers with umbrellas and rain sound (`WeatherView.ts`), switchable in Settings |
 | Traffic | ✅ | Cars on roads; buses between Bus Stops; trains on railway track from the Train Station; the Army Base's squad and jeep (`TrafficView.ts`, `routes.ts`); planes at the Airport (`FlightView.ts`) |
 
 ## 4.5 Economy and resources

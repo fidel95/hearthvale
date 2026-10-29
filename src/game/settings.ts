@@ -11,6 +11,7 @@ export interface Settings {
   confirmPurchases: boolean // the ✓ step before buying a building
   reduceMotion: boolean // no bobbing bubbles, floating pop-ups or waves
   music: boolean // gentle background music
+  weather: boolean // rain showers now and then
   soundVolume: number // 0 (muted) to 1
   admin: AdminSettings
 }
@@ -34,6 +35,7 @@ export const DEFAULT_SETTINGS: Settings = {
   confirmPurchases: true,
   reduceMotion: false,
   music: false,
+  weather: true,
   soundVolume: 0.6,
   admin: { enabled: false, freeBuild: false, infiniteEnergy: false, instantTimers: false, calendarSpeed: 1 },
 }
@@ -45,6 +47,7 @@ export const SETTING_LABELS: Record<SwitchSetting, string> = {
   confirmPurchases: 'Confirm (✓) before buying a building',
   reduceMotion: 'Reduce motion',
   music: 'Background music',
+  weather: 'Rain showers',
 }
 
 export class SettingsStore {

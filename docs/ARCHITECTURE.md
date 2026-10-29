@@ -420,6 +420,19 @@ roll, a Catmull-Rom curve round the town, landing roll, turn round) in the
 airport's own coordinates, then turns and moves it to where the airport
 stands. It banks the plane by how fast its heading changes.
 
+## Leisure, mountains and weather
+
+`LeisureView` adds people having fun, for looks only: sunbathers on each
+Public Beach's towels and swimmers off whichever side faces the sea, and
+skiers who zigzag down the Ski Resort's mountain and ride the chairlift up.
+The mountain's shape (`SKI_SLOPE`, `slopeHeight` in models.ts) is shared by
+the model and the skiers, so they stay on the snow. `MountainView` builds the
+countryside and snowy peaks beyond the world's edge once. `WeatherView` runs
+the showers: a schedule, an intensity that eases between 0 and 1, rain streaks
+in a box that follows the view, and dimmer lights and a grayer sky while it
+rains; Game tells PeopleView (umbrellas), LeisureView (the beach empties) and
+the sound (rain noise).
+
 ## People
 
 `PeopleView` is purely visual: nothing is saved and nothing affects the

@@ -49,6 +49,11 @@ export type PlaceholderShape =
   | 'rail'
   | 'station'
   | 'airport'
+  | 'beach'
+  | 'playground'
+  | 'sportsfield'
+  | 'bigpark'
+  | 'skiresort'
 
 export interface BuildingType {
   id: string
@@ -728,6 +733,80 @@ export const BUILDING_TYPES: BuildingType[] = [
     requiresRoad: true, // passengers need to get there
     recoveryYears: 15, // mostly runway and aprons: land improvements
     placeholder: { shape: 'airport', color: '#4a4f57', accent: '#e8eef2', height: 0.9 },
+  },
+  // ---- Parks, the beach and the slopes
+  {
+    id: 'playground',
+    name: 'Playground',
+    category: 'community',
+    size: { x: 2, z: 2 },
+    cost: 250,
+    unlockLevel: 6,
+    upkeep: 4,
+    amenity: { bonus: 0.06, radius: 3 },
+    attractsVisitors: { lingerSeconds: 7 },
+    recoveryYears: 15, // land improvements
+    placeholder: { shape: 'playground', color: '#7fcf62', accent: '#ff7a3d', height: 0.5 },
+  },
+  {
+    id: 'sports-field',
+    name: 'Sports Field',
+    category: 'community',
+    size: { x: 3, z: 2 },
+    cost: 650,
+    unlockLevel: 8,
+    build: { seconds: 90, materials: { lumber: 4 } },
+    needs: { water: 2 },
+    upkeep: 10,
+    amenity: { bonus: 0.08, radius: 5 },
+    populationCapacity: 10,
+    attractsVisitors: { lingerSeconds: 9 },
+    recoveryYears: 15, // land improvements
+    placeholder: { shape: 'sportsfield', color: '#4fae4a', accent: '#ffffff', height: 0.4 },
+  },
+  {
+    id: 'public-beach',
+    name: 'Public Beach',
+    category: 'community',
+    size: { x: 3, z: 2 },
+    cost: 400,
+    unlockLevel: 9,
+    onShore: true,
+    upkeep: 8,
+    amenity: { bonus: 0.08, radius: 5 },
+    attractsVisitors: { lingerSeconds: 12 },
+    recoveryYears: 15, // land improvements
+    placeholder: { shape: 'beach', color: '#f6e3a4', accent: '#ff5c8a', height: 0.5 },
+  },
+  {
+    id: 'central-park',
+    name: 'Central Park',
+    category: 'community',
+    size: { x: 4, z: 4 },
+    cost: 1800,
+    unlockLevel: 11,
+    build: { seconds: 180, materials: { lumber: 8, bricks: 4 } },
+    needs: { water: 3 },
+    upkeep: 25,
+    amenity: { bonus: 0.12, radius: 7 },
+    populationCapacity: 30,
+    attractsVisitors: { lingerSeconds: 12 },
+    recoveryYears: 15, // land improvements
+    placeholder: { shape: 'bigpark', color: '#5fbf52', accent: '#d9c79a', height: 0.8 },
+  },
+  {
+    id: 'ski-resort',
+    name: 'Ski Resort',
+    category: 'business',
+    size: { x: 4, z: 4 },
+    cost: 3500,
+    unlockLevel: 13,
+    build: { seconds: 300, materials: { lumber: 10, steel: 8 } },
+    needs: { water: 2, power: 4, trash: 2 },
+    income: { coins: 260, seconds: 300 }, // lift tickets
+    requiresRoad: true,
+    attractsVisitors: { lingerSeconds: 10 },
+    placeholder: { shape: 'skiresort', color: '#f4f8fb', accent: '#c8463a', height: 2.4 },
   },
 ]
 

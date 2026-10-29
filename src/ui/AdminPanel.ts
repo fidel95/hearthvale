@@ -16,6 +16,7 @@ export interface AdminActions {
   energy: () => void
   finishTimers: () => void
   nextMonth: () => void
+  toggleRain: () => void
 }
 
 const POWERS: [keyof AdminSettings, string][] = [
@@ -45,7 +46,7 @@ export class AdminPanel {
     )
 
     const time = el('div', 'debug-grid')
-    time.append(button('Finish all timers', a.finishTimers), button('Skip to next month', a.nextMonth))
+    time.append(button('Finish all timers', a.finishTimers), button('Skip to next month', a.nextMonth), button('🌧️ Rain / ☀️ Sun', a.toggleRain))
     const speedRow = el('div', 'setting-row')
     const speedButtons = SPEEDS.map((speed) => {
       const b = button(`${speed}×`, () => setPower({ calendarSpeed: speed }), 'panel-button secondary')

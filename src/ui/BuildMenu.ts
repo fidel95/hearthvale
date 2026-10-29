@@ -60,6 +60,8 @@ function details(type: BuildingType): string[] {
   if (type.id === 'bus-stop') lines.push('🚌 Buses drive from stop to stop on your roads')
   if (type.id === 'army-base') lines.push('🪖 A squad drills on the parade ground and a jeep patrols the roads')
   if (type.id === 'airport') lines.push('✈️ Planes take off, fly round the town and land')
+  if (type.id === 'public-beach') lines.push('🏖️ Sunbathers and swimmers come when it isn\'t raining')
+  if (type.id === 'ski-resort') lines.push('⛷️ Skiers ski down and ride the chairlift back up')
   if (type.townBonus) lines.push(`+${Math.round(type.townBonus * 100)}% to all rent and sales in town`)
   if (type.shipSpeedBonus) lines.push(`Ships arrive ${Math.round(type.shipSpeedBonus * 100)}% sooner`)
   if (type.minRating) lines.push(`Needs a city rating of ${type.minRating} (see Town)`)

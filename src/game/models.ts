@@ -183,6 +183,18 @@ function fitToFootprint(model: THREE.Object3D, type: BuildingType): THREE.Object
   return wrapper
 }
 
+// The Ski Resort's mountain, in the building's own coordinates (its center
+// at the origin): a cone with its peak over (cx, cz). Skiers ride on it and
+// the lift climbs it (LeisureView), so they share these numbers with the model.
+export const SKI_SLOPE = { cx: -0.45, cz: -0.45, height: 2.2, radius: 1.75 }
+export const SKI_LIFT = { from: { x: 1.0, z: 0.55 }, to: { x: -0.2, z: -0.45 } }
+
+// Height of the mountain's surface at (x, z), from the ground of the site.
+export function slopeHeight(x: number, z: number): number {
+  const { cx, cz, height, radius } = SKI_SLOPE
+  return 0.03 + Math.max(0, height * (1 - Math.hypot(x - cx, z - cz) / radius))
+}
+
 // Simple shapes so the game is playable before any art exists.
 // (Their geometries aren't freed on demolish; they're tiny, and real models replace them.)
 function createPlaceholder(type: BuildingType): THREE.Group {
@@ -365,6 +377,87 @@ function createPlaceholder(type: BuildingType): THREE.Group {
       // A half cylinder, open end toward the runway.
       const hangar = new THREE.CylinderGeometry(0.5, 0.5, 1.1, 10, 1, false, 0, Math.PI).rotateX(Math.PI / 2).rotateZ(Math.PI / 2)
       add(hangar, '#b8bfc7', w * 0.33, 0.04, -d * 0.28)
+      break
+    }
+    case 'playground': {
+      // Soft ground, a slide, a swing frame, a sandbox and a seesaw.
+      add(new THREE.BoxGeometry(w * 0.95, 0.03, d * 0.95), '#e8c9a0', 0, 0, 0)
+      add(new THREE.BoxGeometry(0.16, 0.42, 0.16), accent, -0.45, 0.03, -0.45)
+      add(new THREE.BoxGeometry(0.16, 0.04, 0.6).rotateX(0.6), '#ffd23f', -0.45, 0.12, -0.12)
+      for (const x of [0.15, 0.75]) add(new THREE.BoxGeometry(0.04, 0.5, 0.04), '#2f7fe0', x, 0.03, -0.5)
+      add(new THREE.BoxGeometry(0.66, 0.04, 0.04), '#2f7fe0', 0.45, 0.53, -0.5)
+      for (const x of [0.32, 0.58]) add(new THREE.BoxGeometry(0.1, 0.02, 0.06), '#e0453a', x, 0.18, -0.5)
+      add(new THREE.BoxGeometry(0.55, 0.06, 0.55), '#f6e3a4', -0.4, 0.03, 0.4)
+      add(new THREE.BoxGeometry(0.7, 0.03, 0.08).rotateZ(0.15), '#3fae6b', 0.45, 0.12, 0.45)
+      add(new THREE.BoxGeometry(0.08, 0.1, 0.08), '#8a5a36', 0.45, 0.03, 0.45)
+      break
+    }
+    case 'sportsfield': {
+      // A pitch with white lines and a goal at each end, and a little stand.
+      add(new THREE.BoxGeometry(w * 0.95, 0.03, d * 0.75), color, 0, 0, 0.1)
+      for (const x of [-w * 0.45, 0, w * 0.45]) add(new THREE.BoxGeometry(0.03, 0.005, d * 0.72), accent, x, 0.03, 0.1)
+      for (const z of [-d * 0.26, d * 0.46]) add(new THREE.BoxGeometry(w * 0.9, 0.005, 0.03), accent, 0, 0.03, z)
+      add(new THREE.TorusGeometry(0.3, 0.012, 4, 24).rotateX(Math.PI / 2), accent, 0, 0.035, 0.1)
+      for (const end of [-1, 1]) {
+        add(new THREE.BoxGeometry(0.04, 0.22, 0.5), accent, end * w * 0.47, 0.03, 0.1)
+      }
+      add(new THREE.BoxGeometry(w * 0.6, 0.16, 0.3), '#c8463a', 0, 0, -d * 0.4)
+      add(new THREE.BoxGeometry(w * 0.6, 0.12, 0.16), '#2f7fe0', 0, 0.16, -d * 0.45)
+      break
+    }
+    case 'beach': {
+      // Sand, two umbrellas over towels, and a lifeguard's chair.
+      add(new THREE.BoxGeometry(w * 0.98, 0.03, d * 0.98), color, 0, 0, 0)
+      for (const [x, c] of [[-0.8, accent], [0.35, '#2f7fe0']] as const) {
+        add(new THREE.CylinderGeometry(0.015, 0.015, 0.45, 6), '#ffffff', x, 0.03, -0.1)
+        add(new THREE.ConeGeometry(0.32, 0.14, 8), c, x, 0.42, -0.1)
+        add(new THREE.BoxGeometry(0.16, 0.01, 0.34), c === accent ? '#ffd23f' : '#ff7043', x + 0.2, 0.035, 0.05)
+      }
+      for (const [lx, lz] of [[-0.1, -0.1], [0.1, -0.1], [-0.1, 0.1], [0.1, 0.1]]) {
+        add(new THREE.BoxGeometry(0.03, 0.5, 0.03), '#ffffff', w * 0.38 + lx, 0.03, lz)
+      }
+      add(new THREE.BoxGeometry(0.28, 0.04, 0.28), '#e0453a', w * 0.38, 0.53, 0)
+      break
+    }
+    case 'bigpark': {
+      // Lawns crossed by paths, a pond, a fountain in the middle, trees and flower beds.
+      add(new THREE.BoxGeometry(w * 0.97, 0.03, d * 0.97), color, 0, 0, 0)
+      add(new THREE.BoxGeometry(w * 0.95, 0.035, 0.32), accent, 0, 0, 0)
+      add(new THREE.BoxGeometry(0.32, 0.035, d * 0.95), accent, 0, 0, 0)
+      add(new THREE.CylinderGeometry(0.42, 0.45, 0.1, 16), '#c9c6bd', 0, 0.03, 0)
+      add(new THREE.CylinderGeometry(0.34, 0.34, 0.05, 16), '#6fb7e0', 0, 0.1, 0)
+      add(new THREE.CylinderGeometry(0.05, 0.08, 0.3, 8), '#c9c6bd', 0, 0.1, 0)
+      add(new THREE.CylinderGeometry(0.75, 0.75, 0.04, 20).scale(1.2, 1, 0.8), '#5aa8e0', 1.0, 0.03, 1.05)
+      for (const [x, z, c] of [[-1.2, -1.2, '#3f8f3a'], [-1.3, -0.5, '#66bb4a'], [1.2, -1.2, '#f28cb1'], [-1.2, 1.2, '#3f8f3a'], [0.6, -1.3, '#66bb4a'], [-0.6, 1.3, '#f5a742']] as const) {
+        add(new THREE.CylinderGeometry(0.05, 0.07, 0.35, 6), '#7a5233', x, 0.03, z)
+        add(new THREE.IcosahedronGeometry(0.3, 0), c, x, 0.3, z)
+      }
+      for (const [x, z, c] of [[1.2, -0.5, '#ff5c8a'], [-0.5, -0.6, '#ffd23f'], [0.55, 0.55, '#b46cf0']] as const) {
+        add(new THREE.CylinderGeometry(0.22, 0.24, 0.07, 10), c, x, 0.03, z)
+      }
+      break
+    }
+    case 'skiresort': {
+      // A snowy peak (see SKI_SLOPE, which the skiers ride on), pine trees on
+      // its lower slopes, a chairlift up one side and a red lodge at the foot.
+      const { cx, cz, height: h, radius: r } = SKI_SLOPE
+      add(new THREE.BoxGeometry(w * 0.97, 0.03, d * 0.97), '#e9f1f6', 0, 0, 0)
+      add(new THREE.ConeGeometry(r, h, 9), color, cx, 0.03, cz)
+      add(new THREE.ConeGeometry(r * 0.42, h * 0.42, 9), '#ffffff', cx, 0.03 + h * 0.58, cz)
+      for (const [x, z] of [[1.3, -1.4], [-1.5, 1.3], [1.6, -0.6], [-0.7, 1.6], [0.5, -1.7]]) {
+        add(new THREE.ConeGeometry(0.16, 0.45, 6), '#2e6b45', x, 0.03, z)
+      }
+      // Lift towers from the lodge up toward the peak.
+      for (let i = 0; i <= 4; i++) {
+        const t = i / 4
+        const x = SKI_LIFT.from.x + (SKI_LIFT.to.x - SKI_LIFT.from.x) * t
+        const z = SKI_LIFT.from.z + (SKI_LIFT.to.z - SKI_LIFT.from.z) * t
+        add(new THREE.CylinderGeometry(0.02, 0.025, 0.45, 6), '#5b6570', x, slopeHeight(x, z), z)
+      }
+      add(new THREE.BoxGeometry(0.75, 0.38, 0.5), accent, 1.35, 0.03, 1.35)
+      const roof = new THREE.ConeGeometry(Math.SQRT1_2, 1, 4).rotateY(Math.PI / 4)
+      roof.scale(0.85, 0.3, 0.6)
+      add(roof, '#7a3a2a', 1.35, 0.41, 1.35)
       break
     }
     case 'barn': {

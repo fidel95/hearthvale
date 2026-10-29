@@ -121,6 +121,8 @@ the right on a wide screen) so the town stays in view.
 - **Sound and help:** sound effects and optional music (Settings), and ❓ for help on every topic. 🎯 or the Home key brings the camera back to your town.
 - **Your save:** saved automatically in this browser. Settings has Save now, Export (download a copy) and Import. Clearing site data deletes the save, so export a copy to keep it safe.
 - **Admin tools:** Settings → Admin tools adds a 🛠️ button: give yourself coins, levels and materials, finish every timer, run the calendar 10× or 60× faster, or switch on powers (build anything free and instantly, unlimited energy, everything ready at once).
+- **Parks, beaches and the slopes:** Playground, Sports Field and Central Park lift nearby homes and draw visitors; a Public Beach on the shore fills with sunbathers and swimmers; the Ski Resort (level 13) sells lift tickets while skiers zigzag down and ride the chairlift up. Snowy mountains rise behind the town.
+- **Weather:** rain showers roll in every few minutes: the sky dims, umbrellas come out and the beach empties (Settings → Rain showers; Admin can start or stop it).
 - **Traffic and transport:** cars drive your roads as the town grows. Bus Stops (level 7) lift nearby homes and shops, and buses run between them. An Army Base (level 12) adds safety and room for residents; its squad marches through town and a jeep patrols. Railway track and a Train Station (level 14): a train shuttles along your line and visitors lift all rent and sales. An Airport (level 15): planes take off, circle the town and land.
 - **Building several at once:** after Place, tap a spot for each one (tap a spot again to take it back), then ✓ or "Buy N · 🪙 total" buys them all; coins, fit and room for residents are checked for the whole set.
 - **Removing roads:** tap a road and 🗑️ Remove, then tap or drag along more roads to pick several and remove them together; it warns if a shop would lose its road.
@@ -204,6 +206,9 @@ src/
     RailView.ts           draws railway track the same way
     TrafficView.ts        cars, buses, trains and the army's squad and jeep
     FlightView.ts         planes taking off, circling and landing at the airport
+    LeisureView.ts        sunbathers and swimmers at the beach, skiers and the chairlift
+    MountainView.ts       the countryside and snowy mountains beyond the world's edge
+    WeatherView.ts        rain showers: falling rain, dimmer light, a grayer sky
     routes.ts             route-finding on roads and track (tested)
     ShipView.ts           sailboats, fishing boats and cargo ships
     models.ts             loads .glb models, draws placeholder shapes and crops

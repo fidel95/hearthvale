@@ -95,6 +95,31 @@ export class Sound {
     }, 900)
   }
 
+  // Rain: soft noise, filtered so it hisses gently, at a level from 0 (none) to 1.
+  private rain: GainNode | null = null
+  setRain(level: number) {
+    const ctx = this.context
+    if (!ctx || !this.master) return
+    if (!this.rain) {
+      const seconds = 2
+      const buffer = ctx.createBuffer(1, ctx.sampleRate * seconds, ctx.sampleRate)
+      const data = buffer.getChannelData(0)
+      for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1
+      const noise = ctx.createBufferSource()
+      noise.buffer = buffer
+      noise.loop = true
+      const filter = ctx.createBiquadFilter()
+      filter.type = 'bandpass'
+      filter.frequency.value = 1400
+      filter.Q.value = 0.6
+      this.rain = ctx.createGain()
+      this.rain.gain.value = 0
+      noise.connect(filter).connect(this.rain).connect(this.master)
+      noise.start()
+    }
+    this.rain.gain.setTargetAtTime(level * 0.35, ctx.currentTime, 0.5)
+  }
+
   // One note: a quick rise, then a fade (an "envelope"), so it doesn't click.
   private tone(freq: number, at: number, length: number, wave: OscillatorType, loudness: number) {
     const ctx = this.context!

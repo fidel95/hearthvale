@@ -40,6 +40,11 @@ const SHAPES = {
   body: new THREE.CylinderGeometry(0.06, 0.07, 0.15, 6).translate(0, 0.195, 0),
   head: new THREE.IcosahedronGeometry(0.055, 0).translate(0, 0.32, 0),
 }
+const UMBRELLA = {
+  pole: new THREE.CylinderGeometry(0.008, 0.008, 0.22, 4).translate(0.05, 0.36, 0),
+  canopy: new THREE.ConeGeometry(0.17, 0.08, 8).translate(0.05, 0.49, 0),
+}
+const UMBRELLA_COLORS = ['#e0453a', '#2f7fe0', '#ffd23f', '#2b2d33', '#ff5c8a', '#3fae6b']
 const materials = new Map<string, THREE.MeshLambertMaterial>()
 function material(color: string) {
   let m = materials.get(color)
@@ -60,6 +65,12 @@ function createPerson(): THREE.Group {
     mesh.castShadow = true
     person.add(mesh)
   }
+  // An umbrella, shown only while it rains.
+  const umbrella = new THREE.Group()
+  umbrella.add(new THREE.Mesh(UMBRELLA.pole, material('#444444')), new THREE.Mesh(UMBRELLA.canopy, material(pick(UMBRELLA_COLORS))))
+  umbrella.visible = false
+  umbrella.name = 'umbrella'
+  person.add(umbrella)
   person.scale.setScalar(1.4) // a little larger than true scale, so they read at a glance
   return person
 }
@@ -74,6 +85,13 @@ export class PeopleView {
   constructor(scene: THREE.Scene, city: City) {
     this.scene = scene
     this.city = city
+  }
+
+  // Out comes every umbrella when it rains.
+  private raining = false
+  setRaining(raining: boolean) {
+    this.raining = raining
+    for (const w of this.walkers) w.object.getObjectByName('umbrella')!.visible = raining
   }
 
   // Turned off in Settings: everyone goes home at once.
@@ -140,6 +158,7 @@ export class PeopleView {
       phase: Math.random() * Math.PI * 2,
     }
     if (!this.chooseDestination(walker)) return
+    walker.object.getObjectByName('umbrella')!.visible = this.raining
     this.walkers.push(walker)
     this.scene.add(walker.object)
     this.place(walker)

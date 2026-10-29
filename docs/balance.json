@@ -1447,6 +1447,167 @@
       "coinsPerEnergy": null,
       "roads": "—",
       "upgrades": "—"
+    },
+    {
+      "id": "playground",
+      "name": "Playground",
+      "category": "community",
+      "role": "middle",
+      "unlockLevel": 6,
+      "quests": [
+        "Fun in the Sun"
+      ],
+      "footprint": "2×2",
+      "tiles": 4,
+      "cost": 250,
+      "materials": "",
+      "materialsValue": 0,
+      "totalCost": 250,
+      "buildSeconds": 0,
+      "cycleSeconds": null,
+      "coinsPerCycle": null,
+      "goodsPerCycle": 0,
+      "netPerCycle": null,
+      "xpPerCycle": null,
+      "buildXp": 12,
+      "residents": 0,
+      "needs": "",
+      "upkeepPerMonth": 4,
+      "effect": "+6% within 3 tiles",
+      "paybackCycles": null,
+      "paybackMinutes": null,
+      "coinsPerMinute": null,
+      "coinsPerEnergy": null,
+      "roads": "—",
+      "upgrades": "—"
+    },
+    {
+      "id": "sports-field",
+      "name": "Sports Field",
+      "category": "community",
+      "role": "late",
+      "unlockLevel": 8,
+      "quests": [],
+      "footprint": "3×2",
+      "tiles": 6,
+      "cost": 650,
+      "materials": "🪵 4",
+      "materialsValue": 48,
+      "totalCost": 698,
+      "buildSeconds": 90,
+      "cycleSeconds": null,
+      "coinsPerCycle": null,
+      "goodsPerCycle": 0,
+      "netPerCycle": null,
+      "xpPerCycle": null,
+      "buildXp": 45,
+      "residents": 0,
+      "needs": "💧2",
+      "upkeepPerMonth": 10,
+      "effect": "+8% within 5 tiles",
+      "paybackCycles": null,
+      "paybackMinutes": null,
+      "coinsPerMinute": null,
+      "coinsPerEnergy": null,
+      "roads": "—",
+      "upgrades": "—"
+    },
+    {
+      "id": "public-beach",
+      "name": "Public Beach",
+      "category": "community",
+      "role": "late",
+      "unlockLevel": 9,
+      "quests": [
+        "Fun in the Sun"
+      ],
+      "footprint": "3×2",
+      "tiles": 6,
+      "cost": 400,
+      "materials": "",
+      "materialsValue": 0,
+      "totalCost": 400,
+      "buildSeconds": 0,
+      "cycleSeconds": null,
+      "coinsPerCycle": null,
+      "goodsPerCycle": 0,
+      "netPerCycle": null,
+      "xpPerCycle": null,
+      "buildXp": 20,
+      "residents": 0,
+      "needs": "",
+      "upkeepPerMonth": 8,
+      "effect": "+8% within 5 tiles",
+      "paybackCycles": null,
+      "paybackMinutes": null,
+      "coinsPerMinute": null,
+      "coinsPerEnergy": null,
+      "roads": "—",
+      "upgrades": "—"
+    },
+    {
+      "id": "central-park",
+      "name": "Central Park",
+      "category": "community",
+      "role": "late",
+      "unlockLevel": 11,
+      "quests": [],
+      "footprint": "4×4",
+      "tiles": 16,
+      "cost": 1800,
+      "materials": "🧱 4 🪵 8",
+      "materialsValue": 156,
+      "totalCost": 1956,
+      "buildSeconds": 180,
+      "cycleSeconds": null,
+      "coinsPerCycle": null,
+      "goodsPerCycle": 0,
+      "netPerCycle": null,
+      "xpPerCycle": null,
+      "buildXp": 126,
+      "residents": 0,
+      "needs": "💧3",
+      "upkeepPerMonth": 25,
+      "effect": "+12% within 7 tiles",
+      "paybackCycles": null,
+      "paybackMinutes": null,
+      "coinsPerMinute": null,
+      "coinsPerEnergy": null,
+      "roads": "—",
+      "upgrades": "—"
+    },
+    {
+      "id": "ski-resort",
+      "name": "Ski Resort",
+      "category": "business",
+      "role": "late",
+      "unlockLevel": 13,
+      "quests": [
+        "Hit the Slopes"
+      ],
+      "footprint": "4×4",
+      "tiles": 16,
+      "cost": 3500,
+      "materials": "🪵 10 🔩 8",
+      "materialsValue": 320,
+      "totalCost": 3820,
+      "buildSeconds": 300,
+      "cycleSeconds": 300,
+      "coinsPerCycle": 260,
+      "goodsPerCycle": 0,
+      "netPerCycle": 260,
+      "xpPerCycle": 17,
+      "buildXp": 245,
+      "residents": 0,
+      "needs": "💧2 🔌4 🗑️2",
+      "upkeepPerMonth": 0,
+      "effect": "",
+      "paybackCycles": 14.692307692307692,
+      "paybackMinutes": 78.46153846153847,
+      "coinsPerMinute": 52,
+      "coinsPerEnergy": 260,
+      "roads": "not required; +5% beside one",
+      "upgrades": "★★ at level 15, ★★★ at 17"
     }
   ],
   "crops": [
@@ -1665,7 +1826,8 @@
       "unlocks": [
         "Family House",
         "Flower Shop",
-        "Park"
+        "Park",
+        "Playground"
       ],
       "quests": [
         "Community Spirit"
@@ -1696,7 +1858,8 @@
       ],
       "unlocks": [
         "Eco House",
-        "General Store"
+        "General Store",
+        "Sports Field"
       ],
       "quests": [
         "Room to Grow",
@@ -1713,10 +1876,12 @@
         "Villa",
         "Dock",
         "Fire Station",
+        "Public Beach",
         "🌻 Sunflowers"
       ],
       "quests": [
-        "Harbor Town"
+        "Harbor Town",
+        "Fun in the Sun"
       ]
     },
     {
@@ -1745,7 +1910,8 @@
       "unlocks": [
         "Modern House",
         "Solar Farm",
-        "Clock Tower"
+        "Clock Tower",
+        "Central Park"
       ],
       "quests": [
         "A Town to Be Proud Of"
