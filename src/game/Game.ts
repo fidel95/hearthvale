@@ -4,6 +4,7 @@ import { CropPicker } from '../ui/CropPicker'
 import { Hud } from '../ui/Hud'
 import { LandPanel } from '../ui/LandPanel'
 import { LevelUpPanel } from '../ui/LevelUpPanel'
+import { TownPanel } from '../ui/TownPanel'
 import { TaxPanel } from '../ui/TaxPanel'
 import { Builder } from './Builder'
 import { BUILDINGS_BY_ID } from './buildings'
@@ -15,8 +16,10 @@ import { GameClock, MONTH_NAMES } from './GameClock'
 import { IncomeView } from './IncomeView'
 import { LandView } from './LandView'
 import { Player } from './Player'
+import { Services } from './Services'
 import { AutoSaver, clearSave, readSave } from './save'
 import { Taxes } from './Taxes'
+import { UTILITY_INFO } from './utilityRules'
 
 // How many world units of the map fit vertically on screen at zoom 1.
 const VIEW_SIZE = 24
@@ -39,6 +42,7 @@ export class Game {
   // Game state: the town, the player's progress, the calendar and the tax books.
   private city = new City()
   private player = new Player(this.city)
+  private services = new Services(this.city)
   private clock: GameClock
   private taxes: Taxes
 
@@ -79,18 +83,25 @@ export class Game {
     this.cityView = new CityView(this.scene, this.city)
     this.taxes = new Taxes(this.city, this.clock)
     const builder = new Builder(this.scene, this.city, this.player, this.cityView, this.controls, this.renderer.domElement)
-    this.incomeView = new IncomeView(this.scene, this.city, this.cityView, (b) => builder.tap(b))
+    this.incomeView = new IncomeView(this.scene, this.city, this.cityView, this.services, (b) => builder.tap(b))
     builder.onHoverBuilding = (b) => this.incomeView.setHovered(b)
 
     const taxPanel = new TaxPanel(container, this.city, this.taxes, this.clock)
-    this.hud = new Hud(container, builder, this.city, this.player, {
+    const townPanel = new TownPanel(container, this.city, this.services)
+    this.hud = new Hud(container, builder, this.city, this.player, this.services, {
       onOpenTaxes: () => taxPanel.open(),
+      onOpenTown: () => townPanel.open(),
       onNewTown: () => this.newTown(),
     })
     this.showTaxEvents(taxPanel)
     const cropPicker = new CropPicker(container, this.city, this.player, (message) => this.hud.toast(message))
     builder.onPlantRequest = (plot) => cropPicker.open(plot)
     this.showPlayerEvents(new LevelUpPanel(container))
+    this.services.onChange((event) => {
+      if (event.kind !== 'shortage') return
+      const names = event.utilities.map((u) => `${UTILITY_INFO[u].icon} ${UTILITY_INFO[u].name.toLowerCase()}`)
+      this.hud.toast(`Not enough ${names.join(', ')}: income drops. Tap Town to see what to build.`, 'warn')
+    })
     const landPanel = new LandPanel(container, this.city, this.player, (message) => this.hud.toast(message))
     landView.onLotClick = (lot) => landPanel.open(lot)
 
@@ -120,7 +131,11 @@ export class Game {
     const dt = frameTime - this.lastFrame
     this.lastFrame = frameTime
 
-    for (const month of this.clock.advance(dt)) this.taxes.endOfMonth(month)
+    for (const month of this.clock.advance(dt)) {
+      // Utility bills first, so December's land on this year's return.
+      this.services.endOfMonth()
+      this.taxes.endOfMonth(month)
+    }
     this.followSun()
 
     const now = Date.now()

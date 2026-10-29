@@ -65,10 +65,10 @@ describe('property valuation', () => {
 
 describe('depreciation', () => {
   it('spreads homes over 27.5 years', () => {
-    expect(monthlyDepreciation(330, 'home')).toBeCloseTo(1)
+    expect(monthlyDepreciation(330, { category: 'home' })).toBeCloseTo(1)
   })
 
   it('never depreciates land', () => {
-    expect(monthlyDepreciation(50, 'farm')).toBe(0)
+    expect(monthlyDepreciation(50, { category: 'farm' })).toBe(0)
   })
 })

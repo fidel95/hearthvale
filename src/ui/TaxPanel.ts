@@ -46,6 +46,7 @@ function returnRows(r: TaxReturn): Row[] {
   rows.push(
     ['Gross income', coins(r.grossIncome), 'total'],
     ['− Seeds (farm expenses)', coins(r.farmExpenses), 'minus'],
+    ['− Utility operating costs', coins(r.operatingExpenses), 'minus'],
     ['− Property tax', coins(r.propertyTax), 'minus'],
     ['− Depreciation', coins(r.depreciation), 'minus'],
     ['− Standard deduction', coins(r.standardDeduction), 'minus'],
@@ -264,6 +265,10 @@ export class TaxPanel {
       [
         'Farms',
         "Crop sales are farm income (Schedule F in the US). Seeds are a farm expense, deducted in the year you buy them (the cash method most farmers use). Crops are sold wholesale, so there's no sales tax on them. A crop that withers gives no extra deduction: its seeds were already deducted.",
+      ],
+      [
+        'Utilities',
+        "Water towers, power plants and recycling centers cost money every month to run. Those running costs are ordinary business expenses, deducted in full the year you pay them. The plants themselves are depreciated over their real US classes: water 25 years, power plants 20, recycling 7, solar just 5 (a deliberate incentive).",
       ],
       [
         'Prizes',

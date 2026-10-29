@@ -2,9 +2,11 @@
 // lives here as plain data, so adding a building means adding an entry,
 // not writing new code.
 
-export type Category = 'home' | 'business' | 'farm' | 'decoration'
+import type { Utility } from './utilityRules'
 
-export type PlaceholderShape = 'house' | 'shop' | 'field' | 'tree'
+export type Category = 'home' | 'business' | 'farm' | 'decoration' | 'utility'
+
+export type PlaceholderShape = 'house' | 'shop' | 'field' | 'tree' | 'tower' | 'plant' | 'recycling' | 'solar'
 
 export interface BuildingType {
   id: string
@@ -15,6 +17,14 @@ export interface BuildingType {
   unlockLevel: number // the player level that makes it available (progression.ts)
   // Coins this building pays out every `seconds`. Homes collect rent, businesses earn sales.
   income?: { coins: number; seconds: number }
+  // People living here (homes only). They count toward population and walk around town.
+  residents?: number
+  // Units of each utility this building uses (utilityRules.ts).
+  needs?: Partial<Record<Utility, number>>
+  // Utility buildings: what they supply, and what they cost to run each game month.
+  supplies?: { utility: Utility; amount: number; upkeep: number }
+  // Depreciation period in years, when it differs from its category's (taxRules.ts).
+  recoveryYears?: number
   // How to draw it when there's no model (or the model fails to load).
   placeholder: { shape: PlaceholderShape; color: string; accent: string; height: number }
   // URL of a .glb model, e.g. suburban('building-type-a'). Optional: without it we draw the placeholder.
@@ -34,6 +44,8 @@ export const BUILDING_TYPES: BuildingType[] = [
     cost: 100,
     unlockLevel: 1,
     income: { coins: 15, seconds: 30 },
+    residents: 2,
+    needs: { water: 2, power: 2, trash: 2 },
     model: suburban('building-type-g'),
     placeholder: { shape: 'house', color: '#f2d7b0', accent: '#c4553f', height: 0.9 },
   },
@@ -45,6 +57,8 @@ export const BUILDING_TYPES: BuildingType[] = [
     cost: 250,
     unlockLevel: 3,
     income: { coins: 35, seconds: 60 },
+    residents: 3,
+    needs: { water: 3, power: 3, trash: 3 },
     model: suburban('building-type-k'),
     placeholder: { shape: 'house', color: '#c9d8e8', accent: '#4a5d7a', height: 1.6 },
   },
@@ -56,6 +70,8 @@ export const BUILDING_TYPES: BuildingType[] = [
     cost: 400,
     unlockLevel: 6,
     income: { coins: 50, seconds: 90 },
+    residents: 4,
+    needs: { water: 4, power: 4, trash: 4 },
     model: suburban('building-type-a'),
     placeholder: { shape: 'house', color: '#f4f4f4', accent: '#3fae6b', height: 1.2 },
   },
@@ -67,6 +83,8 @@ export const BUILDING_TYPES: BuildingType[] = [
     cost: 600,
     unlockLevel: 8,
     income: { coins: 80, seconds: 120 },
+    residents: 4,
+    needs: { water: 4, power: 5, trash: 3 },
     model: suburban('building-type-p'),
     placeholder: { shape: 'house', color: '#f4f4f4', accent: '#4b5060', height: 1.2 },
   },
@@ -78,6 +96,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     cost: 300,
     unlockLevel: 2,
     income: { coins: 40, seconds: 45 },
+    needs: { water: 2, power: 3, trash: 2 },
     placeholder: { shape: 'shop', color: '#f6e7c8', accent: '#d9822b', height: 1 },
   },
   {
@@ -88,6 +107,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     cost: 500,
     unlockLevel: 5,
     income: { coins: 75, seconds: 90 },
+    needs: { water: 2, power: 4, trash: 3 },
     placeholder: { shape: 'shop', color: '#e3e3e3', accent: '#3a8f5c', height: 1.2 },
   },
   {
@@ -98,6 +118,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     size: { x: 2, z: 2 },
     cost: 50,
     unlockLevel: 1,
+    needs: { water: 2 }, // irrigation
     placeholder: { shape: 'field', color: '#8a5a36', accent: '#6e4529', height: 0.06 },
   },
   {
@@ -129,6 +150,53 @@ export const BUILDING_TYPES: BuildingType[] = [
     unlockLevel: 2,
     model: suburban('planter'),
     placeholder: { shape: 'tree', color: '#5b5f6b', accent: '#3f8f3a', height: 0.5 },
+  },
+  // ---- Utilities. Building one costs coins once; running it costs coins every
+  // game month. Real towns face the same choice between cheap-to-build,
+  // expensive-to-run plants and the reverse (compare the power plant and solar farm).
+  {
+    id: 'water-tower',
+    name: 'Water Tower',
+    category: 'utility',
+    size: { x: 2, z: 2 },
+    cost: 250,
+    unlockLevel: 2,
+    supplies: { utility: 'water', amount: 20, upkeep: 15 },
+    recoveryYears: 25, // water utility property
+    placeholder: { shape: 'tower', color: '#8fb8d8', accent: '#5b7f9e', height: 2 },
+  },
+  {
+    id: 'power-plant',
+    name: 'Power Plant',
+    category: 'utility',
+    size: { x: 3, z: 2 },
+    cost: 500,
+    unlockLevel: 3,
+    supplies: { utility: 'power', amount: 30, upkeep: 30 }, // fuel makes it expensive to run
+    recoveryYears: 20, // electric utility steam production plant
+    placeholder: { shape: 'plant', color: '#b9b4ab', accent: '#d9a441', height: 1.1 },
+  },
+  {
+    id: 'recycling-center',
+    name: 'Recycling Center',
+    category: 'utility',
+    size: { x: 2, z: 2 },
+    cost: 300,
+    unlockLevel: 3,
+    supplies: { utility: 'trash', amount: 20, upkeep: 20 },
+    recoveryYears: 7, // waste reduction and resource recovery plants
+    placeholder: { shape: 'recycling', color: '#5e9e6e', accent: '#2f6f8f', height: 0.9 },
+  },
+  {
+    id: 'solar-farm',
+    name: 'Solar Farm',
+    category: 'utility',
+    size: { x: 3, z: 3 },
+    cost: 1200,
+    unlockLevel: 6,
+    supplies: { utility: 'power', amount: 25, upkeep: 5 }, // no fuel: cheap to run
+    recoveryYears: 5, // solar energy property gets a short 5-year period
+    placeholder: { shape: 'solar', color: '#2c3e66', accent: '#c9ccd2', height: 0.5 },
   },
 ]
 

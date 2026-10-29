@@ -195,4 +195,12 @@ describe('Taxes', () => {
     expect(taxes.lastReturn!.propertyTax).toBeCloseTo(10)
     expect(taxes.lastReturn!.depreciation).toBe(0)
   })
+
+  it('deducts running costs like utility upkeep as operating expenses', () => {
+    const { city, taxes } = setup()
+    city.payExpense(30, 'Utility operating costs')
+    expect(taxes.estimate().operatingExpenses).toBe(30)
+    taxes.ledger.rentIncome = 2000
+    expect(taxes.estimate().taxableIncome).toBeCloseTo(2000 - 30 - STANDARD_DEDUCTION)
+  })
 })

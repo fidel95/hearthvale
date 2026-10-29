@@ -762,3 +762,28 @@ button {
   color: var(--ink-soft);
   cursor: not-allowed;
 }
+
+/* ---- Town services ---- */
+
+.town-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.town-line .short {
+  color: var(--bad);
+  font-weight: 700;
+}
+
+.town-population {
+  margin: 14px 0 0;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.bracket-fill.short {
+  background: var(--bad);
+}

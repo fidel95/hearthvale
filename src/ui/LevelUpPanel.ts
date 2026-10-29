@@ -3,7 +3,7 @@ import { coins, el } from './dom'
 
 type LevelUp = Extract<PlayerEvent, { kind: 'levelUp' }>
 
-const CATEGORY_ICON = { home: '🏠', business: '🏪', farm: '🌱', decoration: '🌳' }
+const CATEGORY_ICON = { home: '🏠', business: '🏪', farm: '🌱', decoration: '🌳', utility: '🏭' }
 
 // The window that celebrates a new level: the coin reward, the energy refill
 // and everything that just unlocked.

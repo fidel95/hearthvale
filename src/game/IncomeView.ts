@@ -5,6 +5,8 @@ import type { City, PlacedBuilding } from './City'
 import type { CityView } from './CityView'
 import { cropState } from './crops'
 import { footprintCenter } from './grid'
+import type { Services } from './Services'
+import { shortIcons } from './utilityRules'
 
 // Labels floating over buildings: bubbles that say "tap me" (coins to
 // collect, crops to harvest, plots to plant), "+15" pop-ups and the hover
@@ -28,6 +30,7 @@ export class IncomeView {
   private scene: THREE.Scene
   private city: City
   private cityView: CityView
+  private services: Services
   private onTap: (building: PlacedBuilding) => void
   private bubbles = new Map<number, Bubble>()
   private info: CSS2DObject
@@ -35,10 +38,17 @@ export class IncomeView {
   // After collecting, hide the info card briefly so it doesn't cover the "+15" pop-up.
   private hideInfoUntil = 0
 
-  constructor(scene: THREE.Scene, city: City, cityView: CityView, onTap: (building: PlacedBuilding) => void) {
+  constructor(
+    scene: THREE.Scene,
+    city: City,
+    cityView: CityView,
+    services: Services,
+    onTap: (building: PlacedBuilding) => void,
+  ) {
     this.scene = scene
     this.city = city
     this.cityView = cityView
+    this.services = services
     this.onTap = onTap
 
     const infoEl = document.createElement('div')
@@ -142,7 +152,7 @@ export class IncomeView {
         case 'ripe':
           return [
             `${b.type.name} · ${state.crop.name}`,
-            `Ripe! Tap to harvest 🪙 ${state.crop.sellPrice} · withers in ${duration(state.witherAt - now)}`,
+            `Ripe! Tap to harvest 🪙 ${this.city.harvestValue(b, state.crop)}${this.shortNote(b)} · withers in ${duration(state.witherAt - now)}`,
           ]
         case 'withered':
           return [`${b.type.name} · ${state.crop.name}`, 'Withered · tap to clear']
@@ -150,9 +160,15 @@ export class IncomeView {
     }
     if (!b.type.income) return [b.type.name, '']
     const status = this.city.isReady(b, now)
-      ? `Ready! Click to collect 🪙 ${b.type.income.coins}`
-      : `🪙 ${b.type.income.coins} in ${duration(b.readyAt - now)}`
-    return [b.type.name, status]
+      ? `Ready! Click to collect 🪙 ${this.city.payout(b)}`
+      : `🪙 ${this.city.payout(b)} in ${duration(b.readyAt - now)}`
+    return [b.type.name, status + this.shortNote(b)]
+  }
+
+  // " · ⚠️ short on 💧🔌" when utilities are cutting this building's income.
+  private shortNote(b: PlacedBuilding): string {
+    if (this.city.incomeMultiplier(b) >= 1) return ''
+    return ` · ⚠️ short on ${shortIcons(this.services.report)}`
   }
 
   private abovePoint(b: PlacedBuilding): THREE.Vector3 {

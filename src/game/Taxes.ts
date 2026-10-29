@@ -37,6 +37,7 @@ export interface YearLedger {
   salesIncome: number
   farmIncome: number // crop sales
   farmExpenses: number // seeds, deducted when bought (the cash method most farmers use)
+  operatingExpenses: number // running costs like utility upkeep
   otherIncome: number
   salesTaxCollected: number
   salesTaxRemitted: number
@@ -53,6 +54,7 @@ export interface TaxReturn {
   farmIncome: number
   otherIncome: number
   farmExpenses: number
+  operatingExpenses: number
   propertyTax: number
   depreciation: number
   standardDeduction: number
@@ -87,6 +89,7 @@ function emptyLedger(year: number): YearLedger {
     salesIncome: 0,
     farmIncome: 0,
     farmExpenses: 0,
+    operatingExpenses: 0,
     otherIncome: 0,
     salesTaxCollected: 0,
     salesTaxRemitted: 0,
@@ -130,6 +133,12 @@ export class Taxes {
         case 'collected':
           this.recordIncome(event.building, event.amount)
           break
+        // Running a business's utilities is an "ordinary and necessary"
+        // business expense (IRC §162), so it's deducted from income.
+        case 'expense':
+          this.ledger.operatingExpenses += event.amount
+          this.emit({ kind: 'changed' })
+          break
         // Prizes and awards are taxable income in the US (IRC §74), even in coins.
         case 'award':
           this.ledger.otherIncome += event.amount
@@ -172,7 +181,7 @@ export class Taxes {
   estimate(): TaxReturn {
     const l = this.ledger
     const grossIncome = l.rentIncome + l.salesIncome + l.farmIncome + l.otherIncome
-    const deductions = l.farmExpenses + l.propertyTax + l.depreciation + STANDARD_DEDUCTION
+    const deductions = l.farmExpenses + l.operatingExpenses + l.propertyTax + l.depreciation + STANDARD_DEDUCTION
     const taxableIncome = Math.max(0, grossIncome - deductions)
     const { tax, slices, marginalRate } = incomeTax(taxableIncome)
     return {
@@ -183,6 +192,7 @@ export class Taxes {
       farmIncome: l.farmIncome,
       otherIncome: l.otherIncome,
       farmExpenses: l.farmExpenses,
+      operatingExpenses: l.operatingExpenses,
       propertyTax: l.propertyTax,
       depreciation: l.depreciation,
       standardDeduction: STANDARD_DEDUCTION,
@@ -232,9 +242,14 @@ export class Taxes {
   load(save: TaxesSave) {
     this.ledger = { ...emptyLedger(save.ledger.year), ...save.ledger }
     this.salesTaxHeld = save.salesTaxHeld
-    // Returns filed before Stage 4 have no farm lines.
+    // Returns filed by older versions lack the lines added since (farms, utilities).
     const last = save.lastReturn
-    this.lastReturn = last && { ...last, farmIncome: last.farmIncome ?? 0, farmExpenses: last.farmExpenses ?? 0 }
+    this.lastReturn = last && {
+      ...last,
+      farmIncome: last.farmIncome ?? 0,
+      farmExpenses: last.farmExpenses ?? 0,
+      operatingExpenses: last.operatingExpenses ?? 0,
+    }
     for (const [id, asset] of save.assets) {
       if (this.city.get(id)) this.assets.set(id, asset)
     }
@@ -281,7 +296,7 @@ export class Taxes {
       this.ledger.propertyTax += (annualPropertyTax(building.type) / 12) * fraction
 
       const remaining = asset.basis - asset.depreciated
-      const depreciation = Math.min(remaining, monthlyDepreciation(asset.basis, building.type.category) * fraction)
+      const depreciation = Math.min(remaining, monthlyDepreciation(asset.basis, building.type) * fraction)
       asset.depreciated += depreciation
       this.ledger.depreciation += depreciation
     }

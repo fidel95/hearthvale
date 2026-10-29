@@ -3,6 +3,8 @@ import type { Builder, Mode } from '../game/Builder'
 import type { City } from '../game/City'
 import { MONTH_NAMES, type GameClock } from '../game/GameClock'
 import type { Player } from '../game/Player'
+import type { Services } from '../game/Services'
+import { UTILITIES, UTILITY_INFO } from '../game/utilityRules'
 import { duration, el } from './dom'
 
 // The HTML overlay on top of the canvas: coins, level, energy and calendar (top left),
@@ -25,6 +27,7 @@ function hintFor(mode: Mode): string {
 
 export interface HudCallbacks {
   onOpenTaxes: () => void
+  onOpenTown: () => void
   onNewTown: () => void
 }
 
@@ -33,13 +36,21 @@ export class Hud {
   private level = el('div', 'level-label')
   private xpBar = el('div', 'xp-fill')
   private energy = el('div', 'energy')
+  private town = el('div', 'town-line')
   private date = el('div', 'date-label')
   private monthBar = el('div', 'month-bar-fill')
   private toasts = el('div', 'toasts')
   private shownMonth = -1
   private player: Player
 
-  constructor(container: HTMLElement, builder: Builder, city: City, player: Player, callbacks: HudCallbacks) {
+  constructor(
+    container: HTMLElement,
+    builder: Builder,
+    city: City,
+    player: Player,
+    services: Services,
+    callbacks: HudCallbacks,
+  ) {
     this.player = player
     const hud = el('div', 'hud')
 
@@ -49,7 +60,7 @@ export class Hud {
     monthBar.append(this.monthBar)
     const xpBar = el('div', 'xp-bar')
     xpBar.append(this.xpBar)
-    status.append(this.coins, this.level, xpBar, this.energy, this.date, monthBar)
+    status.append(this.coins, this.level, xpBar, this.energy, this.town, this.date, monthBar)
 
     // ---- Top middle: what the current tool does, with a way out on touch screens (no Esc key)
     const hint = el('div', 'hint')
@@ -79,6 +90,15 @@ export class Hud {
       )
       if (type.income) item.append(el('span', 'catalog-meta', `Earns 🪙 ${type.income.coins} / ${type.income.seconds}s`))
       if (type.category === 'farm') item.append(el('span', 'catalog-meta', 'Plant crops to sell'))
+      if (type.needs) {
+        const needs = UTILITIES.filter((u) => type.needs?.[u]).map((u) => `${UTILITY_INFO[u].icon}${type.needs![u]}`)
+        const people = type.residents ? `👥 ${type.residents} · ` : ''
+        item.append(el('span', 'catalog-meta', `${people}uses ${needs.join(' ')}`))
+      }
+      if (type.supplies) {
+        const { utility, amount, upkeep } = type.supplies
+        item.append(el('span', 'catalog-meta', `Supplies ${UTILITY_INFO[utility].icon} ${amount} · 🪙 ${upkeep}/month to run`))
+      }
       item.append(lock)
       item.addEventListener('click', () => {
         catalog.hidden = true
@@ -102,6 +122,11 @@ export class Hud {
       demolish: el('button', 'tool', 'Demolish'),
     }
     const taxes = el('button', 'tool', 'Taxes')
+    const town = el('button', 'tool', 'Town')
+    town.addEventListener('click', () => {
+      catalog.hidden = true
+      callbacks.onOpenTown()
+    })
     tools.build.addEventListener('click', () => (catalog.hidden = !catalog.hidden))
     tools.move.addEventListener('click', () => {
       catalog.hidden = true
@@ -116,7 +141,7 @@ export class Hud {
       callbacks.onOpenTaxes()
     })
     const bar = el('div', 'toolbar')
-    bar.append(tools.build, tools.move, tools.demolish, taxes)
+    bar.append(tools.build, tools.move, tools.demolish, taxes, town)
 
     const bottom = el('div', 'hud-bottom')
     bottom.append(catalog, bar)
@@ -150,6 +175,18 @@ export class Hud {
     // Any change (XP, a level-up, loading a save) can change the level and what's unlocked.
     player.onChange(() => {
       showLevel()
+
+    // Population, and each utility as used/supplied, red when it falls short.
+    const showTown = () => {
+      const r = services.report
+      const chips = UTILITIES.map((u) => {
+        const { demand, supply, level } = r.utilities[u]
+        return el('span', level < 1 ? 'short' : '', `${UTILITY_INFO[u].icon}${demand}/${supply}`)
+      })
+      this.town.replaceChildren(el('span', '', `👥 ${r.population}`), ...chips)
+    }
+    services.onChange(showTown)
+    showTown()
       refreshCatalog()
     })
     showLevel()

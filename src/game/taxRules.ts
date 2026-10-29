@@ -110,12 +110,13 @@ export const RECOVERY_YEARS: Record<Category, number | null> = {
   business: 39, // nonresidential real property
   decoration: 15, // land improvements (landscaping, fences, ...)
   farm: null, // land
+  utility: 20, // a default; each utility building sets its own class (buildings.ts recoveryYears)
 }
 
 // Depreciation for one full month. In the month a building is placed you get
 // half of this: the "mid-month convention" the IRS uses for real estate.
-export function monthlyDepreciation(basis: number, category: Category): number {
-  const years = RECOVERY_YEARS[category]
+export function monthlyDepreciation(basis: number, type: Pick<BuildingType, 'category' | 'recoveryYears'>): number {
+  const years = type.recoveryYears ?? RECOVERY_YEARS[type.category]
   return years ? basis / (years * 12) : 0
 }
 

@@ -47,6 +47,7 @@ export type CityEvent =
   | { kind: 'harvested'; building: PlacedBuilding; crop: CropType; amount: number }
   | { kind: 'cleared'; building: PlacedBuilding; crop: CropType } // a withered crop was cleared away
   | { kind: 'award'; amount: number; reason: string } // prize coins, e.g. a level-up reward
+  | { kind: 'expense'; amount: number; reason: string } // a running cost, e.g. utility upkeep
   | { kind: 'coins'; coins: number }
   // The land changed: a lot was bought (bought is set), or a save was loaded.
   | { kind: 'land'; bought?: OwnedLot }
@@ -62,6 +63,10 @@ export class City {
   private land = new Map<string, OwnedLot>(
     START_LOTS.map((lot) => [lotKey(lot), { lot, price: START_LOT_VALUE }]),
   )
+
+  // What share of its full income a building earns right now (0 to 1).
+  // Services sets this from the utility report; without it everything earns in full.
+  incomeMultiplier: (building: PlacedBuilding) => number = () => 1
 
   // A getter with no setter: other code can read coins but must go through
   // place / collect / adjustCoins to change them.
@@ -183,13 +188,23 @@ export class City {
     const building = this.buildings.get(id)
     if (!building || !building.type.income || !this.isReady(building, now)) return 0
 
-    const { coins, seconds } = building.type.income
+    const amount = this.payout(building)
     // The next timer starts when you collect, not when it became ready,
     // so leaving money uncollected doesn't stack up extra payouts.
-    building.readyAt = now + seconds * 1000
-    this.emit({ kind: 'collected', building, amount: coins })
-    this.adjustCoins(coins)
-    return coins
+    building.readyAt = now + building.type.income.seconds * 1000
+    this.emit({ kind: 'collected', building, amount })
+    this.adjustCoins(amount)
+    return amount
+  }
+
+  // What collecting from this building pays right now (less when utilities fall short).
+  payout(building: PlacedBuilding): number {
+    return Math.round((building.type.income?.coins ?? 0) * this.incomeMultiplier(building))
+  }
+
+  // What a crop on this plot sells for right now (less without enough water).
+  harvestValue(plot: PlacedBuilding, crop: CropType): number {
+    return Math.round(crop.sellPrice * this.incomeMultiplier(plot))
   }
 
   // Plant a crop on an empty farm plot, paying for the seeds.
@@ -214,7 +229,7 @@ export class City {
     if (state.stage !== 'ripe') return 0
 
     plot.crop = null
-    const amount = state.crop.sellPrice
+    const amount = this.harvestValue(plot, state.crop)
     this.emit({ kind: 'harvested', building: plot, crop: state.crop, amount })
     this.adjustCoins(amount)
     return amount
@@ -238,6 +253,14 @@ export class City {
     if (amount <= 0) return
     this.emit({ kind: 'award', amount, reason })
     this.adjustCoins(amount)
+  }
+
+  // A running cost, like utility upkeep. It's a deductible expense (Taxes
+  // counts it), so it gets its own event. Like taxes, it can cause debt.
+  payExpense(amount: number, reason: string) {
+    if (amount <= 0) return
+    this.emit({ kind: 'expense', amount, reason })
+    this.adjustCoins(-amount)
   }
 
   // Add (or, with a negative delta, take away) coins. Unlike building, taxes

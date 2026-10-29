@@ -113,6 +113,39 @@ function createPlaceholder(type: BuildingType): THREE.Group {
       }
       break
     }
+    case 'tower': {
+      // A water tower: four legs holding up a round tank with a pointed roof.
+      for (const [x, z] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
+        add(new THREE.CylinderGeometry(0.05, 0.05, height * 0.55, 6), accent, x * w * 0.22, 0, z * d * 0.22)
+      }
+      add(new THREE.CylinderGeometry(w * 0.32, w * 0.32, height * 0.35, 12), color, 0, height * 0.55, 0)
+      add(new THREE.ConeGeometry(w * 0.34, height * 0.15, 12), accent, 0, height * 0.9, 0)
+      break
+    }
+    case 'plant': {
+      // A power plant: a long hall with two smokestacks.
+      add(new THREE.BoxGeometry(w * 0.85, height * 0.6, d * 0.7), color, 0, 0, 0.1)
+      add(new THREE.CylinderGeometry(0.18, 0.24, height * 1.4, 8), accent, -w * 0.25, 0, -d * 0.25)
+      add(new THREE.CylinderGeometry(0.18, 0.24, height * 1.4, 8), accent, w * 0.05, 0, -d * 0.25)
+      break
+    }
+    case 'recycling': {
+      // A recycling center: a shed and a row of colored bins out front.
+      add(new THREE.BoxGeometry(w * 0.8, height, d * 0.55), color, 0, 0, -d * 0.15)
+      const bins = ['#2f6f8f', '#e0b23a', '#3f8f3a']
+      bins.forEach((c, i) => add(new THREE.BoxGeometry(0.28, 0.3, 0.28), c, (i - 1) * 0.4, 0, d * 0.3))
+      break
+    }
+    case 'solar': {
+      // A solar farm: rows of tilted dark panels on short posts.
+      for (let row = 0; row < d; row++) {
+        const z = -d / 2 + 0.5 + row
+        add(new THREE.BoxGeometry(0.06, height * 0.4, 0.06), accent, 0, 0, z)
+        const panel = add(new THREE.BoxGeometry(w * 0.85, 0.05, 0.7), color, 0, height * 0.4, z)
+        panel.rotation.x = -0.45 // tilted toward the sun
+      }
+      break
+    }
     case 'tree': {
       add(new THREE.CylinderGeometry(0.07, 0.09, height * 0.4, 6), color, 0, 0, 0)
       add(new THREE.IcosahedronGeometry(0.38, 0), accent, 0, height * 0.35, 0)
