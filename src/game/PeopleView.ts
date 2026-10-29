@@ -3,6 +3,7 @@ import { sizeOf, type City, type PlacedBuilding } from './City'
 import { inBounds, tileToWorld, type Tile } from './grid'
 import { levelFactor } from './construction'
 import { findPath } from './pathfinding'
+import { isTrack } from './buildings'
 import { isWater } from './terrain'
 
 // Residents walking around town. Purely for looks: nothing here changes the
@@ -94,7 +95,7 @@ export class PeopleView {
   private passable = (tile: Tile) => {
     if (!inBounds(tile) || !this.city.ownsTile(tile) || isWater(tile)) return false
     const here = this.city.buildingAt(tile)
-    return !here || here.type.category === 'road'
+    return !here || isTrack(here.type) // people cross the railway too
   }
 
   // Walking on grass "costs" more than on a road, so paths stick to roads when they can.
@@ -151,7 +152,7 @@ export class PeopleView {
     } else {
       // Mostly visit another building (shops and parks are popular), sometimes just wander.
       const others = [...this.city.all()].filter(
-        (b) => b.id !== walker.homeId && b.type.category !== 'decoration' && b.type.category !== 'road',
+        (b) => b.id !== walker.homeId && b.type.category !== 'decoration' && !isTrack(b.type),
       )
       const favorites = others.filter((b) => b.type.category === 'business' || b.type.attractsVisitors)
       const target = favorites.length > 0 && Math.random() < 0.5 ? pick(favorites) : others.length > 0 ? pick(others) : null

@@ -56,6 +56,8 @@ export class PlacementSystem {
         problems.push(type.onShore ? 'It must stand on the shore, next to the sea' : "It doesn't fit there")
       } else if (type.requiresRoad && !edgeTiles({ type, tile: spot.tile, rotation: spot.rotation }).some(this.city.isRoad)) {
         warnings.push('Needs a road beside it to open')
+      } else if (type.requiresRail && !edgeTiles({ type, tile: spot.tile, rotation: spot.rotation }).some(this.city.isRail)) {
+        warnings.push('Needs railway track beside it to open')
       }
     }
     return { ok: problems.length === 0, problems, warnings }

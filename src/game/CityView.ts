@@ -2,6 +2,7 @@ import * as THREE from 'three'
 import { sizeOf, type City, type PlacedBuilding } from './City'
 import { cropState } from './crops'
 import { footprintCenter } from './grid'
+import { isTrack } from './buildings'
 import { createBuildingObject, createConstructionSite, createCropObject, cropLookFor, disposeCropObject } from './models'
 
 const POP_MS = 350
@@ -95,13 +96,13 @@ export class CityView {
   }
 
   private create(b: PlacedBuilding, pop = false) {
-    // Roads are drawn together by RoadView; here they only get an empty placeholder.
+    // Roads and track are drawn together by RoadView and RailView; here they only get an empty placeholder.
     const obj =
-      b.type.category === 'road' ? new THREE.Group() : b.construction ? createConstructionSite(b.type) : createBuildingObject(b.type, undefined, b.id)
+      isTrack(b.type) ? new THREE.Group() : b.construction ? createConstructionSite(b.type) : createBuildingObject(b.type, undefined, b.id)
     // Upgraded buildings stand a little taller: 8% per level.
     const scale = 1 + 0.08 * (b.level - 1)
     obj.scale.setScalar(scale)
-    if (pop && this.popIn && b.type.category !== 'road') {
+    if (pop && this.popIn && !isTrack(b.type)) {
       this.pops.set(b.id, { start: performance.now(), scale })
       obj.scale.setScalar(scale * POP_FROM)
     }

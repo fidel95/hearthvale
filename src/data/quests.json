@@ -402,6 +402,53 @@
         "coins": 1500,
         "xp": 80
       }
+    },
+    {
+      "id": "buses",
+      "title": "All Aboard the Bus",
+      "intro": "Bus stops make the neighborhoods around them nicer, and buses run between them. Put a few near homes and shops, beside a road.",
+      "after": "community",
+      "level": 7,
+      "tasks": [
+        {
+          "label": "Build 2 bus stops",
+          "count": 2,
+          "have": {
+            "building": "bus-stop"
+          }
+        }
+      ],
+      "reward": {
+        "coins": 200,
+        "xp": 20
+      }
+    },
+    {
+      "id": "railway",
+      "title": "The Railway Comes to Town",
+      "intro": "Lay railway track and build a station beside it. Trains bring visitors who spend money all over town.",
+      "after": "landmark",
+      "level": 14,
+      "tasks": [
+        {
+          "label": "Lay 10 tiles of track",
+          "count": 10,
+          "have": {
+            "building": "rail"
+          }
+        },
+        {
+          "label": "Build the Train Station",
+          "count": 1,
+          "have": {
+            "building": "train-station"
+          }
+        }
+      ],
+      "reward": {
+        "coins": 2000,
+        "xp": 100
+      }
     }
   ],
   "achievements": [

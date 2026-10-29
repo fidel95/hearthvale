@@ -170,6 +170,7 @@ export class City {
   }
 
   isRoad = (tile: Tile): boolean => this.buildingAt(tile)?.type.category === 'road'
+  isRail = (tile: Tile): boolean => this.buildingAt(tile)?.type.id === 'rail'
 
   // The road rule: a road on any tile touching one side of the footprint.
   // (ignoring: pretend this road tile is gone, to check what removing it would cut off.)
@@ -178,15 +179,24 @@ export class City {
     return edgeTiles(b).some((t) => this.isRoad(t) && !ignoring.some((i) => i.x === t.x && i.z === t.z))
   }
 
-  // Buildings that need a road and would lose every one if these road tiles went.
-  cutOffBy(...roads: PlacedBuilding[]): PlacedBuilding[] {
-    const tiles = roads.map((r) => r.tile)
-    return [...this.buildings.values()].filter((b) => b.type.requiresRoad && this.hasRoadAccess(b) && !this.hasRoadAccess(b, tiles))
+  hasRailAccess(b: PlacedBuilding, ignoring: Tile[] = []): boolean {
+    return edgeTiles(b).some((t) => this.isRail(t) && !ignoring.some((i) => i.x === t.x && i.z === t.z))
+  }
+
+  // Buildings that need a road (or track) and would lose every one if these
+  // road and track tiles went.
+  cutOffBy(...tracks: PlacedBuilding[]): PlacedBuilding[] {
+    const tiles = tracks.map((r) => r.tile)
+    return [...this.buildings.values()].filter(
+      (b) =>
+        (b.type.requiresRoad && this.hasRoadAccess(b) && !this.hasRoadAccess(b, tiles)) ||
+        (b.type.requiresRail && this.hasRailAccess(b) && !this.hasRailAccess(b, tiles)),
+    )
   }
 
   // Working: built, and connected if it needs a road.
   isOperating(b: PlacedBuilding): boolean {
-    return this.isBuilt(b) && (!b.type.requiresRoad || this.hasRoadAccess(b))
+    return this.isBuilt(b) && (!b.type.requiresRoad || this.hasRoadAccess(b)) && (!b.type.requiresRail || this.hasRailAccess(b))
   }
 
   buildingAt(tile: Tile): PlacedBuilding | undefined {

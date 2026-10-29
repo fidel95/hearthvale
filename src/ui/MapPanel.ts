@@ -23,6 +23,7 @@ const COLORS: Record<string, string> = {
   storage: '#a4553f',
   port: '#8a6a4a',
   landmark: '#b06ad0',
+  rail: '#7a6a5a',
 }
 
 export class MapPanel {

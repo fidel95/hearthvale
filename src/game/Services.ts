@@ -40,7 +40,7 @@ export class Services {
   // Landmarks' bonus to all rent and sales.
   townBonus(): number {
     let bonus = 0
-    for (const b of this.city.all()) if (this.city.isBuilt(b)) bonus += b.type.townBonus ?? 0
+    for (const b of this.city.all()) if (this.city.isOperating(b)) bonus += b.type.townBonus ?? 0
     return bonus
   }
 
@@ -91,7 +91,9 @@ export class Services {
     // Any building can change the bonus of the ones around it, so redo them all. Cheap for a town this size.
     const all = [...this.city.all()].filter((b) => this.city.isBuilt(b))
     this.bonuses.clear()
-    for (const b of all) this.bonuses.set(b.id, locationBonus(b, all, this.city.isRoad))
+    // Only working buildings help their neighbors (a bus stop the bus can't reach doesn't count).
+    const working = all.filter((b) => this.city.isOperating(b))
+    for (const b of all) this.bonuses.set(b.id, locationBonus(b, working, this.city.isRoad))
     this.emit({ kind: 'changed', report: this.report })
     const newlyShort = UTILITIES.filter((u) => before.utilities[u].level >= 1 && this.report.utilities[u].level < 1)
     if (newlyShort.length > 0) this.emit({ kind: 'shortage', utilities: newlyShort })

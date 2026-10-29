@@ -294,6 +294,58 @@ function createPlaceholder(type: BuildingType): THREE.Group {
       add(new THREE.BoxGeometry(0.25, height * 0.5, 0.25), color, -w * 0.32, height * 0.8, -d * 0.2)
       break
     }
+    case 'busstop': {
+      // A bus shelter: a back wall, a roof, a bench, and a sign on a pole.
+      add(new THREE.BoxGeometry(0.7, 0.04, 0.4), '#c9c6bd', 0, 0, 0)
+      add(new THREE.BoxGeometry(0.62, height * 0.75, 0.04), color, 0, 0.04, -0.16)
+      add(new THREE.BoxGeometry(0.7, 0.05, 0.42), color, 0, height * 0.8, -0.02)
+      add(new THREE.BoxGeometry(0.45, 0.06, 0.12), '#8a5a36', 0, 0.16, -0.08)
+      add(new THREE.CylinderGeometry(0.02, 0.02, height, 6), '#dddddd', 0.38, 0, 0.16)
+      add(new THREE.BoxGeometry(0.16, 0.16, 0.03), accent, 0.38, height * 0.85, 0.16)
+      break
+    }
+    case 'armybase': {
+      // Two barracks, a parade ground, a flagpole with a flag, a watchtower and a low wall.
+      add(new THREE.BoxGeometry(w * 0.92, 0.04, d * 0.92), accent, 0, 0, 0)
+      for (const z of [-0.85, 0.85]) {
+        add(new THREE.BoxGeometry(w * 0.55, height * 0.5, 0.6), color, -0.35, 0.04, z)
+        // A half cylinder lying along the barracks: a curved roof.
+        const roof = new THREE.CylinderGeometry(0.3, 0.3, w * 0.55, 8, 1, false, 0, Math.PI).rotateZ(Math.PI / 2)
+        add(roof, '#55613b', -0.35, 0.04 + height * 0.5, z)
+      }
+      add(new THREE.CylinderGeometry(0.025, 0.025, height * 1.6, 6), '#dddddd', 0.9, 0.04, 0)
+      add(new THREE.BoxGeometry(0.32, 0.2, 0.02), '#2f7fe0', 1.07, height * 1.35, 0)
+      for (const [x, z] of [[1.15, -1.15]]) {
+        for (const [lx, lz] of [[-0.12, -0.12], [0.12, -0.12], [-0.12, 0.12], [0.12, 0.12]]) {
+          add(new THREE.BoxGeometry(0.04, height * 1.2, 0.04), '#6b4a2f', x + lx, 0.04, z + lz)
+        }
+        add(new THREE.BoxGeometry(0.36, 0.2, 0.36), color, x, 0.04 + height * 1.2, z)
+        add(new THREE.ConeGeometry(0.28, 0.2, 4).rotateY(Math.PI / 4), '#55613b', x, 0.24 + height * 1.2, z)
+      }
+      for (const [x, z, sw, sd] of [[0, -d * 0.47, w * 0.94, 0.06], [-w * 0.47, 0, 0.06, d * 0.94]] as const) {
+        add(new THREE.BoxGeometry(sw, 0.16, sd), '#9a9a8a', x, 0.04, z)
+      }
+      break
+    }
+    case 'rail': {
+      // A short piece of track, for the build menu's picture (RailView draws the real network).
+      add(new THREE.BoxGeometry(0.9, 0.04, 0.5), color, 0, 0, 0)
+      for (const x of [-0.3, 0, 0.3]) add(new THREE.BoxGeometry(0.1, 0.03, 0.46), '#6b4a2f', x, 0.04, 0)
+      for (const z of [-0.12, 0.12]) add(new THREE.BoxGeometry(0.9, 0.04, 0.035), accent, 0, 0.07, z)
+      break
+    }
+    case 'station': {
+      // A station hall with a clock, and a long platform canopy on posts beside the track.
+      add(new THREE.BoxGeometry(w * 0.6, height * 0.8, d * 0.5), color, -w * 0.15, 0, -d * 0.2)
+      const roof = new THREE.ConeGeometry(Math.SQRT1_2, 1, 4).rotateY(Math.PI / 4)
+      roof.scale(w * 0.66, height * 0.35, d * 0.56)
+      add(roof, accent, -w * 0.15, height * 0.8, -d * 0.2)
+      add(new THREE.CylinderGeometry(0.14, 0.14, 0.03, 16).rotateX(Math.PI / 2), '#ffffff', -w * 0.15, height * 0.55, d * 0.05 + 0.02)
+      add(new THREE.BoxGeometry(w * 0.95, 0.08, d * 0.3), '#c9c6bd', 0, 0, d * 0.32)
+      for (const x of [-1.2, -0.4, 0.4, 1.2]) add(new THREE.BoxGeometry(0.05, height * 0.6, 0.05), '#dddddd', x, 0.08, d * 0.38)
+      add(new THREE.BoxGeometry(w * 0.95, 0.05, d * 0.32), accent, 0, 0.08 + height * 0.6, d * 0.32)
+      break
+    }
     case 'barn': {
       // A red barn: walls, a steep two-sided roof (a 4-sided cone stretched long) and white trim.
       add(new THREE.BoxGeometry(w * 0.8, height * 0.6, d * 0.85), color, 0, 0, 0)

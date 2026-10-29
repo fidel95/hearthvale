@@ -397,6 +397,21 @@ original, so disposing it would break the same buildings in your town.
 reset each calendar day; `neighborData.ts` holds who the neighbors are and
 what they give and ask for.
 
+## Traffic, buses, trains and the army
+
+`TrafficView` is like `PeopleView`: purely for looks, never saved, worked out
+again from the town whenever roads, track or stops change. The route-finding
+is in `routes.ts` as pure, tested functions: `nextTile` (wander on, turning
+back only at dead ends), `reachable` and `pathToFarthest` (breadth-first), and
+`Polyline`, which turns a path of tile centers into a position and heading for
+any distance along it, shifted into the right-hand lane. Cars step tile to
+tile; buses loop through their stops (found with A*); a train shuttles from
+the station to the end of the line, the locomotive pulling out and pushing
+back; the squad marches two abreast, out and back. Railway track is its own
+category (`rail`, the one new mechanic at level 14) and is drawn by `RailView`
+like roads; `isTrack()` covers both wherever roads and track behave alike
+(drawn by dragging, removed with the picker, walkable for residents).
+
 ## People
 
 `PeopleView` is purely visual: nothing is saved and nothing affects the

@@ -16,6 +16,7 @@ export type Category =
   | 'storage'
   | 'port'
   | 'landmark'
+  | 'rail' // railway track and the train station
 
 export type PlaceholderShape =
   | 'house'
@@ -42,6 +43,10 @@ export type PlaceholderShape =
   | 'clocktower'
   | 'lighthouse'
   | 'garden'
+  | 'busstop'
+  | 'armybase'
+  | 'rail'
+  | 'station'
 
 export interface BuildingType {
   id: string
@@ -86,6 +91,8 @@ export interface BuildingType {
   // Needs a road touching one side of its footprint to work (shops: customers
   // have to get there). See City.hasRoadAccess.
   requiresRoad?: boolean
+  // Needs railway track touching one side to work (the train station).
+  requiresRail?: boolean
   // Must be built on the shore, next to the sea (docks).
   onShore?: boolean
   // Depreciation period in years, when it differs from its category's (taxRules.ts).
@@ -647,9 +654,71 @@ export const BUILDING_TYPES: BuildingType[] = [
     attractsVisitors: { lingerSeconds: 10 },
     placeholder: { shape: 'garden', color: '#6fbf5a', accent: '#cfe8f2', height: 1.4 },
   },
+  // ---- Transport and the army
+  {
+    id: 'bus-stop',
+    name: 'Bus Stop',
+    category: 'community',
+    size: { x: 1, z: 1 },
+    cost: 150,
+    unlockLevel: 7,
+    upkeep: 3,
+    amenity: { bonus: 0.04, radius: 4 },
+    requiresRoad: true, // the bus has to reach it
+    recoveryYears: 15, // a shelter beside the road: a land improvement
+    placeholder: { shape: 'busstop', color: '#2f7fe0', accent: '#ffd23f', height: 0.6 },
+  },
+  {
+    id: 'army-base',
+    name: 'Army Base',
+    category: 'community',
+    size: { x: 3, z: 3 },
+    cost: 2500,
+    unlockLevel: 12,
+    build: { seconds: 240, materials: { bricks: 8, steel: 6 } },
+    needs: { water: 3, power: 3, trash: 2 },
+    upkeep: 40,
+    amenity: { bonus: 0.05, radius: 6 }, // people feel safe nearby
+    populationCapacity: 40,
+    requiresRoad: true, // the squad and the jeep go out on the roads
+    placeholder: { shape: 'armybase', color: '#6b7a4a', accent: '#c2b280', height: 0.9 },
+  },
+  {
+    id: 'rail',
+    name: 'Railway Track',
+    category: 'rail',
+    size: { x: 1, z: 1 },
+    cost: 20,
+    unlockLevel: 14,
+    xpReward: 0,
+    placeholder: { shape: 'rail', color: '#8a7a6a', accent: '#9aa3ad', height: 0.05 },
+  },
+  {
+    id: 'train-station',
+    name: 'Train Station',
+    category: 'rail',
+    size: { x: 3, z: 2 },
+    cost: 3000,
+    unlockLevel: 14,
+    build: { seconds: 300, materials: { bricks: 10, steel: 8, glass: 4 } },
+    needs: { water: 2, power: 3, trash: 2 },
+    upkeep: 30,
+    unique: true,
+    townBonus: 0.04, // visitors arriving by train spend money all over town
+    attractsVisitors: { lingerSeconds: 6 },
+    requiresRail: true,
+    recoveryYears: 39, // the station building: nonresidential real property
+    placeholder: { shape: 'station', color: '#e9d3b0', accent: '#2f5fc4', height: 1.2 },
+  },
 ]
 
 export const BUILDINGS_BY_ID = new Map(BUILDING_TYPES.map((b) => [b.id, b]))
+
+// Roads and railway track: 1×1 tiles you draw by dragging, drawn on screen
+// as one connected network (RoadView, RailView) rather than one by one.
+export function isTrack(type: BuildingType): boolean {
+  return type.category === 'road' || type.id === 'rail'
+}
 
 // A building can be turned in quarter turns (0–3). Turned a quarter, its
 // footprint swaps width and depth.

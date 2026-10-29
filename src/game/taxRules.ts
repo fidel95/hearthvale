@@ -116,6 +116,7 @@ export const RECOVERY_YEARS: Record<Category, number | null> = {
   storage: 39, // nonresidential real property (a barn overrides it: farm building)
   port: 15, // docks and wharves are land improvements
   landmark: 39, // nonresidential real property
+  rail: 7, // railroad track is 7-year property, IRC §168(e)(3)(C)(i) (the station overrides it)
 }
 
 // Depreciation for one full month. In the month a building is placed you get

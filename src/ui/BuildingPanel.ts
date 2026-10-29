@@ -10,6 +10,7 @@ import type { Services } from '../game/Services'
 import type { Taxes } from '../game/Taxes'
 import { UTILITIES, UTILITY_INFO } from '../game/utilityRules'
 import { coins, duration, el, percent } from './dom'
+import { isTrack } from '../game/buildings'
 import { Sheet, button } from './Sheet'
 
 // Everything about one building: status, a progress bar for whatever it's
@@ -28,7 +29,7 @@ export interface BuildingActions {
 
 // Can this building go into storage right now?
 export function canStore(b: PlacedBuilding, city: City, docks: Docks): boolean {
-  return city.isBuilt(b) && b.type.category !== 'road' && !(b.type.category === 'port' && docks.state(b, Date.now()).stage !== 'idle')
+  return city.isBuilt(b) && !isTrack(b.type) && !(b.type.category === 'port' && docks.state(b, Date.now()).stage !== 'idle')
 }
 
 export class BuildingPanel {

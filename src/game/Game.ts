@@ -33,7 +33,7 @@ import type { Neighbor } from './neighborData'
 import { Visit } from './Visit'
 import { GRANT, canClaimGrant } from './safetyNet'
 import { CROPS_BY_ID, CROP_TYPES } from './crops'
-import { BUILDING_TYPES } from './buildings'
+import { BUILDING_TYPES, isTrack } from './buildings'
 import { FEATURE_LEVELS } from './UnlockSystem'
 import { MONTH_NAMES } from './GameClock'
 import { xpForLevel } from './progression'
@@ -45,7 +45,9 @@ import { IncomeView } from './IncomeView'
 import { LandView } from './LandView'
 import { WELCOME_BACK_AFTER_MS, awaySummary } from './offline'
 import { PeopleView } from './PeopleView'
+import { RailView } from './RailView'
 import { RoadView } from './RoadView'
+import { TrafficView } from './TrafficView'
 import { ShipView } from './ShipView'
 import { AutoSaver } from './save'
 import { UTILITY_INFO } from './utilityRules'
@@ -101,6 +103,8 @@ export class Game {
   private cityView: CityView
   private peopleView: PeopleView
   private roadView: RoadView
+  private railView: RailView
+  private trafficView: TrafficView
   private landView: LandView
   private shipView: ShipView
   private incomeView: IncomeView
@@ -140,6 +144,8 @@ export class Game {
     this.cityView = new CityView(this.scene, this.city)
     this.peopleView = new PeopleView(this.scene, this.city)
     this.roadView = new RoadView(this.scene, this.city)
+    this.railView = new RailView(this.scene, this.city)
+    this.trafficView = new TrafficView(this.scene, this.city)
     const builder = new Builder(this.scene, this.city, this.player, this.docks, this.cityView, this.controls, this.renderer.domElement)
     this.incomeView = new IncomeView(this.scene, this.city, this.cityView, this.services, this.docks, (b) => builder.tap(b))
     builder.onHoverBuilding = (b) => this.incomeView.setHovered(b)
@@ -209,6 +215,7 @@ export class Game {
       landView.setGridVisible(s.showGrid)
       landView.calmSea = s.reduceMotion
       this.peopleView.setVisible(s.showPeople)
+      this.trafficView.setVisible(s.showTraffic)
       builder.confirmPurchases = s.confirmPurchases
       document.body.classList.toggle('reduce-motion', s.reduceMotion)
       this.cityView.popIn = this.loaded && !s.reduceMotion
@@ -297,6 +304,8 @@ export class Game {
     this.contextMenu.update(now)
     this.buildingPanel.update(now)
     this.roadView.update()
+    this.railView.update()
+    this.trafficView.update(Math.min(dt, 100) / 1000)
     this.controls.update(Math.min(dt, 100) / 1000)
     const seconds = frameTime / 1000
     this.landView.update(seconds)
@@ -344,19 +353,19 @@ export class Game {
     // Ask before tearing down one building, or a set of road tiles.
     const confirmRemoval = (list: PlacedBuilding[], onDone?: () => void) => {
       if (list.length === 0) return
-      const roads = list.every((b) => b.type.category === 'road')
-      const what = list.length === 1 ? `this ${list[0].type.name}` : `these ${list.length} road tiles`
+      const roads = list.every((b) => isTrack(b.type))
+      const what = list.length === 1 ? `this ${list[0].type.name}` : `these ${list.length} tiles`
       // Removing roads can cut shops off: say which, before it happens.
       const cut = roads ? this.city.cutOffBy(...list) : []
       confirmRemove.body.replaceChildren(
         el('p', '', `Tear down ${what}? You get nothing back for ${list.length === 1 ? 'it' : 'them'}.`),
         ...(cut.length
-          ? [el('p', 'warning', `🚧 ${cut.map((c) => c.type.name).join(', ')} would be left with no road beside ${cut.length === 1 ? 'it' : 'them'}, and stop selling until reconnected.`)]
+          ? [el('p', 'warning', `🚧 ${cut.map((c) => c.type.name).join(', ')} would be cut off, and stop working until reconnected.`)]
           : []),
         el('p', 'muted', "No tax deduction either: in the US, a demolished building's leftover cost is added to the land's value instead (IRC §280B)."),
       )
       confirmRemove.show(
-        list.length === 1 ? `🗑️ Remove ${list[0].type.name}?` : `🗑️ Remove ${list.length} roads?`,
+        list.length === 1 ? `🗑️ Remove ${list[0].type.name}?` : `🗑️ Remove ${list.length} tiles?`,
         button('Keep', () => confirmRemove.close(), 'panel-button secondary'),
         button('Remove', () => {
           confirmRemove.close()
@@ -366,9 +375,9 @@ export class Game {
       )
     }
     this.removePickedRoads = () => confirmRemoval(builder.pickedRoads(), () => builder.setMode({ kind: 'select' }))
-    // Roads: open the road picker with this one picked, so several can go at once.
+    // Roads and track: open the picker with this one picked, so several can go at once.
     const remove = (b: PlacedBuilding) => {
-      if (b.type.category === 'road') builder.setMode({ kind: 'removeRoads', picked: new Set([b.id]) })
+      if (isTrack(b.type)) builder.setMode({ kind: 'removeRoads', picked: new Set([b.id]) })
       else confirmRemoval([b])
     }
     const move = (b: PlacedBuilding) => {
@@ -423,7 +432,7 @@ export class Game {
     this.contextMenu = new ContextMenu(this.scene, this.cityView, this.incomeView, [
       { icon: 'ℹ️', label: 'Details', run: (b) => this.buildingPanel.open(b) },
       { icon: '✋', label: 'Move', run: move },
-      { icon: '⟳', label: 'Turn', run: (b) => builder.turnPlaced(b), when: (b) => b.type.category !== 'road' },
+      { icon: '⟳', label: 'Turn', run: (b) => builder.turnPlaced(b), when: (b) => !isTrack(b.type) },
       { icon: '🎒', label: 'Store', run: store, when: (b) => canStore(b, this.city, this.docks) },
       { icon: '🗑️', label: 'Remove', run: remove },
     ])

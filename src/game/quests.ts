@@ -8,6 +8,7 @@ import { MATERIAL_IDS } from './items'
 import data from '../data/quests.json'
 import type { Player } from './Player'
 import type { Services } from './Services'
+import { isTrack } from './buildings'
 import type { Taxes } from './Taxes'
 
 // Quests and achievements. Quests are a guided path through the game's
@@ -146,7 +147,7 @@ export class Quests {
           if (e.cost > 0) this.bump('plantings')
           break
         case 'added':
-          if (e.paid > 0 && e.building.type.category !== 'road') this.bump('built')
+          if (e.paid > 0 && !isTrack(e.building.type)) this.bump('built')
           break
         case 'restocked':
           this.bump('restocks')

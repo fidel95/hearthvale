@@ -1,0 +1,353 @@
+import * as THREE from 'three'
+import type { City, PlacedBuilding } from './City'
+import { edgeTiles } from './communityRules'
+import { tileToWorld, type Tile } from './grid'
+import { findPath } from './pathfinding'
+import { nextTile, pathToFarthest, Polyline, reachable } from './routes'
+
+// Everything that moves along roads and track: cars, buses, trains, and the
+// army's marching squad and patrol jeep. Purely for looks, like PeopleView:
+// nothing here changes the game or is saved, and the whole fleet is worked
+// out again from the town whenever roads, track or stops change.
+//
+// - Cars: about one for every five residents. They wander the roads, keeping
+//   to the right, and only turn back at a dead end.
+// - Buses: one per bus stop (up to two), looping from stop to stop and
+//   pausing at each; with a single stop, out to the far end and back.
+// - Trains: from the station to the far end of the line and back, pausing at
+//   each end; the locomotive pulls going out and pushes coming back.
+// - Army: six soldiers march two abreast from the base to a spot on the road
+//   network and back, and a jeep patrols like a car.
+
+const MAX_CARS = 16
+const LANE = 0.17 // how far right of the middle of the road vehicles drive
+const SPEED = { car: 1.8, bus: 1.3, train: 2.2, march: 0.8 } // tiles per second
+const PAUSE = { bus: 2.5, train: 3, march: 3 } // seconds stopped at each stop or end
+const CAR_COLORS = ['#e0453a', '#2f7fe0', '#f2c230', '#f5f5f5', '#3fae6b', '#8a56d6', '#f08a24', '#2b2d33', '#e85d9b']
+const OLIVE = '#5f6b3a'
+
+// ---- Shapes: one set of geometries shared by every vehicle; built along +x.
+
+const box = (w: number, h: number, d: number, x = 0, y = 0, z = 0) => new THREE.BoxGeometry(w, h, d).translate(x, y + h / 2, z)
+const GEOMETRY = {
+  wheel: new THREE.CylinderGeometry(0.04, 0.04, 0.03, 8).rotateX(Math.PI / 2),
+  carBody: box(0.38, 0.1, 0.2, 0, 0.03),
+  carCabin: box(0.2, 0.09, 0.18, -0.03, 0.13),
+  busBody: box(0.8, 0.2, 0.24, 0, 0.04),
+  busWindows: box(0.7, 0.06, 0.246, 0.02, 0.15),
+  jeepBody: box(0.36, 0.1, 0.2, 0, 0.03),
+  jeepBar: box(0.03, 0.1, 0.2, -0.05, 0.13),
+  locoBody: box(0.72, 0.18, 0.22, 0, 0.06),
+  locoCab: box(0.24, 0.12, 0.22, -0.22, 0.24),
+  locoChimney: new THREE.CylinderGeometry(0.04, 0.05, 0.12, 8).translate(0.24, 0.3, 0),
+  carriage: box(0.72, 0.2, 0.22, 0, 0.06),
+  carriageWindows: box(0.6, 0.06, 0.226, 0, 0.16),
+  legs: box(0.08, 0.12, 0.06),
+  torso: new THREE.CylinderGeometry(0.06, 0.07, 0.15, 6).translate(0, 0.195, 0),
+  head: new THREE.IcosahedronGeometry(0.055, 0).translate(0, 0.32, 0),
+  helmet: new THREE.SphereGeometry(0.065, 8, 4, 0, Math.PI * 2, 0, Math.PI / 2).translate(0, 0.335, 0),
+}
+const materials = new Map<string, THREE.MeshLambertMaterial>()
+function material(color: string) {
+  let m = materials.get(color)
+  if (!m) materials.set(color, (m = new THREE.MeshLambertMaterial({ color })))
+  return m
+}
+const pick = <T,>(list: T[]): T => list[Math.floor(Math.random() * list.length)]
+
+function build(parts: [THREE.BufferGeometry, string][], wheelsAt: number[] = []): THREE.Group {
+  const g = new THREE.Group()
+  for (const [geometry, color] of parts) {
+    const mesh = new THREE.Mesh(geometry, material(color))
+    mesh.castShadow = true
+    g.add(mesh)
+  }
+  for (const x of wheelsAt) {
+    for (const z of [-0.1, 0.1]) {
+      const wheel = new THREE.Mesh(GEOMETRY.wheel, material('#222222'))
+      wheel.position.set(x, 0.04, z)
+      g.add(wheel)
+    }
+  }
+  return g
+}
+
+const makeCar = (color: string) => build([[GEOMETRY.carBody, color], [GEOMETRY.carCabin, color]], [-0.12, 0.12])
+const makeJeep = () => build([[GEOMETRY.jeepBody, OLIVE], [GEOMETRY.jeepBar, '#3b4226']], [-0.12, 0.12])
+const makeBus = () => build([[GEOMETRY.busBody, '#f2c230'], [GEOMETRY.busWindows, '#2b3a4a']], [-0.25, 0.25])
+const makeLoco = () => build([[GEOMETRY.locoBody, '#d23c32'], [GEOMETRY.locoCab, '#8f2a24'], [GEOMETRY.locoChimney, '#2b2d33']], [-0.22, 0.22])
+const makeCarriage = (color: string) => build([[GEOMETRY.carriage, color], [GEOMETRY.carriageWindows, '#fff4d6']], [-0.22, 0.22])
+function makeSoldier(): THREE.Group {
+  const s = build([
+    [GEOMETRY.legs, '#3b4226'],
+    [GEOMETRY.torso, OLIVE],
+    [GEOMETRY.head, pick(['#f1c9a5', '#d9a47c', '#a86f4c', '#6b4430'])],
+    [GEOMETRY.helmet, '#4a5530'],
+  ])
+  s.scale.setScalar(1.4)
+  return s
+}
+
+const center = (t: Tile) => {
+  const c = tileToWorld(t)
+  return { x: c.x, z: c.z }
+}
+const place = (obj: THREE.Object3D, pose: { x: number; z: number; angle: number }, y = 0) => {
+  obj.position.set(pose.x, y, pose.z)
+  obj.rotation.y = pose.angle
+}
+
+// ---- The movers
+
+interface Wanderer {
+  object: THREE.Group
+  from: Tile | null
+  at: Tile
+  to: Tile
+  t: number
+  speed: number
+}
+
+// Something going round a fixed route (bus, train, squad): distance along
+// the line, and where along it to stop and wait.
+interface Shuttle {
+  objects: THREE.Group[]
+  lines: Polyline[] // a bus: one loop; a train or squad: out, then back
+  line: number
+  s: number
+  stops: number[][] // per line, the distances at which to pause
+  nextStop: number
+  pause: number
+  pauseFor: number
+  speed: number
+  spacing: number // distance between the train's carriages, or the squad's rows
+  kind: 'bus' | 'train' | 'squad'
+  phase: number
+}
+
+export class TrafficView {
+  private scene: THREE.Scene
+  private city: City
+  private cars: Wanderer[] = []
+  private shuttles: Shuttle[] = []
+  private dirty = true
+  private visible = true
+  private spawnTimer = 0
+  private wantCars = 0
+  private wantJeep = false
+
+  constructor(scene: THREE.Scene, city: City) {
+    this.scene = scene
+    this.city = city
+    city.onChange((e) => {
+      if (['added', 'removed', 'moved', 'finished', 'stored', 'restored'].includes(e.kind)) this.dirty = true
+    })
+  }
+
+  // Turned off in Settings: every vehicle leaves at once.
+  setVisible(visible: boolean) {
+    this.visible = visible
+    this.dirty = true
+    if (!visible) this.clearAll()
+  }
+
+  update(dt: number) {
+    if (!this.visible) return
+    if (this.dirty) this.replan()
+    this.spawnTimer -= dt
+    if (this.spawnTimer <= 0 && (this.cars.length < this.wantCars + (this.wantJeep ? 1 : 0))) {
+      this.spawnTimer = 0.7
+      this.spawnCar(this.wantJeep && !this.cars.some((c) => c.object.userData.jeep))
+    }
+    for (const car of [...this.cars]) this.driveCar(car, dt)
+    for (const s of this.shuttles) this.runShuttle(s, dt)
+  }
+
+  // Work out the fleet from the town as it is now.
+  private replan() {
+    this.dirty = false
+    const all = [...this.city.all()]
+    const roads = all.filter((b) => b.type.category === 'road').length
+    const residents = all.reduce((sum, b) => sum + (this.city.isBuilt(b) ? (b.type.residents ?? 0) : 0), 0)
+    const base = all.find((b) => b.type.id === 'army-base' && this.city.isOperating(b))
+    this.wantCars = roads >= 3 ? Math.min(MAX_CARS, Math.floor(residents / 5)) : 0
+    this.wantJeep = base !== undefined
+    // Cars that lost their road leave; too many cars, the extras leave.
+    for (const car of [...this.cars]) if (!this.city.isRoad(car.at) || !this.city.isRoad(car.to)) this.removeCar(car)
+    while (this.cars.length > this.wantCars + (this.wantJeep ? 1 : 0)) this.removeCar(this.cars[this.cars.length - 1])
+    if (!this.wantJeep) for (const car of [...this.cars]) if (car.object.userData.jeep) this.removeCar(car)
+
+    // Buses, trains and the squad follow routes, so they start over on new ones.
+    for (const s of this.shuttles) for (const o of s.objects) this.scene.remove(o)
+    this.shuttles = []
+    this.planBuses(all)
+    this.planTrain(all)
+    if (base) this.planSquad(base)
+  }
+
+  private clearAll() {
+    for (const car of [...this.cars]) this.removeCar(car)
+    for (const s of this.shuttles) for (const o of s.objects) this.scene.remove(o)
+    this.shuttles = []
+  }
+
+  // ---- Cars (and the jeep)
+
+  private spawnCar(jeep: boolean) {
+    const roads = [...this.city.all()].filter((b) => b.type.category === 'road')
+    if (roads.length === 0) return
+    const at = pick(roads).tile
+    const to = nextTile(null, at, this.city.isRoad)
+    if (!to) return
+    const object = jeep ? makeJeep() : makeCar(pick(CAR_COLORS))
+    object.userData.jeep = jeep
+    this.scene.add(object)
+    this.cars.push({ object, from: null, at, to, t: 0, speed: SPEED.car * (0.85 + Math.random() * 0.3) })
+  }
+
+  private removeCar(car: Wanderer) {
+    this.scene.remove(car.object)
+    this.cars.splice(this.cars.indexOf(car), 1)
+  }
+
+  private driveCar(car: Wanderer, dt: number) {
+    car.t += car.speed * dt
+    while (car.t >= 1) {
+      car.t -= 1
+      const next = nextTile(car.at, car.to, this.city.isRoad)
+      if (!next) return this.removeCar(car)
+      car.from = car.at
+      car.at = car.to
+      car.to = next
+    }
+    place(car.object, new Polyline([center(car.at), center(car.to)]).at(car.t, LANE))
+  }
+
+  // ---- Buses
+
+  private planBuses(all: PlacedBuilding[]) {
+    const stops = all
+      .filter((b) => b.type.id === 'bus-stop' && this.city.isOperating(b))
+      .map((b) => edgeTiles(b).find(this.city.isRoad))
+      .filter((t): t is Tile => t !== undefined)
+    if (stops.length === 0) return
+    // Visit the stops nearest-first, then back to the first: one loop.
+    const order = [stops[0]]
+    const left = stops.slice(1)
+    while (left.length > 0) {
+      const last = order[order.length - 1]
+      left.sort((a, b) => Math.hypot(a.x - last.x, a.z - last.z) - Math.hypot(b.x - last.x, b.z - last.z))
+      order.push(left.shift()!)
+    }
+    // With one stop, the bus goes out to the far end of the road and back.
+    if (order.length === 1) order.push(pathToFarthest(order[0], this.city.isRoad).at(-1)!)
+    const tiles: Tile[] = [order[0]]
+    const stopIndexes = [0]
+    for (let i = 0; i < order.length; i++) {
+      const leg = findPath(order[i], order[(i + 1) % order.length], this.city.isRoad)
+      if (!leg) return // not all on one road network: no bus
+      tiles.push(...leg.slice(1))
+      stopIndexes.push(tiles.length - 1)
+    }
+    if (tiles.length < 3) return
+    const line = new Polyline(tiles.map(center))
+    // Where each stop is along the loop. The loop ends back at the first stop,
+    // so its start isn't counted again (or the bus would wait there twice).
+    const stopDistances = stopIndexes.slice(1).map((i) => new Polyline(tiles.slice(0, i + 1).map(center)).length)
+    const buses = Math.min(2, stops.length)
+    for (let i = 0; i < buses; i++) {
+      const object = makeBus()
+      this.scene.add(object)
+      const s = (line.length * i) / buses
+      this.shuttles.push({
+        kind: 'bus', objects: [object], lines: [line], line: 0, s,
+        stops: [stopDistances], nextStop: stopDistances.findIndex((d) => d >= s), pause: 0, pauseFor: PAUSE.bus,
+        speed: SPEED.bus, spacing: 0, phase: 0,
+      })
+    }
+  }
+
+  // ---- Trains
+
+  private planTrain(all: PlacedBuilding[]) {
+    const station = all.find((b) => b.type.id === 'train-station' && this.city.isOperating(b))
+    const start = station && edgeTiles(station).find(this.city.isRail)
+    if (!start) return
+    const path = pathToFarthest(start, this.city.isRail)
+    if (path.length < 3) return
+    const out = new Polyline(path.map(center))
+    const back = new Polyline([...path].reverse().map(center))
+    const spacing = 0.8
+    const carriages = Math.max(1, Math.min(3, Math.floor(out.length / spacing) - 1))
+    const objects = [makeLoco(), ...Array.from({ length: carriages }, (_, i) => makeCarriage(['#3f8f5c', '#2f6fbf', '#3f8f5c'][i]))]
+    for (const o of objects) this.scene.add(o)
+    const length = spacing * (objects.length - 1)
+    this.shuttles.push({
+      kind: 'train', objects, lines: [out, back], line: 0, s: length,
+      stops: [[out.length], [back.length]], nextStop: 0, pause: PAUSE.train, pauseFor: PAUSE.train,
+      speed: SPEED.train, spacing, phase: 0,
+    })
+  }
+
+  // ---- The army
+
+  private planSquad(base: PlacedBuilding) {
+    const start = edgeTiles(base).find(this.city.isRoad)
+    if (!start) return
+    // March to somewhere a fair way along the roads, and back.
+    const paths = [...reachable(start, this.city.isRoad).values()].filter((p) => p.length >= 6)
+    const path = paths.length > 0 ? pick(paths) : pathToFarthest(start, this.city.isRoad)
+    if (path.length < 3) return
+    const out = new Polyline(path.map(center))
+    const back = new Polyline([...path].reverse().map(center))
+    const objects = Array.from({ length: 6 }, makeSoldier)
+    for (const o of objects) this.scene.add(o)
+    this.shuttles.push({
+      kind: 'squad', objects, lines: [out, back], line: 0, s: 0.8,
+      stops: [[out.length], [back.length]], nextStop: 0, pause: PAUSE.march, pauseFor: PAUSE.march,
+      speed: SPEED.march, spacing: 0.4, phase: 0,
+    })
+  }
+
+  // ---- Moving along a route
+
+  private runShuttle(s: Shuttle, dt: number) {
+    if (s.pause > 0) {
+      s.pause -= dt
+    } else {
+      s.s += s.speed * dt
+      s.phase += dt * 9
+      const stops = s.stops[s.line]
+      const stopAt = stops[s.nextStop]
+      if (stopAt !== undefined && s.s >= stopAt) {
+        s.s = stopAt
+        s.pause = s.pauseFor
+        s.nextStop++
+      }
+      const line = s.lines[s.line]
+      if (s.s >= line.length && s.pause <= 0) {
+        // End of the line: a loop starts over; out-and-back turns around.
+        s.line = (s.line + 1) % s.lines.length
+        s.s = s.kind === 'bus' ? 0 : s.spacing * (s.kind === 'train' ? s.objects.length - 1 : 2)
+        s.nextStop = 0
+      }
+    }
+    const line = s.lines[s.line]
+    if (s.kind === 'bus') return place(s.objects[0], line.at(s.s, LANE))
+    if (s.kind === 'train') {
+      // Out, the locomotive leads; back, it pushes from the rear.
+      const n = s.objects.length
+      for (let i = 0; i < n; i++) {
+        const object = s.line === 0 ? s.objects[i] : s.objects[n - 1 - i]
+        place(object, line.at(s.s - i * s.spacing))
+      }
+      return
+    }
+    // The squad: two abreast, in rows behind the leader, bobbing as they march.
+    const bob = s.pause > 0 ? 0 : Math.abs(Math.sin(s.phase)) * 0.03
+    s.objects.forEach((o, i) => {
+      const row = Math.floor(i / 2)
+      place(o, line.at(s.s - row * s.spacing, i % 2 === 0 ? -0.12 : 0.12), bob)
+    })
+  }
+}

@@ -19,7 +19,7 @@ const TABS: { label: string; categories: Category[] }[] = [
   { label: '🏪 Businesses', categories: ['business', 'port'] },
   { label: '🏫 Community', categories: ['community', 'utility'] },
   { label: '🌾 Farms', categories: ['farm', 'storage'] },
-  { label: '🛣️ Roads', categories: ['road'] },
+  { label: '🛣️ Transport', categories: ['road', 'rail'] },
   { label: '🌳 Decor', categories: ['decoration'] },
   { label: '🏛️ Landmarks', categories: ['landmark'] },
 ]
@@ -32,6 +32,8 @@ function headline(type: BuildingType): string {
   if (type.storage) return `Stores 📦 ${type.storage}`
   if (type.category === 'farm') return 'Grows crops'
   if (type.category === 'road') return `+${ROAD_BONUS * 100}% beside it`
+  if (type.id === 'rail') return 'Trains run on it'
+  if (type.townBonus) return `+${Math.round(type.townBonus * 100)}% town-wide`
   return 'Decoration'
 }
 
@@ -53,6 +55,10 @@ function details(type: BuildingType): string[] {
   if (type.category === 'road') lines.push(`Drag to draw. Homes and shops beside a road earn +${ROAD_BONUS * 100}%`)
   if (type.onShore) lines.push('Must be built on the shore. Order shipments of goods here')
   if (type.requiresRoad) lines.push('🛣️ Needs a road touching one of its sides to open')
+  if (type.id === 'rail') lines.push('Drag to lay track. A Train Station beside it runs a train to the end of the line and back')
+  if (type.requiresRail) lines.push('🛤️ Needs railway track touching one of its sides; its train runs along the track')
+  if (type.id === 'bus-stop') lines.push('🚌 Buses drive from stop to stop on your roads')
+  if (type.id === 'army-base') lines.push('🪖 A squad marches through town and a jeep patrols the roads')
   if (type.townBonus) lines.push(`+${Math.round(type.townBonus * 100)}% to all rent and sales in town`)
   if (type.shipSpeedBonus) lines.push(`Ships arrive ${Math.round(type.shipSpeedBonus * 100)}% sooner`)
   if (type.minRating) lines.push(`Needs a city rating of ${type.minRating} (see Town)`)

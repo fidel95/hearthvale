@@ -12,7 +12,7 @@ import { cropState } from './crops'
 //
 // Everything comes from timestamps and the town's state, so it's never saved.
 
-export type BlockedReason = 'road' | 'stock'
+export type BlockedReason = 'road' | 'rail' | 'stock'
 
 export type ProductionState =
   | { state: 'building'; endsAt: number; done: boolean }
@@ -24,6 +24,7 @@ export type ProductionState =
 export function productionState(city: City, b: PlacedBuilding, now: number): ProductionState {
   if (b.construction) return { state: 'building', endsAt: b.construction.endsAt, done: now >= b.construction.endsAt }
   if (b.type.requiresRoad && !city.hasRoadAccess(b)) return { state: 'blocked', reason: 'road' }
+  if (b.type.requiresRail && !city.hasRailAccess(b)) return { state: 'blocked', reason: 'rail' }
   if (b.type.income) {
     if (now < b.readyAt) return { state: 'producing', readyAt: b.readyAt }
     return city.production.hasStock(b) ? { state: 'ready' } : { state: 'blocked', reason: 'stock' }
@@ -38,5 +39,6 @@ export function productionState(city: City, b: PlacedBuilding, now: number): Pro
 
 export const BLOCKED_TEXT: Record<BlockedReason, string> = {
   road: 'No road access: build a road beside it',
+  rail: 'No railway: build track beside it',
   stock: 'Out of stock: restock it with goods',
 }

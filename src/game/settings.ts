@@ -7,6 +7,7 @@ import { Emitter } from './events'
 export interface Settings {
   showGrid: boolean // tile grid lines on your land
   showPeople: boolean // residents walking around town
+  showTraffic: boolean // cars, buses, trains and the army on the move
   confirmPurchases: boolean // the ✓ step before buying a building
   reduceMotion: boolean // no bobbing bubbles, floating pop-ups or waves
   music: boolean // gentle background music
@@ -29,6 +30,7 @@ export type SwitchSetting = { [K in keyof Settings]: Settings[K] extends boolean
 export const DEFAULT_SETTINGS: Settings = {
   showGrid: true,
   showPeople: true,
+  showTraffic: true,
   confirmPurchases: true,
   reduceMotion: false,
   music: false,
@@ -39,6 +41,7 @@ export const DEFAULT_SETTINGS: Settings = {
 export const SETTING_LABELS: Record<SwitchSetting, string> = {
   showGrid: 'Show the tile grid',
   showPeople: 'Show residents walking around',
+  showTraffic: 'Show cars, buses, trains and soldiers',
   confirmPurchases: 'Confirm (✓) before buying a building',
   reduceMotion: 'Reduce motion',
   music: 'Background music',

@@ -1,6 +1,6 @@
 import * as THREE from 'three'
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
-import { footprint, type BuildingType, type Rotation } from './buildings'
+import { footprint, type BuildingType, type Rotation, isTrack } from './buildings'
 import type { CameraController, Carry } from './CameraController'
 import { duration, outOfEnergyMessage } from '../ui/dom'
 import { sizeOf, type City, type PlacedBuilding } from './City'
@@ -208,7 +208,7 @@ export class Builder {
     // Roads are drawn by dragging, and picked for removal by dragging;
     // everything else drags the camera.
     this.controls.paint =
-      mode.kind === 'build' && mode.type.category === 'road'
+      mode.kind === 'build' && isTrack(mode.type)
         ? (x, y, first) => this.paintRoad(x, y, first)
         : mode.kind === 'removeRoads'
           ? (x, y, first) => this.dragPick(x, y, first)
@@ -418,7 +418,7 @@ export class Builder {
     const point = this.controls.groundPointAt(clientX, clientY)
     const tile = point && worldToTile(point)
     const b = tile ? this.city.buildingAt(tile) : undefined
-    return b && b.type.category === 'road' ? b : null
+    return b && isTrack(b.type) ? b : null
   }
 
   private togglePick(road: PlacedBuilding) {
@@ -474,7 +474,7 @@ export class Builder {
         // Two steps: tap to put the building down, then ✓ to buy it (or tap
         // somewhere else to try another spot). Roads skip this: they're drawn.
         const anchor = anchorFor(mode.type, tile, this.rotation)
-        if (mode.type.category === 'road' || !this.confirmPurchases) {
+        if (isTrack(mode.type) || !this.confirmPurchases) {
           const check = this.placement.check(mode.type, { tile: anchor, rotation: this.rotation })
           if (!check.ok) this.onNotice?.(check.problems[0])
           else this.city.place(mode.type, anchor, { rotation: this.rotation, free: this.placement.freeBuild })
@@ -502,8 +502,8 @@ export class Builder {
       }
       case 'removeRoads': {
         const road = this.city.buildingAt(tile)
-        if (road?.type.category === 'road') this.togglePick(road)
-        else if (road) this.onNotice?.('Only roads can be picked here. Tap a road, or drag along several.')
+        if (road && isTrack(road.type)) this.togglePick(road)
+        else if (road) this.onNotice?.('Only roads and track can be picked here. Tap one, or drag along several.')
         break
       }
       case 'move': {

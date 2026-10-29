@@ -320,6 +320,10 @@ level 10 pays 250 coins; at a 12% marginal rate, 30 of those go to income tax.
 **Real rule:** the IRS failure-to-pay penalty is 0.5% of the unpaid tax per
 month, up to 25%, plus interest.
 
+**Railroad track** is 7-year property under IRC §168(e)(3)(C)(i), far
+shorter than the station building beside it (39 years), so in the game track
+depreciates quickly while the station takes decades.
+
 **In the game:** coins never go below zero. A bill bigger than the coins you
 have takes them all, and the rest is owed (shown as "owe" beside your coins).
 Income pays what's owed before it reaches your coins. Each month you're in debt, 0.5% of it (at least
