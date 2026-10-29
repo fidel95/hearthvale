@@ -19,7 +19,7 @@ function hintFor(mode: Mode): string {
     case 'build':
       return mode.type.category === 'road' ? 'Drag to draw road' : `Tap where the ${mode.type.name} should go`
     case 'move':
-      return 'Tap where it should go'
+      return 'Drag it, or tap where it should go'
     case 'restore':
       return `Tap where the ${mode.building.type.name} should go`
   }

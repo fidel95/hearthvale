@@ -284,6 +284,7 @@ export class Game {
     this.contextMenu.update(now)
     this.buildingPanel.update(now)
     this.roadView.update()
+    this.controls.update(Math.min(dt, 100) / 1000)
     const seconds = frameTime / 1000
     this.landView.update(seconds)
     this.shipView.update(Math.min(dt, 100) / 1000, seconds, now)
@@ -407,6 +408,7 @@ export class Game {
       if (b) this.tutorial.complete('select')
     }
     // A tap on the map while a sheet is open just closes the sheet.
+    builder.allowDrag = () => !this.visit
     builder.interceptClick = (x, y) => {
       if (Sheet.closeCurrent()) return true
       if (!this.visit) return false

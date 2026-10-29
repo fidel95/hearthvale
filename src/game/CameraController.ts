@@ -10,8 +10,20 @@ const MAX_ZOOM = 3
 // How far (in pixels) the pointer must move before a press counts as a drag.
 // Below this it's a click, so tiny hand jitters don't swallow clicks.
 const DRAG_THRESHOLD = 5
+// How long a press must stay still to pick something up.
+const LONG_PRESS_MS = 400
+// Carrying something near the screen's edge scrolls the map that way.
+const EDGE_PX = 48
+const EDGE_SPEED = 14 // world units per second at zoom 1
 
 type ScreenPoint = { x: number; y: number }
+
+// Something being carried by a drag (a building being moved), instead of panning.
+export interface Carry {
+  move(clientX: number, clientY: number): void
+  drop(clientX: number, clientY: number): void
+  cancel(): void
+}
 
 // Pans and zooms the camera with mouse (drag + wheel) or touch (drag + pinch),
 // and reports clicks/taps that weren't part of a drag.
@@ -27,6 +39,9 @@ export class CameraController {
   // called with each pointer position, first = true at the start of a drag.
   // Pinching still zooms.
   paint: ((clientX: number, clientY: number, first: boolean) => void) | null = null
+  // Asked when a one-finger drag starts (held = false) or a press is held still
+  // (held = true): return a Carry to move something instead of panning.
+  grab?: (clientX: number, clientY: number, held: boolean) => Carry | null
 
   private camera: THREE.OrthographicCamera
   private canvas: HTMLCanvasElement
@@ -40,6 +55,9 @@ export class CameraController {
   // The ground point that should stay under the pointer (or between two fingers).
   private grabPoint: THREE.Vector3 | null = null
   private pinchStart: { distance: number; zoom: number } | null = null
+  private carry: Carry | null = null
+  private carryPoint: ScreenPoint | null = null
+  private holdTimer: number | undefined
 
   constructor(camera: THREE.OrthographicCamera, canvas: HTMLCanvasElement) {
     this.camera = camera
@@ -97,10 +115,20 @@ export class CameraController {
     this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
 
     if (this.pointers.size === 1) {
-      this.gesture = { start: { x: e.clientX, y: e.clientY }, moved: false, multiTouch: false }
+      const start = { x: e.clientX, y: e.clientY }
+      this.gesture = { start, moved: false, multiTouch: false }
       this.grabPoint = this.groundPointAt(e.clientX, e.clientY)
+      // Held still long enough: maybe pick up what's under the finger.
+      this.holdTimer = window.setTimeout(() => {
+        if (!this.gesture || this.gesture.moved || this.pointers.size !== 1 || this.paint) return
+        this.startCarry(this.grab?.(start.x, start.y, true) ?? null, start)
+        if (this.carry) navigator.vibrate?.(15)
+      }, LONG_PRESS_MS)
     } else if (this.gesture) {
       // A second finger landed: this gesture is now a pinch, never a tap.
+      window.clearTimeout(this.holdTimer)
+      this.carry?.cancel()
+      this.carry = null
       this.gesture.multiTouch = true
       this.startPinch()
     }
@@ -119,10 +147,21 @@ export class CameraController {
       return
     }
 
+    if (this.carry) {
+      this.carryPoint = { x: e.clientX, y: e.clientY }
+      this.carry.move(e.clientX, e.clientY)
+      return
+    }
     const moved = Math.hypot(e.clientX - this.gesture.start.x, e.clientY - this.gesture.start.y)
     if (!this.gesture.moved && moved < DRAG_THRESHOLD) return
     const starting = !this.gesture.moved
     this.gesture.moved = true
+    window.clearTimeout(this.holdTimer)
+    if (starting && !this.paint && !this.gesture.multiTouch) {
+      // A drag that starts on something draggable carries it instead of panning.
+      this.startCarry(this.grab?.(this.gesture.start.x, this.gesture.start.y, false) ?? null, { x: e.clientX, y: e.clientY })
+      if (this.carry) return
+    }
     if (this.paint && !this.gesture.multiTouch) {
       // Paint from where the drag began, so the first tile isn't skipped.
       if (starting) this.paint(this.gesture.start.x, this.gesture.start.y, true)
@@ -135,6 +174,17 @@ export class CameraController {
 
   private onPointerUp(e: PointerEvent, released: boolean) {
     if (!this.pointers.delete(e.pointerId)) return
+    window.clearTimeout(this.holdTimer)
+    if (this.carry && this.pointers.size === 0) {
+      if (released) this.carry.drop(e.clientX, e.clientY)
+      else this.carry.cancel()
+      this.carry = null
+      this.carryPoint = null
+      this.gesture = null
+      this.grabPoint = null
+      this.canvas.style.cursor = ''
+      return
+    }
 
     if (this.pointers.size === 1) {
       // Lifted one finger of a pinch: carry on dragging with the other one.
@@ -152,6 +202,33 @@ export class CameraController {
     this.grabPoint = null
     this.pinchStart = null
     this.canvas.style.cursor = ''
+  }
+
+  private startCarry(carry: Carry | null, at: ScreenPoint) {
+    if (!carry || !this.gesture) return
+    this.carry = carry
+    this.carryPoint = at
+    this.gesture.moved = true // never a tap now
+    this.canvas.style.cursor = 'grabbing'
+    carry.move(at.x, at.y)
+  }
+
+  // Called every frame: while carrying something near the screen's edge,
+  // scroll the map that way so it can go anywhere.
+  update(dtSeconds: number) {
+    if (!this.carry || !this.carryPoint) return
+    const rect = this.canvas.getBoundingClientRect()
+    const { x, y } = this.carryPoint
+    const push = (distance: number) => Math.max(0, 1 - distance / EDGE_PX)
+    const right = push(rect.right - x) - push(x - rect.left)
+    const down = push(rect.bottom - y) - push(y - rect.top)
+    if (right === 0 && down === 0) return
+    // Screen right is world (+x, −z); screen down is (+x, +z) on this isometric view.
+    const step = (EDGE_SPEED * dtSeconds) / this.camera.zoom / Math.SQRT2
+    this.target.x += (right + down) * step
+    this.target.z += (down - right) * step
+    this.apply()
+    this.carry.move(x, y)
   }
 
   private onWheel(e: WheelEvent) {

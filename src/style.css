@@ -33,6 +33,8 @@ body {
 #app canvas {
   display: block;
   touch-action: none; /* let our pointer code handle touch drags and pinches, not the browser */
+  -webkit-touch-callout: none; /* a long press picks up a building, not the iOS image menu */
+  user-select: none;
 }
 
 [hidden] {

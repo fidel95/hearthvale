@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
 import { footprint, type BuildingType, type Rotation } from './buildings'
-import type { CameraController } from './CameraController'
+import type { CameraController, Carry } from './CameraController'
 import { duration, outOfEnergyMessage } from '../ui/dom'
 import { sizeOf, type City, type PlacedBuilding } from './City'
 import type { CityView } from './CityView'
@@ -48,6 +48,8 @@ export class Builder {
   // Asked first on every map tap; return true to swallow the tap (Game uses
   // it so a tap on the map just closes an open sheet).
   interceptClick?: (clientX: number, clientY: number) => boolean
+  // Whether buildings can be dragged right now (not while visiting a neighbor).
+  allowDrag: () => boolean = () => true
 
   // The building whose context menu is showing.
   selected: PlacedBuilding | null = null
@@ -73,6 +75,9 @@ export class Builder {
   private lastPainted: Tile | null = null
   // Where a new building would go, waiting for ✓ (buy) or ✗ (cancel).
   private pending: Tile | null = null
+  // While dragging a building: where its corner is relative to the tile under
+  // the finger, so the spot you grabbed stays under your finger.
+  private dragOffset: Tile | null = null
   // How the building being placed or moved is turned (⟳ or the R key).
   private rotation: Rotation = 0
   private confirm: CSS2DObject
@@ -147,6 +152,7 @@ export class Builder {
     })
     canvas.addEventListener('contextmenu', (e) => {
       e.preventDefault() // right-click cancels instead of opening the browser menu
+      if (this.dragOffset) return // some phones send this on a long press: that's a pick-up
       this.setMode({ kind: 'select' })
     })
     window.addEventListener('keydown', (e) => {
@@ -154,6 +160,7 @@ export class Builder {
       if (e.key === 'r' || e.key === 'R') this.turn()
     })
     controls.onClick = (x, y) => this.onClick(x, y)
+    controls.grab = (x, y, held) => this.grab(x, y, held)
     city.onChange((e) => {
       if ((e.kind === 'removed' || e.kind === 'stored') && this.selected?.id === e.building.id) this.select(null)
       if (e.kind === 'moved' && this.selected?.id === e.building.id) this.refresh()
@@ -329,6 +336,41 @@ export class Builder {
     return null
   }
 
+  // Pick up a building to drag it: a press held on any building, or a drag
+  // that starts on the selected one. Anywhere else, dragging pans the map.
+  private grab(clientX: number, clientY: number, held: boolean): Carry | null {
+    if (this.mode.kind !== 'select' || !this.allowDrag()) return null
+    const point = this.controls.groundPointAt(clientX, clientY)
+    const tile = point && worldToTile(point)
+    const b = tile ? this.city.buildingAt(tile) : undefined
+    if (!tile || !b || (!held && b !== this.selected)) return null
+    this.setMode({ kind: 'move', carrying: b })
+    this.dragOffset = { x: b.tile.x - tile.x, z: b.tile.z - tile.z }
+    const finish = () => {
+      this.dragOffset = null
+      this.setMode({ kind: 'select' })
+      this.select(b)
+    }
+    return {
+      move: (x, y) => this.updateHover(x, y),
+      drop: (x, y) => {
+        this.updateHover(x, y)
+        const to = this.hoverTile && this.anchorAt(b.type, this.hoverTile)
+        const rotation = this.rotation
+        finish()
+        if (!to || (to.x === b.tile.x && to.z === b.tile.z && rotation === b.rotation)) return
+        if (!this.city.move(b.id, to, rotation)) this.onNotice?.("It doesn't fit there, so it stayed put")
+      },
+      cancel: finish,
+    }
+  }
+
+  // Where a building's corner goes for the tile under the pointer: centered on
+  // it, or, while dragging, keeping the spot that was grabbed under the pointer.
+  private anchorAt(type: BuildingType, tile: Tile): Tile {
+    return this.dragOffset ? { x: tile.x + this.dragOffset.x, z: tile.z + this.dragOffset.z } : anchorFor(type, tile, this.rotation)
+  }
+
   private updateHover(clientX: number, clientY: number) {
     const point = this.controls.groundPointAt(clientX, clientY)
     this.hoverTile = point && worldToTile(point)
@@ -369,7 +411,7 @@ export class Builder {
       }
       case 'move': {
         const moved = mode.carrying
-        if (this.city.move(moved.id, anchorFor(moved.type, tile, this.rotation), this.rotation)) {
+        if (this.city.move(moved.id, this.anchorAt(moved.type, tile), this.rotation)) {
           this.setMode({ kind: 'select' })
           this.select(moved)
         } else {
@@ -430,7 +472,7 @@ export class Builder {
     const type = this.placingType()
     if (type) {
       const size = footprint(type, this.rotation)
-      const anchor = this.pending ?? anchorFor(type, tile, this.rotation)
+      const anchor = this.pending ?? this.anchorAt(type, tile)
       const ignoreId = this.mode.kind === 'move' ? this.mode.carrying.id : undefined
       // Moving and restoring are free; building new is checked in full.
       const check = this.placement.check(type, { tile: anchor, rotation: this.rotation, ignoreId }, { free: this.mode.kind !== 'build' })

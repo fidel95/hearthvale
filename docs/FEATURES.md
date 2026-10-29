@@ -58,7 +58,7 @@ Every item in the design spec, with its status and where it lives.
 | Preview before placing | ✅ | |
 | Validate coins, materials, free and owned footprint | ✅ | `PlacementSystem.check`; materials at construction (`projects.ts`) |
 | Deduct only on success; cancel costs nothing | ✅ | Paid on ✓ only (`confirmPlacement`) |
-| Move mode | ✅ | Context menu → Move |
+| Move mode | ✅ | Press and hold a building (or drag the selected one) and drop it; or context menu → Move. Dragging to the screen's edge scrolls; a drop that doesn't fit puts it back |
 | Rotate | ✅ | ⟳ / R; footprint swaps |
 | Sell / remove with a stated refund | ✅ | Remove: no refund (and why, under US tax law) |
 | No moving into locked land or onto buildings | ✅ | Same `canPlace` |

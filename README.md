@@ -120,6 +120,7 @@ the right on a wide screen) so the town stays in view.
 - **Landmarks:** the Clock Tower, Lighthouse and Botanical Garden: expensive, one of each, and they raise all rent and sales in town.
 - **Sound and help:** sound effects and optional music (Settings), and ❓ for help on every topic. 🎯 or the Home key brings the camera back to your town.
 - **Your save:** saved automatically in this browser. Settings has Save now, Export (download a copy) and Import. Clearing site data deletes the save, so export a copy to keep it safe.
+- **Moving buildings:** press and hold a building, or drag the selected one, and let go where it should go. The outline shows where it fits; dragging to the screen's edge scrolls the map.
 - **Never stuck:** if nothing in your town earns coins and you can't afford a Cottage, the county offers a grant (once an hour).
 - **New town:** ⚙️ → Start a new town.
 
