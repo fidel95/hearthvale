@@ -101,7 +101,8 @@ One JSON document in `localStorage` under `hearthvale.save`
   "calendar": { "playedMs": 812345 },
   "settings": { "showGrid": true, "showPeople": true, "confirmPurchases": true, "reduceMotion": false },
   "tutorial": { "step": 6, "skipped": false },
-  "safetyNet": { "lastGrantAt": null }
+  "safetyNet": { "lastGrantAt": null },
+  "neighbors": [["rosa", { "friendship": 6, "day": "2026-10-29", "helped": ["25,25"], "giftClaimed": true, "requestDone": false }]]
 }
 ```
 
@@ -122,7 +123,10 @@ by hand can't disagree with itself.
 | 2 (Stages 5.5–9.5) | 3 | Regrouped into the sections above; settings and tutorial added (returning players skip the tutorial); towns without an inventory get the starting materials |
 
 Fields added since without changing the version (`rotation`,
-`lastCollectedAt`, …) get defaults when missing.
+`lastCollectedAt`, `neighbors`, …) get defaults when missing.
+
+Neighbors' towns aren't saved at all: they're generated from each neighbor's
+seed and level whenever you visit.
 
 ## Adding a building
 

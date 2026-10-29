@@ -23,9 +23,9 @@ export interface UpgradeCost {
   playerLevel: number // the player level needed
 }
 
-// Upgrades are level 7's new mechanic (★★), with ★★★ from level 10, and never
-// sooner than two levels after the building itself unlocks.
-const UPGRADE_LEVELS: Record<number, number> = { 2: 7, 3: 10 }
+// Upgrades are level 10's new mechanic (★★), with ★★★ from level 12, and
+// never sooner than two levels after the building itself unlocks.
+const UPGRADE_LEVELS: Record<number, number> = { 2: 10, 3: 12 }
 
 // Upgrading to `toLevel`: three quarters of the building's price per level,
 // some materials, and a player level.

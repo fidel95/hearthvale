@@ -297,6 +297,24 @@ appear on the return as "Prizes (level-up rewards)" and are part of gross
 income, so they're taxed at your marginal rate like everything else. Reaching
 level 10 pays 250 coins; at a 12% marginal rate, 30 of those go to income tax.
 
+## 6b. Neighbors: pay for help vs. gifts
+
+**Real rules:**
+
+- Money you're paid for doing work is income, even a small, friendly amount.
+- A **gift** isn't income to the person who receives it (IRC §102), and the
+  giver can't deduct it either (only gifts to qualified charities are
+  deductible). The person receiving a gifted item takes over the giver's
+  basis in it.
+
+**In the game:**
+
+| What happens | Tax effect |
+|---|---|
+| A neighbor pays you 10 coins for helping | Taxable income ("other income") |
+| A neighbor's daily gift of materials | Not income; the materials have no cost to you |
+| You give a neighbor what they asked for, and they thank you with coins | Gifts both ways: no income for the coins, no deduction for the materials |
+
 ## 7. Paying late
 
 **Real rule:** the IRS failure-to-pay penalty is 0.5% of the unpaid tax per

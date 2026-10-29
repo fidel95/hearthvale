@@ -32,11 +32,25 @@ export class MapPanel {
   private onJump: (tile: Tile) => void
   private onLot: (lot: Lot) => void
 
-  constructor(container: HTMLElement, city: City, getCenter: () => Tile, onJump: (tile: Tile) => void, onLot: (lot: Lot) => void) {
+  private worldTab = el('div', '')
+  private neighborsTab = el('div', '')
+  private tabs = el('div', 'catalog-tabs')
+  private renderNeighbors: () => HTMLElement
+
+  // renderNeighbors draws the Neighbors tab (NeighborsList.ts).
+  constructor(
+    container: HTMLElement,
+    city: City,
+    getCenter: () => Tile,
+    onJump: (tile: Tile) => void,
+    onLot: (lot: Lot) => void,
+    renderNeighbors: () => HTMLElement,
+  ) {
     this.city = city
     this.getCenter = getCenter
     this.onJump = onJump
     this.onLot = onLot
+    this.renderNeighbors = renderNeighbors
     this.sheet = new Sheet(container, '🗺️ Map')
     const legend = el('div', 'map-legend')
     for (const [label, color] of [
@@ -53,13 +67,39 @@ export class MapPanel {
       item.style.setProperty('--swatch', color)
       legend.append(item)
     }
-    this.sheet.body.append(el('p', 'muted', 'Tap anywhere to go there. Tap a lot for sale to buy it.'), this.canvas, legend)
+    this.worldTab.append(el('p', 'muted', 'Tap anywhere to go there. Tap a lot for sale to buy it.'), this.canvas, legend)
+    for (const [label, show] of [
+      ['🗺️ Your world', () => this.show('world')],
+      ['👋 Neighbors', () => this.show('neighbors')],
+    ] as const) {
+      const b = el('button', 'catalog-tab', label)
+      b.addEventListener('click', show)
+      this.tabs.append(b)
+    }
+    this.sheet.body.append(this.tabs, this.worldTab, this.neighborsTab)
     this.canvas.addEventListener('click', (e) => this.onClick(e))
   }
 
-  open() {
+  open(tab: 'world' | 'neighbors' = 'world') {
     this.sheet.open()
-    this.draw()
+    this.show(tab)
+  }
+
+  close() {
+    this.sheet.close()
+  }
+
+  // Redraw the neighbors tab if it's showing (after a gift or a trade).
+  refresh() {
+    if (this.sheet.isOpen && !this.neighborsTab.hidden) this.neighborsTab.replaceChildren(this.renderNeighbors())
+  }
+
+  private show(tab: 'world' | 'neighbors') {
+    this.worldTab.hidden = tab !== 'world'
+    this.neighborsTab.hidden = tab !== 'neighbors'
+    ;[...this.tabs.children].forEach((b, i) => b.classList.toggle('active', (i === 0) === (tab === 'world')))
+    if (tab === 'world') this.draw()
+    else this.neighborsTab.replaceChildren(this.renderNeighbors())
   }
 
   // The diamond: tile (x, z) goes to screen (x − z, (x + z) / 2), scaled to fit.

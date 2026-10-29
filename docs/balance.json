@@ -35,7 +35,7 @@
       "coinsPerMinute": 30,
       "coinsPerEnergy": 15,
       "roads": "not required; +5% beside one",
-      "upgrades": "★★ at level 7, ★★★ at 10"
+      "upgrades": "★★ at level 10, ★★★ at 12"
     },
     {
       "id": "townhouse",
@@ -68,7 +68,7 @@
       "coinsPerMinute": 35,
       "coinsPerEnergy": 35,
       "roads": "not required; +5% beside one",
-      "upgrades": "★★ at level 7, ★★★ at 10"
+      "upgrades": "★★ at level 10, ★★★ at 12"
     },
     {
       "id": "family-house",
@@ -99,7 +99,7 @@
       "coinsPerMinute": 33.333333333333336,
       "coinsPerEnergy": 50,
       "roads": "not required; +5% beside one",
-      "upgrades": "★★ at level 8, ★★★ at 10"
+      "upgrades": "★★ at level 10, ★★★ at 12"
     },
     {
       "id": "modern-house",
@@ -161,7 +161,7 @@
       "coinsPerMinute": 32,
       "coinsPerEnergy": 24,
       "roads": "not required; +5% beside one",
-      "upgrades": "★★ at level 7, ★★★ at 10"
+      "upgrades": "★★ at level 10, ★★★ at 12"
     },
     {
       "id": "duplex",
@@ -192,7 +192,7 @@
       "coinsPerMinute": 33.6,
       "coinsPerEnergy": 42,
       "roads": "not required; +5% beside one",
-      "upgrades": "★★ at level 7, ★★★ at 10"
+      "upgrades": "★★ at level 10, ★★★ at 12"
     },
     {
       "id": "eco-house",
@@ -318,7 +318,7 @@
       "coinsPerMinute": 26.666666666666668,
       "coinsPerEnergy": 20,
       "roads": "not required; +5% beside one",
-      "upgrades": "★★ at level 7, ★★★ at 10"
+      "upgrades": "★★ at level 10, ★★★ at 12"
     },
     {
       "id": "general-store",
@@ -380,7 +380,7 @@
       "coinsPerMinute": 27,
       "coinsPerEnergy": 27,
       "roads": "not required; +5% beside one",
-      "upgrades": "★★ at level 7, ★★★ at 10"
+      "upgrades": "★★ at level 10, ★★★ at 12"
     },
     {
       "id": "flower-shop",
@@ -411,7 +411,7 @@
       "coinsPerMinute": 25.6,
       "coinsPerEnergy": 32,
       "roads": "not required; +5% beside one",
-      "upgrades": "★★ at level 8, ★★★ at 10"
+      "upgrades": "★★ at level 10, ★★★ at 12"
     },
     {
       "id": "restaurant",
@@ -1423,7 +1423,7 @@
       "level": 7,
       "totalXp": 210,
       "newMechanics": [
-        "upgrades"
+        "neighbors"
       ],
       "unlocks": [
         "Fountain",
@@ -1431,7 +1431,7 @@
         "🌽 Corn"
       ],
       "quests": [
-        "Renovator"
+        "Good Neighbors"
       ]
     },
     {
@@ -1468,7 +1468,9 @@
     {
       "level": 10,
       "totalXp": 450,
-      "newMechanics": [],
+      "newMechanics": [
+        "upgrades"
+      ],
       "unlocks": [
         "Restaurant",
         "Statue",
@@ -1476,7 +1478,9 @@
         "School",
         "🥔 Potatoes"
       ],
-      "quests": []
+      "quests": [
+        "Renovator"
+      ]
     },
     {
       "level": 11,

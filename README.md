@@ -71,7 +71,8 @@ the right on a wide screen) so the town stays in view.
 - **Quests:** active quests with task progress and rewards, what's coming next and why it's locked, your level and what the next levels unlock, achievements with three stars each, and finished quests. A red badge on Quests means a reward is waiting.
 - **Inventory:** stored buildings (place them again, free), construction materials (with a Buy button), goods and shop shelves, and collectibles.
 - **Collections:** five sets of five items. Items turn up while you collect rent, sell, harvest, unload ships and finish buildings. Hand in a full set for coins, XP and energy, as often as you complete it.
-- **Map:** the whole world at the game's angle. Tap to jump there; tap a lot for sale to buy it.
+- **Map:** the whole world at the game's angle. Tap to jump there; tap a lot for sale to buy it. Its **Neighbors** tab lists your neighbors.
+- **Neighbors** (from level 7): five simulated neighbors with towns of their own that grow with yours. Visit one, tap 🤝 bubbles to help (collect their rent, harvest or clear crops: 5 helps per neighbor a day, each paying coins and XP), claim their daily gift, and give them the materials they ask for. Helping builds friendship, and better friends send bigger gifts. Everything is local: no accounts, no network.
 - **Town services and Taxes:** tap 👥 or 🪙 in the top bar.
 
 ### The systems
@@ -140,6 +141,9 @@ src/
     safetyNet.ts          the county grant for a town that would otherwise be stuck
     settings.ts           player settings and their defaults
     tutorial.ts           the new-town tutorial steps
+    neighborData.ts       the neighbors, their generated towns, daily gifts and requests
+    Neighbors.ts          friendship and today's helps, gifts and requests
+    Visit.ts              a visit to a neighbor's town: its own scene, town and help bubbles
     ContextMenu.ts        the menu over a selected building
     utilityRules.ts       water, power and trash: demand, supply, effect on income (pure functions)
     communityRules.ts     location bonuses (parks, schools, roads) and road shapes (pure functions)
@@ -181,6 +185,7 @@ src/
     CollectionsPanel.ts   collection sets and rewards
     MapPanel.ts           the world map
     Coach.ts              the tutorial's instruction card
+    NeighborsList.ts      the neighbors tab of the Map
     dom.ts                small DOM helpers
 scripts/                  generators run with Vitest (npm run balance)
 public/models/            3D models served as-is (Kenney City Kit, CC0)
@@ -207,8 +212,8 @@ docs/                     the docs linked above
 | 9.5 | ✅ | Balance pass: design principles, a generated balance worksheet (npm run balance), balance tests, one new mechanic per level, a safety-net grant |
 | 9.6 | ✅ | Data model: turning buildings, population capacity, settings, tutorial, save format version 3 |
 | 10 | ✅ | Decorations that boost nearby income (capped at +10%); 5 new homes from the model pack, 4 new shops, a Library and Town Hall, 6 new decorations |
-| 11 | ⏳ | Simulated neighbors to visit and help |
-| 12 | | Polish (animation, sound, citizens) and deploy |
+| 11 | ✅ | Simulated neighbors: generated towns to visit, daily helps, gifts, requests, friendship; gifts vs. pay for help on taxes |
+| 12 | ⏳ | Polish (animation, sound, citizens) and deploy |
 
 ## Credits
 

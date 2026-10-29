@@ -46,7 +46,7 @@ export class Builder {
   onSelect?: (building: PlacedBuilding | null) => void
   // Asked first on every map tap; return true to swallow the tap (Game uses
   // it so a tap on the map just closes an open sheet).
-  interceptClick?: () => boolean
+  interceptClick?: (clientX: number, clientY: number) => boolean
 
   // The building whose context menu is showing.
   selected: PlacedBuilding | null = null
@@ -328,7 +328,7 @@ export class Builder {
   }
 
   private onClick(clientX: number, clientY: number) {
-    if (this.interceptClick?.()) return
+    if (this.interceptClick?.(clientX, clientY)) return
     // Touch screens have no hover, so work out the tile from the tap itself.
     this.updateHover(clientX, clientY)
     const tile = this.hoverTile

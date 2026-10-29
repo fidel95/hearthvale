@@ -12,10 +12,24 @@ const loader = new GLTFLoader()
 // (not the result) so two buildings asking at once share a single download.
 const modelCache = new Map<string, Promise<THREE.Object3D>>()
 
+// Geometry belonging to a cached model. Every building made from that model
+// shares it (clone() copies objects, not geometry), so it must never be
+// disposed while the game runs.
+const sharedGeometries = new WeakSet<THREE.BufferGeometry>()
+
+export function isSharedGeometry(geometry: THREE.BufferGeometry): boolean {
+  return sharedGeometries.has(geometry)
+}
+
 function loadModel(url: string): Promise<THREE.Object3D> {
   let model = modelCache.get(url)
   if (!model) {
-    model = loader.loadAsync(url).then((gltf) => gltf.scene)
+    model = loader.loadAsync(url).then((gltf) => {
+      gltf.scene.traverse((o) => {
+        if (o instanceof THREE.Mesh) sharedGeometries.add(o.geometry)
+      })
+      return gltf.scene
+    })
     modelCache.set(url, model)
   }
   return model

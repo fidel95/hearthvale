@@ -5,6 +5,7 @@ import { LOT_SIZE } from './grid'
 import type { Stack } from './Inventory'
 import { MATERIAL_IDS } from './items'
 import { START_LOTS, START_LOT_VALUE } from './land'
+import type { NeighborsSave } from './Neighbors'
 import type { PlayerSave } from './Player'
 import { levelForXp, maxEnergy } from './progression'
 import type { QuestsSave } from './quests'
@@ -40,6 +41,7 @@ export interface SaveData {
   settings: Partial<Settings>
   tutorial: TutorialSave
   safetyNet: { lastGrantAt: number | null }
+  neighbors?: NeighborsSave // friendship and today's helps, gifts and requests (added in Stage 11)
 }
 
 // The City's part of the save, pieced back together from the file's sections.

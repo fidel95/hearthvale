@@ -550,6 +550,38 @@ the `*.test.ts` files, and [TAXES.md](TAXES.md)
 
 ---
 
+## Stage 11: neighbors
+
+**Files:** `neighborData.ts`, `Neighbors.ts`, `Visit.ts`, `ui/NeighborsList.ts`,
+`ui/MapPanel.ts` (tabs), `neighbors.test.ts`
+
+- **Procedural generation with a seed.** `seededRandom(seed)` gives the same
+  "random" numbers every time for the same seed, so a neighbor's town is
+  generated, not stored, yet always the same. A second generator seeded with
+  the day varies only what's ready to help with.
+- **A second world.** Visiting builds a whole separate scene and City and
+  reuses the same view classes. Because the views only talk to *a* City, they
+  didn't need to change to draw someone else's town.
+- **Shared resources and cleanup.** Model clones share geometry with the
+  original. Freeing the visit's memory must skip that, or your own town's
+  buildings would vanish. A `WeakSet` of shared geometries makes the rule
+  explicit.
+- **Days, not timers.** Daily limits reset by calendar date (`dayKey`), which
+  is what a player means by "today".
+- **The tax side.** Pay for help is income; gifts aren't income to the
+  recipient (IRC §102) and aren't deductible to the giver.
+- **Keeping the principles.** Neighbors are level 7's one new mechanic, so
+  upgrades moved to level 10. The balance test caught the overlap the moment
+  both were at 7.
+
+**Try it:**
+
+1. Add a sixth neighbor. What's the least code that takes?
+2. Let a neighbor's request be goods instead of materials.
+3. Make a Best friend tier unlock a rare collectible as a gift.
+
+---
+
 ## Coming next
 
-- **Stage 11:** simulated neighbors to visit and help.
+- **Stage 12:** polish (animation, sound) and deploying the game online.

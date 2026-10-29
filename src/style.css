@@ -1446,3 +1446,77 @@ button {
   margin: 0;
   padding: 6px 14px;
 }
+
+/* ---- Neighbors ---- */
+
+.neighbor {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.neighbor-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.neighbor-avatar {
+  font-size: 30px;
+}
+
+.neighbor-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.neighbor-buttons .panel-button {
+  margin: 0;
+  padding: 8px 10px;
+  font-size: 13px;
+}
+
+/* While visiting: who, how many helps are left, and the way home. */
+.visit-bar {
+  pointer-events: auto;
+  position: absolute;
+  left: 50%;
+  bottom: 12px;
+  translate: -50% 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: min(480px, calc(100% - 24px));
+  padding: 8px 10px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
+.visit-text {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  font-size: 13px;
+}
+
+.visit-bar .panel-button {
+  margin: 0;
+  white-space: nowrap;
+}
+
+.bubble-help .bubble-face,
+.bubble-help .bubble-face::after {
+  background: #ffe3ef;
+}
+
+.bubble-help .bubble-face {
+  width: 52px;
+  border-radius: 20px;
+  font-size: 17px;
+}

@@ -7,6 +7,7 @@ import { Coach } from '../ui/Coach'
 import { CropPicker } from '../ui/CropPicker'
 import { InventoryPanel } from '../ui/InventoryPanel'
 import { MapPanel } from '../ui/MapPanel'
+import { neighborsList } from '../ui/NeighborsList'
 import { QuestsPanel } from '../ui/QuestsPanel'
 import { el } from '../ui/dom'
 import { Modal, Sheet, button } from '../ui/Sheet'
@@ -29,6 +30,9 @@ import { Inventory } from './Inventory'
 import { MATERIAL_IDS, materialsText } from './items'
 import { finishConstruction, upgradeBuilding, type ProjectResult } from './projects'
 import { Quests } from './quests'
+import { Neighbors } from './Neighbors'
+import type { Neighbor } from './neighborData'
+import { Visit } from './Visit'
 import { GRANT, canClaimGrant } from './safetyNet'
 import { CROPS_BY_ID } from './crops'
 import { Docks } from './Docks'
@@ -75,6 +79,9 @@ export class Game {
   private inventory = new Inventory(this.city)
   private collections = new Collections(this.city, this.inventory, this.player)
   private quests!: Quests
+  private neighbors = new Neighbors(this.city, this.player, this.inventory)
+  private visit: Visit | null = null
+  private homeView: THREE.Vector3 | null = null // where the camera was before a visit
   private settings = new SettingsStore()
   private tutorial = new Tutorial(this.city)
   private clock: GameClock
@@ -126,7 +133,13 @@ export class Game {
     this.peopleView = new PeopleView(this.scene, this.city)
     this.roadView = new RoadView(this.scene, this.city)
     this.taxes = new Taxes(this.city, this.clock)
-    this.quests = new Quests({ city: this.city, player: this.player, services: this.services }, this.inventory, this.collections, this.taxes)
+    this.quests = new Quests(
+      { city: this.city, player: this.player, services: this.services },
+      this.inventory,
+      this.collections,
+      this.taxes,
+      this.neighbors,
+    )
     const builder = new Builder(this.scene, this.city, this.player, this.docks, this.cityView, this.controls, this.renderer.domElement)
     this.incomeView = new IncomeView(this.scene, this.city, this.cityView, this.services, this.docks, (b) => builder.tap(b))
     builder.onHoverBuilding = (b) => this.incomeView.setHovered(b)
@@ -139,13 +152,29 @@ export class Game {
     const collectionsPanel = new CollectionsPanel(container, this.collections, this.inventory)
     const questsPanel = new QuestsPanel(container, this.quests, this.player)
     const landPanelForMap = (lot: Lot) => this.landPanel?.open(lot)
-    const mapPanel = new MapPanel(
+    const mapPanel: MapPanel = new MapPanel(
       container,
       this.city,
       () => worldToTile(this.controls.target) ?? { x: 30, z: 30 },
       (tile) => this.controls.centerOn(tileToWorld(tile)),
       landPanelForMap,
+      () =>
+        neighborsList(this.neighbors, {
+          visit: (n) => {
+            mapPanel.close()
+            this.startVisit(container, builder, n)
+          },
+          claimGift: (n) => {
+            const g = this.neighbors.gift(n, Date.now())
+            if (this.neighbors.claimGift(n, Date.now())) this.hud.toast(`🎁 ${n.name} sent ${g.amount} ${g.material}. Gifts aren't taxable income.`)
+          },
+          fulfill: (n) => {
+            const thanks = this.neighbors.fulfill(n, Date.now())
+            if (thanks) this.hud.toast(`${n.avatar} ${n.name} thanks you with a gift of 🪙 ${thanks}!`)
+          },
+        }),
     )
+    this.neighbors.onChange(() => mapPanel.refresh())
     this.hud = new Hud(container, builder, this.city, this.player, this.services, {
       onOpenBuild: () => {
         builder.setMode({ kind: 'select' })
@@ -164,6 +193,8 @@ export class Game {
     })
     this.setUpSelection(container, builder)
     new Coach(container, this.tutorial)
+    this.hud.onGoHome = () => this.endVisit()
+    this.neighbors.onChange(() => this.saver.requestSave())
     this.tutorial.onChange(() => this.saver.requestSave())
     // Apply settings now and whenever they change.
     this.settings.onChange((s) => {
@@ -207,6 +238,7 @@ export class Game {
         settings: this.settings.values,
         tutorial: this.tutorial.toSave(),
         safetyNet: { lastGrantAt: this.lastGrantAt },
+        neighbors: this.neighbors.toSave(),
       }
     })
     const leftAt = this.loadOrSeed()
@@ -251,6 +283,12 @@ export class Game {
     this.peopleView.update(Math.min(dt, 100) / 1000)
     this.incomeView.update(now)
     this.hud.update(this.clock, now)
+    // Visiting a neighbor: draw their town instead (yours carries on underneath).
+    if (this.visit) {
+      this.visit.update(Math.min(dt, 100) / 1000, seconds, now)
+      this.visit.render(this.renderer, this.camera)
+      return
+    }
     this.renderer.render(this.scene, this.camera)
     this.labelRenderer.render(this.scene, this.camera)
   }
@@ -272,6 +310,7 @@ export class Game {
       this.settings.load(save.settings)
       this.tutorial.load(save.tutorial)
       this.lastGrantAt = save.safetyNet.lastGrantAt
+      if (save.neighbors) this.neighbors.load(save.neighbors)
       return save.savedAt
     }
     // A new town: the starting buildings and materials (land.ts, construction.ts).
@@ -380,7 +419,12 @@ export class Game {
     ])
     builder.onSelect = (b) => this.contextMenu.show(b)
     // A tap on the map while a sheet is open just closes the sheet.
-    builder.interceptClick = () => Sheet.closeCurrent()
+    builder.interceptClick = (x, y) => {
+      if (Sheet.closeCurrent()) return true
+      if (!this.visit) return false
+      this.visit.click(x, y)
+      return true
+    }
   }
 
   private settingsSheet: Sheet | null = null
@@ -423,6 +467,30 @@ export class Game {
   }
 
   private landPanel: LandPanel | null = null
+
+  private startVisit(container: HTMLElement, builder: Builder, n: Neighbor) {
+    if (this.visit) this.endVisit()
+    builder.setMode({ kind: 'select' })
+    builder.select(null)
+    this.homeView = this.controls.target.clone()
+    this.visit = new Visit(container, n, this.neighbors, this.controls)
+    this.visit.resize(this.container.clientWidth, this.container.clientHeight)
+    this.labelRenderer.domElement.hidden = true
+    this.controls.centerOn(new THREE.Vector3(0, 0, 0))
+    const showBar = () => this.visit && this.hud.setVisit({ ...n, helpsLeft: this.neighbors.helpsLeft(n, Date.now()) })
+    this.visit.onChange = showBar
+    this.visit.onNotice = (m) => this.hud.toast(m)
+    showBar()
+    this.hud.toast(`${n.avatar} ${n.name}: “${n.greeting}”`)
+  }
+
+  private endVisit() {
+    this.visit?.dispose()
+    this.visit = null
+    this.labelRenderer.domElement.hidden = false
+    if (this.homeView) this.controls.centerOn(this.homeView)
+    this.hud.setVisit(null)
+  }
   private lastGrantAt: number | null = null
 
   // The safety net (safetyNet.ts): if the town has nothing that earns and
@@ -523,6 +591,7 @@ export class Game {
     this.camera.updateProjectionMatrix()
     this.renderer.setSize(w, h)
     this.labelRenderer.setSize(w, h)
+    this.visit?.resize(w, h)
   }
 
   private addLights() {

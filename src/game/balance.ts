@@ -6,6 +6,7 @@ import { SHIPMENT_OPTIONS } from './Docks'
 import { MATERIALS, MATERIAL_IDS, materialsText, type Materials } from './items'
 import { expansionLevel } from './land'
 import { ENERGY_REGEN_MS, buildXp, collectXp, maxEnergy, unlocksAt, xpForLevel } from './progression'
+import { NEIGHBORS_UNLOCK_LEVEL } from './neighborData'
 import { QUESTS } from './quests'
 import { UTILITY_INFO, UTILITIES } from './utilityRules'
 
@@ -186,6 +187,7 @@ export type Mechanic =
   | 'upgrades'
   | 'land'
   | 'shipping'
+  | 'neighbors'
 
 // The mechanics a building brings with it.
 export function mechanicsOf(type: BuildingType): Mechanic[] {
@@ -211,6 +213,7 @@ export function mechanicsByLevel(): Map<number, Mechanic[]> {
   const anyUpgradeable = BUILDING_TYPES.find((t) => t.category === 'home')!
   see('upgrades', upgradeCost(anyUpgradeable, 2).playerLevel)
   see('land', expansionLevel(1))
+  see('neighbors', NEIGHBORS_UNLOCK_LEVEL)
   const byLevel = new Map<number, Mechanic[]>()
   for (const [m, level] of first) byLevel.set(level, [...(byLevel.get(level) ?? []), m])
   return byLevel

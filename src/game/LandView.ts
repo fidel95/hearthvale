@@ -38,9 +38,13 @@ export class LandView {
   // With reduced motion the sea holds still.
   calmSea = false
 
-  constructor(scene: THREE.Scene, city: City) {
+  private showSigns: boolean
+
+  // showSigns: false for a neighbor's town, where there's nothing for you to buy.
+  constructor(scene: THREE.Scene, city: City, { showSigns = true } = {}) {
     this.scene = scene
     this.city = city
+    this.showSigns = showSigns
 
     // The whole world, under everything.
     const world = new THREE.Mesh(
@@ -105,7 +109,7 @@ export class LandView {
     for (let x = 0; x < LOTS_PER_SIDE; x++) {
       for (let z = 0; z < LOTS_PER_SIDE; z++) {
         const lot = { x, z }
-        if (this.city.canBuyLot(lot)) this.addSign(lot)
+        if (this.showSigns && this.city.canBuyLot(lot)) this.addSign(lot)
       }
     }
     this.refreshSigns()

@@ -58,6 +58,10 @@ export class Hud {
   private monthBar = el('div', 'chip-bar-fill')
   private toasts = el('div', 'toasts')
   private badges = new Map<string, HTMLElement>()
+  private toolbar = el('nav', 'toolbar')
+  private visitBar = el('div', 'visit-bar')
+  private visitText = el('div', 'visit-text')
+  private visitAvatar = el('span', 'neighbor-avatar')
   private shownMonth = -1
   private player: Player
 
@@ -107,7 +111,7 @@ export class Hud {
     messages.append(hint, this.toasts)
 
     // ---- Bottom toolbar
-    const toolbar = el('nav', 'toolbar')
+    const toolbar = this.toolbar
     const tools: [string, string, () => void][] = [
       ['🔨', 'Build', callbacks.onOpenBuild],
       ['📜', 'Quests', callbacks.onOpenQuests],
@@ -170,7 +174,13 @@ export class Hud {
     showPeople()
     showLevel()
 
-    hud.append(topbar, messages, toolbar)
+    // ---- While visiting a neighbor, a bar with who it is and the way home replaces the toolbar.
+    const home = el('button', 'panel-button', '🏠 Go home')
+    home.addEventListener('click', () => this.onGoHome?.())
+    this.visitBar.append(this.visitAvatar, this.visitText, home)
+    this.visitBar.hidden = true
+
+    hud.append(topbar, messages, toolbar, this.visitBar)
     container.append(hud)
   }
 
@@ -191,6 +201,20 @@ export class Hud {
       this.date.extra.textContent = ` · Year ${clock.year}`
     }
     this.monthBar.style.width = `${clock.monthProgress * 100}%`
+  }
+
+  onGoHome?: () => void
+
+  // Show the visit bar (or, with null, the toolbar again).
+  setVisit(visit: { avatar: string; name: string; town: string; helpsLeft: number } | null) {
+    this.toolbar.hidden = visit !== null
+    this.visitBar.hidden = visit === null
+    if (!visit) return
+    this.visitAvatar.textContent = visit.avatar
+    this.visitText.replaceChildren(
+      el('strong', '', `${visit.name}'s ${visit.town}`),
+      el('span', 'muted', visit.helpsLeft > 0 ? `Tap 🤝 to help · ${visit.helpsLeft} left today` : 'No helps left today: thanks for visiting!'),
+    )
   }
 
   // A small count on a toolbar button (0 hides it).

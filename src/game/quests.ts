@@ -1,6 +1,7 @@
 import type { City } from './City'
 import type { Collections } from './collections'
 import type { Inventory } from './Inventory'
+import type { Neighbors } from './Neighbors'
 import type { Materials } from './items'
 import { MATERIAL_IDS } from './items'
 import type { Player } from './Player'
@@ -30,6 +31,7 @@ export type StatId =
   | 'unloads' // ships unloaded
   | 'sets' // collections handed in
   | 'returns' // tax returns filed
+  | 'helps' // times you helped a neighbor
 
 export interface World {
   city: City
@@ -154,11 +156,20 @@ export const QUESTS: Quest[] = [
     reward: { coins: 300, xp: 30, materials: { glass: 3 } },
   },
   {
+    id: 'neighborly',
+    title: 'Good Neighbors',
+    intro: 'New neighbors have moved in nearby. Open the Map, then Neighbors, and pay one a visit.',
+    after: 'community',
+    level: 7,
+    tasks: [{ label: 'Help neighbors 3 times', stat: 'helps', count: 3 }],
+    reward: { coins: 300, xp: 30, materials: { lumber: 4 } },
+  },
+  {
     id: 'renovator',
     title: 'Renovator',
     intro: 'Homes and shops can be upgraded to earn more. Upgrading is an improvement: its cost is depreciated, not deducted.',
     after: 'builder',
-    level: 7,
+    level: 10,
     tasks: [{ label: 'Upgrade a building', stat: 'upgrades', count: 1 }],
     reward: { coins: 400, xp: 40, materials: { bricks: 4, glass: 3 } },
   },
@@ -240,6 +251,7 @@ export const ACHIEVEMENTS: Achievement[] = [
   { id: 'captain', name: 'Captain', icon: '🚢', stat: 'unloads', tiers: [1, 10, 50] },
   { id: 'collector', name: 'Collector', icon: '🏆', stat: 'sets', tiers: [1, 5, 20] },
   { id: 'taxpayer', name: 'Taxpayer', icon: '🧾', stat: 'returns', tiers: [1, 5, 10] },
+  { id: 'neighbor', name: 'Good Neighbor', icon: '🤝', stat: 'helps', tiers: [10, 50, 200] },
 ]
 
 export const ACHIEVEMENT_XP = [10, 25, 50]
@@ -268,7 +280,7 @@ export class Quests {
   private inventory: Inventory
   private listeners: ((event: QuestsEvent) => void)[] = []
 
-  constructor(world: World, inventory: Inventory, collections: Collections, taxes: Taxes) {
+  constructor(world: World, inventory: Inventory, collections: Collections, taxes: Taxes, neighbors?: Neighbors) {
     this.world = world
     this.inventory = inventory
     world.city.onChange((e) => {
@@ -308,6 +320,7 @@ export class Quests {
     })
     collections.onChange((e) => e.kind === 'completed' && this.bump('sets'))
     taxes.onChange((e) => e.kind === 'taxDay' && this.bump('returns'))
+    neighbors?.onChange((e) => e.kind === 'helped' && this.bump('helps'))
     world.player.onChange((e) => e.kind === 'levelUp' && this.refresh())
     world.services.onChange(() => this.check())
     this.refresh()

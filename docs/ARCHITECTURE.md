@@ -312,6 +312,25 @@ removed, and gives City two hooks:
   timestamps alone, so a ship is in the right place even right after loading.
   Unloading calls `City.addGoods`, which takes what fits; the rest stays aboard.
 
+## Visiting neighbors
+
+A visit (`Visit.ts`) is a second little world: its own `THREE.Scene`, its own
+`City` filled from `planTown` (a seeded random generator, so a neighbor's town
+is the same every visit for a given level), and its own `LandView`,
+`CityView`, `RoadView` and `PeopleView`. It also has its own `CSS2DRenderer`,
+because a label renderer only manages labels in the scene it draws: the main
+one is hidden during a visit and the visit's is removed after.
+
+While visiting, `Game.tick` keeps running your town (timers, calendar) but
+draws the visit's scene instead, and `Builder.interceptClick` sends map taps
+to the visit. Leaving disposes the visit's geometry, except geometry shared
+with cached models (`isSharedGeometry`): clones share geometry with the
+original, so disposing it would break the same buildings in your town.
+
+`Neighbors.ts` keeps friendship and the day's progress (helps, gift, request),
+reset each calendar day; `neighborData.ts` holds who the neighbors are and
+what they give and ask for.
+
 ## People
 
 `PeopleView` is purely visual: nothing is saved and nothing affects the
