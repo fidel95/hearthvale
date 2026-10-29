@@ -15,17 +15,22 @@ fixed directions:
                          │ calls methods (place, move, collect, …)
                          ▼
           ┌──────────── state ────────────┐
-          │ City crops Player Clock Taxes │   the rules and the data
+          │ City Player Services Clock    │   the rules and the data
+          │ Taxes  (+ pure rule modules)  │
           └──────────────┬────────────────┘
                          │ emits events (added, coins, taxDay, …)
                          ▼
           ┌──────────── views ────────────┐
-          │ CityView  IncomeView  Hud      │   draw what the state says
-          │ TaxPanel CropPicker LevelUp    │
+          │ CityView LandView PeopleView   │   draw what the state says
+          │ IncomeView  Hud                │
+          │ TaxPanel TownPanel LandPanel   │
+          │ CropPicker  LevelUpPanel       │
           └───────────────────────────────┘
 ```
 
-- **State** (`City`, `Player`, `GameClock`, `Taxes`) knows the rules and holds the data.
+- **State** (`City`, `Player`, `Services`, `GameClock`, `Taxes`) knows the rules and holds the data.
+  The rules themselves are pure functions and data in modules beside them:
+  `buildings.ts`, `crops.ts`, `land.ts`, `progression.ts`, `utilityRules.ts`, `taxRules.ts`.
   It never touches three.js or the DOM, so it can be unit tested in plain Node
   (`*.test.ts`) and saved as plain JSON.
 - **Views** listen for state events and update the screen. They never change
@@ -58,7 +63,11 @@ inside `switch (event.kind)`.
 | City | `harvested` | a ripe crop is harvested | IncomeView (pop-up), Taxes (farm income) |
 | City | `cleared` | a withered crop is cleared | IncomeView (pop-up) |
 | City | `award` | prize coins are given (a level-up reward) | Taxes (other income) |
-| City | `coins` | the coin balance changes | Hud (counter, catalog), TaxPanel |
+| City | `expense` | a running cost is paid (utility upkeep) | Taxes (operating expense) |
+| City | `land` | a lot is bought, or a save loaded | LandView (ground and signs) |
+| City | `coins` | the coin balance changes | Hud (counter, catalog), TaxPanel, LandView (sign affordability) |
+| Services | `changed` | the utility report changed | Hud (utility line), TownPanel |
+| Services | `shortage` | utilities just started falling short | Game → Hud warning toast |
 | Player | `xp` | XP is earned | Hud (level and bar), Game → IncomeView "+2 ⭐" pop-up |
 | Player | `levelUp` | a new level is reached | Game → LevelUpPanel, Hud (unlocks catalog items) |
 | Player | `energy` | energy is spent, refilled or loaded | Hud, autosave |
@@ -78,15 +87,19 @@ first and loads the save last.
 
 1. Work out `dt`, the real milliseconds since the last frame.
 2. `clock.advance(dt)` moves the calendar forward. For each month that just
-   ended, `taxes.endOfMonth(month)` runs: property tax and depreciation accrue,
+   ended, `services.endOfMonth()` pays the utilities' running costs, then
+   `taxes.endOfMonth(month)` runs: property tax and depreciation accrue,
    the quarter's sales tax is sent, and in December the return is filed.
-3. `cityView.update(now)` swaps a farm plot's crop model when its look
+3. The sun moves to stay over the point the camera looks at, so the shadow
+   box (sharp, but only ~48 tiles wide) covers what's on screen.
+4. `cityView.update(now)` swaps a farm plot's crop model when its look
    changes (sprout → young → grown → ripe → withered).
-4. `incomeView.update(now)` adds, changes or removes bubbles (coins, plant,
+5. `peopleView.update(dt)` moves the walking residents.
+6. `incomeView.update(now)` adds, changes or removes bubbles (coins, plant,
    harvest, withered) and refreshes the info card countdown.
-5. `hud.update(clock, now)` refreshes energy (it refills with time, so it's
+7. `hud.update(clock, now)` refreshes energy (it refills with time, so it's
    checked every frame), the date and the month progress bar.
-6. Draw the 3D scene, then the HTML labels on top.
+8. Draw the 3D scene, then the HTML labels on top.
 
 Nothing in the game "ticks down". Timers are stored as **timestamps**
 (`readyAt`) and compared with the current time. That's cheaper, survives the
@@ -147,6 +160,36 @@ of a few shapes each; rather than hundreds of meshes, every shape of the same
 color is merged into one geometry (`mergeGeometries`), so a whole plot is 2–4
 draw calls.
 
+## The world and land
+
+The world is 60×60 tiles split into 6×6 lots of 10×10 (`grid.ts`). City
+keeps the owned lots and what each cost; `canPlace` only allows owned tiles.
+`canBuyLot` allows lots next to owned land; `land.ts` sets the rising price
+and level. `LandView` draws the whole world as muted ground, owned lots as one
+merged grass mesh with a grid, and a sign on every buyable lot.
+
+## Utilities
+
+`utilityRules.ts` turns the list of buildings into a report: population, and
+for water, power and trash the supply (county + plants), demand and the
+share met. `incomeMultiplier` turns that into how much of its income each
+building earns. `Services` recomputes the report when buildings are added or
+removed, plugs `City.incomeMultiplier` into it (so `City.collect` and
+`City.harvest` pay the reduced amount, and stay testable without Services),
+and pays running costs at each month's end via `City.payExpense`.
+
+Supply is town-wide, as if every building were connected to every pipe and
+wire. That keeps it understandable; coverage areas or pipes could come later.
+
+## People
+
+`PeopleView` is purely visual: nothing is saved and nothing affects the
+game. Homes send out about one walker per two residents (max 40). A walker
+picks a destination (a shop half the time), finds a path with A*
+(`pathfinding.ts`, through owned tiles with no building), walks it tile by
+tile, pauses, and goes on or goes home. If something gets built in its way,
+it plans again from where it stands.
+
 ## XP, levels and energy
 
 `Player` watches City the same way `Taxes` does, so neither City nor the input
@@ -171,6 +214,13 @@ level calls `City.awardCoins`, which emits `award` so Taxes can record the
 prize as income.
 
 ## Saving
+
+### Save versions
+
+`upgradeSave` in `save.ts` brings any older save up to date one version at a
+time. Version 1 (the 20×20 map) → 2 moves every building 20 tiles so it lands
+in the middle of the 60×60 world, and adds the starting lots.
+`save.test.ts` checks it with a real version 1 save.
 
 `save.ts` stores one JSON document in `localStorage` under `hearthvale.save`:
 
@@ -203,8 +253,9 @@ prize as income.
   `visibilitychange`).
 - **Loading order:** clock, then city, then taxes (see the comment in
   `Game.loadOrSeed`).
-- **Versioning:** `SAVE_VERSION` must be bumped when the format changes, with
-  an upgrade step in `readSave` (Stage 6).
+- **Versioning:** bump `SAVE_VERSION` when the format changes in a way old
+  saves can't simply default (like moving every tile), and add a step to
+  `upgradeSave` (see "Save versions" above).
 - **Safety:** every `localStorage` call is wrapped in `try/catch`. Private
   windows and strict browser settings can block storage, and the game still runs
   without it.

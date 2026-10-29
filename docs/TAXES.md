@@ -110,6 +110,14 @@ placed in service you get half a month (the **mid-month convention**).
 | Shops | Nonresidential real property | 39 | Bakery: 300 ÷ 39 = 7.69 per year |
 | Decorations | Land improvements | 15 | Oak tree: 20 ÷ 15 = 1.33 per year |
 | Farm fields | Land | never | 0 |
+| Water Tower | Water utility property | 25 | 250 ÷ 25 = 10 per year |
+| Power Plant | Electric utility steam production plant | 20 | 500 ÷ 20 = 25 per year |
+| Recycling Center | Waste reduction and resource recovery plant | 7 | 300 ÷ 7 = 42.86 per year |
+| Solar Farm | Solar energy property | 5 | 1,200 ÷ 5 = 240 per year |
+
+Solar's short 5-year period is a real, deliberate tax incentive: deducting
+the cost faster makes clean energy cheaper to build. Compare it with the
+Power Plant, which is cheaper to build but pays for fuel every month.
 
 Plowing a plot counts as preparing land, which real rules also treat as part
 of the land's cost, so plots are never depreciated either.
@@ -121,6 +129,28 @@ so it stops once the full cost has been deducted.
 when you tear a building down. US law says no (IRC §280B): that leftover cost
 is added to the *land's* basis and only matters when the land is sold. The game
 follows the real rule, so demolishing gives no deduction.
+
+## 3b. Land
+
+**Real rule:** land is taxed every year as property, but it never wears out,
+so it's never depreciated.
+
+**In the game:** every lot you own is assessed at what it cost (starting lots
+at 250), and pays 1% of that a year in property tax. Lots bought later cost
+500, 1,000, 1,500 and so on, so a bigger town pays more land tax.
+
+## 3c. Utility running costs
+
+**Real rule:** the costs of running a business, like fuel, maintenance and
+staff for its utilities, are "ordinary and necessary" business expenses (IRC
+§162), deducted in full the year they're paid. That's different from the cost
+of the plant itself, which is a capital cost recovered through depreciation.
+
+**In the game:** each Water Tower, Power Plant, Recycling Center and Solar
+Farm charges its running cost at the end of every month. The total appears on
+the return as "Utility operating costs" and comes off your income before
+brackets apply. Building a plant: depreciated over years. Running it: deducted
+right away. That pair is one of the central ideas in business taxes.
 
 ## 4. Farm income and expenses
 
@@ -177,7 +207,7 @@ dollar amounts divided by 10 (1 coin ≈ $10):
 
 ```
 Gross income     = rent + shop sales + crop sales + prizes   (not the sales tax)
-Taxable income   = gross − seeds − property tax − depreciation − standard deduction   (never below 0)
+Taxable income   = gross − seeds − utility costs − property tax − depreciation − standard deduction   (never below 0)
 Income tax       = sum over brackets of (income in bracket × rate)
 ```
 
@@ -286,6 +316,8 @@ come in later stages:
 - **Operating expenses.** The 40% expense ratio is only used to value property; you don't actually pay or deduct those costs. Stage 8 adds real costs (goods for shops), which become deductible as cost of goods sold.
 - **Passive activity loss rules**, which limit rental losses against other income, and **depreciation recapture** on sale. You can't sell buildings in the game.
 - **Interest on unpaid tax and the 25% penalty cap.** The game only charges the 0.5% monthly penalty.
+- **Utility bills.** Real towns charge residents for water, power and trash, which would be income for a town that owns the plants. In the game you own every building, so the plants are pure costs.
+- **Mid-month convention for land.** Land tax accrues for the full month a lot is bought.
 - **Farmland assessment.** Many states value farmland at what it earns farming ("current use" or "use-value" assessment), usually below market value. The game values a plot at what it cost.
 - **Prepaid farm supplies.** Real cash-method farmers can't deduct seed bought far ahead beyond a limit; in the game you always plant right away.
 - **Property reassessment.** Real assessed values are updated every few years and follow the market; game values are fixed by building type.

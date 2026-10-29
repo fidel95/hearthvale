@@ -15,6 +15,7 @@ import { CROPS_BY_ID } from './crops'
 import { GameClock, MONTH_NAMES } from './GameClock'
 import { IncomeView } from './IncomeView'
 import { LandView } from './LandView'
+import { PeopleView } from './PeopleView'
 import { Player } from './Player'
 import { Services } from './Services'
 import { AutoSaver, clearSave, readSave } from './save'
@@ -48,6 +49,7 @@ export class Game {
 
   // Views and UI that react to the state.
   private cityView: CityView
+  private peopleView: PeopleView
   private incomeView: IncomeView
   private hud: Hud
   private saver: AutoSaver
@@ -81,6 +83,7 @@ export class Game {
     // or it misses the 'added' events.
     const landView = new LandView(this.scene, this.city)
     this.cityView = new CityView(this.scene, this.city)
+    this.peopleView = new PeopleView(this.scene, this.city)
     this.taxes = new Taxes(this.city, this.clock)
     const builder = new Builder(this.scene, this.city, this.player, this.cityView, this.controls, this.renderer.domElement)
     this.incomeView = new IncomeView(this.scene, this.city, this.cityView, this.services, (b) => builder.tap(b))
@@ -140,6 +143,8 @@ export class Game {
 
     const now = Date.now()
     this.cityView.update(now)
+    // Capped, so a tab coming back from the background doesn't teleport everyone.
+    this.peopleView.update(Math.min(dt, 100) / 1000)
     this.incomeView.update(now)
     this.hud.update(this.clock, now)
     this.renderer.render(this.scene, this.camera)

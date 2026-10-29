@@ -2,7 +2,9 @@
 
 A cozy isometric city-builder in the style of the 2010s social city games:
 place homes and shops, collect rent and sales on timers, plant and harvest
-crops, level up to unlock more, and deal with taxes modeled on the real thing. It runs entirely in the browser.
+crops, level up to unlock more, buy land to expand, keep the water, power
+and trash services running, watch your residents walk around town, and deal
+with taxes modeled on the real thing. It runs entirely in the browser.
 There are no accounts or servers, and progress is saved on your device.
 
 It's also a learning project. The code is written to be read: comments explain
@@ -52,9 +54,13 @@ to make each in-game month last one second, so you can watch a whole tax year in
 - **Build:** pick a building. A green preview means it fits and you can afford it; red means it doesn't. Place as many as you like, then press Done.
 - **Levels and XP:** building, collecting and harvesting earn XP (⭐). Each level pays a coin reward, refills your energy, raises its maximum and unlocks new buildings and crops. Locked items are shown with the level that unlocks them.
 - **Energy (⚡):** collecting, harvesting, planting and clearing use 1 energy each; building and moving don't. It refills by 1 every 2 minutes, in real time, even while the game is closed.
+- **Land:** the world is 60×60 tiles, in 10×10 lots. You start with the middle four. Tap a 🏷️ sign on a lot next to your land to buy it; each lot costs more than the last and needs a higher level. Land pays property tax but is never depreciated.
+- **Utilities:** homes, shops and farms use 💧 water, 🔌 electricity and 🗑️ trash pickup. The county covers a small town for free; after that, build a Water Tower, Power Plant or Solar Farm, and Recycling Center. Plants cost coins every month to run (deductible on your taxes). When supply falls short, income drops: the top-left line turns red and the **Town** window shows what to build.
+- **People:** each home has residents (👥). About one in two is out walking at any time, between home, shops and neighbors.
 - **Farming:** build a Farm Plot, then tap it (🌱) to choose seeds. Crops grow through sprout, young and grown stages, then ripen (the crop's bubble appears): tap to harvest and sell. Wait too long and it withers (🥀): the harvest is lost and you tap to clear the plot. Quick crops earn the most per minute; slow ones can be left overnight. Tick "Plant all empty plots" to sow every empty plot at once.
 - **Move:** tap a building to pick it up, then tap where it should go.
 - **Demolish:** tap a building to remove it. You get no refund and no tax deduction; that's the real US rule, explained in docs/TAXES.md.
+- **Town:** population, how each utility keeps up with demand, the effect on income and the monthly running costs.
 - **Taxes:** your books for the year, an income tax estimate by bracket, the sales tax you're holding, property values and last year's return.
 - **New town** (top right) deletes the save and starts over.
 
@@ -71,7 +77,7 @@ over each quarter. Crops are sold wholesale, so they carry no sales tax, and
 the seeds you buy are a deductible farm expense. Every
 building owes property tax on its assessed value. On Tax Day, your income
 minus deductions is taxed using the real US 2024 brackets, scaled ÷10.
-Deductions are the standard deduction, seeds, property tax and depreciation. If a bill pushes your coins below zero, you're in tax debt,
+Deductions are the standard deduction, seeds, utility running costs, property tax (on buildings and land) and depreciation. If a bill pushes your coins below zero, you're in tax debt,
 and a 0.5% penalty is added each month until you've paid it off.
 [docs/TAXES.md](docs/TAXES.md) has the details.
 
@@ -86,6 +92,10 @@ src/
     grid.ts               tile ↔ world coordinate math
     buildings.ts          the building catalog (pure data)
     crops.ts              the crop catalog and crop stages (empty → growing → ripe → withered)
+    land.ts               starting land and expansion prices
+    utilityRules.ts       water, power and trash: demand, supply, effect on income (pure functions)
+    Services.ts           keeps the utility report current and pays running costs monthly
+    pathfinding.ts        A* shortest paths on the tile grid
     progression.ts        XP, level and energy rules (pure functions)
     Player.ts             the player's XP, level and energy over time
     City.ts               town state: coins, buildings, occupancy, income timers
@@ -95,6 +105,8 @@ src/
     save.ts               localStorage save/load and autosave
     CameraController.ts   pan, zoom, pinch, click detection
     CityView.ts           keeps 3D objects in sync with City
+    LandView.ts           the ground, owned land and "for sale" signs
+    PeopleView.ts         residents walking around town
     models.ts             loads .glb models, draws placeholder shapes and crops
     Builder.ts            build / move / demolish tools, ghost preview, what a tap does
     IncomeView.ts         HTML labels over buildings: bubbles, pop-ups, info card
@@ -104,6 +116,8 @@ src/
     TaxPanel.ts           the Taxes window and Tax Day report
     CropPicker.ts         the seed window for farm plots
     LevelUpPanel.ts       the level-up window
+    LandPanel.ts          the window for buying land
+    TownPanel.ts          the Town window: population and utilities
     dom.ts                small DOM helpers
 public/models/            3D models served as-is (Kenney City Kit, CC0)
 assets-src/               raw downloaded asset packs (git-ignored)
@@ -121,7 +135,8 @@ docs/                     the docs linked above
 | 3.5 | ✅ | Local saving, game calendar, tax system, unit tests, touch support |
 | 4 | ✅ | Farms: plant, grow, harvest, wither; farm income and seed expenses on the tax return |
 | 5 | ✅ | Energy, XP and levels, unlocks; level rewards taxed as prizes |
-| 6 | ⏳ | Offline catch-up polish, save migrations |
+| 5.5 | ✅ | Expandable land, utilities (water, power, trash), walking residents, save upgrades |
+| 6 | ⏳ | "While you were away" summary, offline catch-up polish |
 | 7 | | Roads, population and community buildings |
 | 8 | | Supply chain: farm goods stock shops (cost of goods becomes deductible) |
 | 9 | | Quests and goals |

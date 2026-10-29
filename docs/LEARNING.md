@@ -242,7 +242,57 @@ the `*.test.ts` files, and [TAXES.md](TAXES.md)
 
 ---
 
+## Stage 5.5: land, utilities and people
+
+**Files:** `grid.ts` (lots), `land.ts`, `LandView.ts`, `ui/LandPanel.ts`,
+`save.ts` (`upgradeSave`), `utilityRules.ts`, `Services.ts`,
+`ui/TownPanel.ts`, `pathfinding.ts`, `PeopleView.ts`
+
+- **Changing the world size breaks every save.** Tile (9, 9) on the old
+  20×20 map is a different place on the 60×60 one. Rather than throw old saves
+  away, `upgradeSave` converts them, one version at a time, and a test feeds
+  it a real version 1 save. Versioned data plus step-by-step upgrades is how
+  real apps change their file formats and databases ("migrations").
+- **Sets of objects need keys.** `{x: 2, z: 3} !== {x: 2, z: 3}` in JavaScript,
+  so owned lots live in a `Map` keyed by the string `"2,3"`.
+- **Rules vs. bookkeeping, again.** `utilityRules.ts` is pure: buildings in,
+  report out. `Services` applies it over time and pays the bills. City only
+  knows "a building earns `incomeMultiplier(b)` of its income", which keeps
+  City's tests working without utilities at all.
+- **Capital vs. operating costs.** A plant's price is depreciated over years;
+  its running cost is deducted each year. The Power Plant vs. Solar Farm choice
+  makes the trade-off concrete, with real recovery periods.
+- **A* pathfinding.** Explore tiles in order of "steps so far + estimated
+  steps left". With a guess that never overestimates (Manhattan distance on a
+  4-way grid), the first path to the goal is a shortest one. A **binary heap**
+  hands out the most promising tile in O(log n) instead of scanning a list.
+- **Visual-only systems.** `PeopleView` changes nothing and saves nothing, so
+  it can use `Math.random` freely. Keeping it out of the game state means it
+  can't cause bugs in the rules, and the rules' tests don't need to know it exists.
+- **Shadows on a big map.** A shadow map is one texture over a box. Stretching
+  it over 60×60 tiles would blur every shadow, so the sun follows the camera
+  and its box covers what's on screen.
+- **Two bugs worth remembering:**
+  - On macOS, `services.ts` and `Services.ts` are the *same file*: the file
+    system ignores case. Writing the second replaced the first. That's why
+    the rules file is `utilityRules.ts`.
+  - Loading a town that was already short fired three warnings at once; now
+    one `shortage` event lists every utility.
+
+**Try it:**
+
+1. Add a Water Treatment Plant: bigger and pricier than the tower, but
+   supplying 60. Where do its numbers go, and what's its real recovery
+   period? (Water utility property: 25 years.)
+2. Make trash visible: when trash pickup is short, scatter a few bags near
+   homes in `CityView`.
+3. Give walkers a favorite shop: the nearest business to their home.
+   `findPath` gives you the distance.
+
+---
+
 ## Coming next
 
-- **Stage 6:** offline catch-up ("while you were away…") and save migrations.
+- **Stage 6:** a "while you were away" summary and offline catch-up polish.
+- **Stage 7:** roads (walkers will prefer them), community buildings.
 - **Stage 8:** a supply chain, with cost of goods sold as a real deduction.
