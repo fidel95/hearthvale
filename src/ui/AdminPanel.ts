@@ -17,6 +17,8 @@ export interface AdminActions {
   finishTimers: () => void
   nextMonth: () => void
   toggleRain: () => void
+  toggleSnow: () => void
+  disaster: (kind: 'tornado' | 'lightning' | 'flood' | 'tsunami') => void
 }
 
 const POWERS: [keyof AdminSettings, string][] = [
@@ -46,7 +48,14 @@ export class AdminPanel {
     )
 
     const time = el('div', 'debug-grid')
-    time.append(button('Finish all timers', a.finishTimers), button('Skip to next month', a.nextMonth), button('🌧️ Rain / ☀️ Sun', a.toggleRain))
+    time.append(button('Finish all timers', a.finishTimers), button('Skip to next month', a.nextMonth), button('🌧️ Rain / ☀️ Sun', a.toggleRain), button('❄️ Snow mode on/off', a.toggleSnow))
+    const disasters = el('div', 'debug-grid')
+    disasters.append(
+      button('🌪️ Tornado', () => a.disaster('tornado')),
+      button('⚡ Lightning storm', () => a.disaster('lightning')),
+      button('🌊 Flood', () => a.disaster('flood')),
+      button('🌊 Tsunami', () => a.disaster('tsunami')),
+    )
     const speedRow = el('div', 'setting-row')
     const speedButtons = SPEEDS.map((speed) => {
       const b = button(`${speed}×`, () => setPower({ calendarSpeed: speed }), 'panel-button secondary')
@@ -78,6 +87,8 @@ export class AdminPanel {
       el('h3', 'level-subtitle', 'Time'),
       time,
       speedRow,
+      el('h3', 'level-subtitle', 'Disasters now'),
+      disasters,
       el('h3', 'level-subtitle', 'Powers'),
       ...powers.map((p) => p.row),
     )

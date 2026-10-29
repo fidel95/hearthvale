@@ -340,6 +340,10 @@ export class Taxes {
         }
         break
       }
+      // Eggs, milk and wool are farm income, like crops (Schedule F).
+      case 'farm':
+        this.ledger.farmIncome += amount
+        break
       default:
         this.ledger.otherIncome += amount
     }

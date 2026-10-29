@@ -122,6 +122,8 @@ the right on a wide screen) so the town stays in view.
 - **Your save:** saved automatically in this browser. Settings has Save now, Export (download a copy) and Import. Clearing site data deletes the save, so export a copy to keep it safe.
 - **Admin tools:** Settings → Admin tools adds a 🛠️ button: give yourself coins, levels and materials, finish every timer, run the calendar 10× or 60× faster, or switch on powers (build anything free and instantly, unlimited energy, everything ready at once).
 - **Parks, beaches and the slopes:** Playground, Sports Field and Central Park lift nearby homes and draw visitors; a Public Beach on the shore fills with sunbathers and swimmers; the Ski Resort (level 13) sells lift tickets while skiers zigzag down and ride the chairlift up. Snowy mountains rise behind the town.
+- **Farm animals:** Chicken Coop, Pig Pen, Sheep Meadow and Cow Pasture: animals wander, graze and peck in their yards, and what they give sells as farm income.
+- **Snow mode and disasters:** Settings → Snow mode for a wintry town with snowfall. Tornados, lightning storms, floods and tsunamis strike now and then: damaged buildings (🔧) stop working until repaired (a deductible expense); nothing is ever destroyed. Settings can turn disasters off; Admin can start any of them.
 - **Weather:** rain showers roll in every few minutes: the sky dims, umbrellas come out and the beach empties (Settings → Rain showers; Admin can start or stop it).
 - **Traffic and transport:** cars drive your roads as the town grows. Bus Stops (level 7) lift nearby homes and shops, and buses run between them. An Army Base (level 12) adds safety and room for residents: its squad runs a daily drill (marching, saluting as the flag goes up, jumping jacks, push-ups, a run), a sentry keeps watch, a helicopter circles the town and a jeep patrols. Tap it and 🎖️ Parade (🪙 300): the squad marches through town behind a flag and a drum, and all rent and sales are 10% higher for 3 minutes. Railway track and a Train Station (level 14): a train shuttles along your line and visitors lift all rent and sales. An Airport (level 15): planes take off, circle the town and land.
 - **Building several at once:** after Place, tap a spot for each one (tap a spot again to take it back), then ✓ or "Buy N · 🪙 total" buys them all; coins, fit and room for residents are checked for the whole set.
@@ -210,7 +212,10 @@ src/
     Army.ts               parades: cost, the town-wide bonus, the rest between them (tested)
     ArmyView.ts           the base's drill, flag, sentry, helicopter and parades
     MountainView.ts       the countryside and snowy mountains beyond the world's edge
-    WeatherView.ts        rain showers: falling rain, dimmer light, a grayer sky
+    WeatherView.ts        rain showers and snowfall: dimmer light, a grayer sky, snow cover
+    AnimalView.ts         chickens, pigs, sheep and cows in their pens
+    Disasters.ts          what disasters do: damage, ruined crops, repairs (tested)
+    DisasterView.ts       tornados, lightning, floods and tsunamis on screen, and when they strike
     routes.ts             route-finding on roads and track (tested)
     ShipView.ts           sailboats, fishing boats and cargo ships
     models.ts             loads .glb models, draws placeholder shapes and crops

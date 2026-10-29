@@ -9,7 +9,8 @@ import { seededRandom } from './neighborData'
 
 const HALF = GRID_SIZE / 2
 
-export function addMountains(scene: THREE.Scene) {
+// Returns a way to set how snowy the countryside is (0 to 1), for snow mode.
+export function addMountains(scene: THREE.Scene): { setSnow: (amount: number) => void } {
   // Land all around, under the world (the sea covers it to the south).
   const land = new THREE.Mesh(new THREE.PlaneGeometry(260, 260).rotateX(-Math.PI / 2).translate(0, -0.02, 0), new THREE.MeshStandardMaterial({ color: '#a2d488' }))
   land.receiveShadow = true
@@ -35,14 +36,25 @@ export function addMountains(scene: THREE.Scene) {
   for (let x = -HALF - 10; x < HALF + 30; x += 6 + rand() * 4) peak(x, -HALF - 8 - rand() * 6)
   for (let z = -HALF; z < HALF - 4; z += 6 + rand() * 4) peak(-HALF - 8 - rand() * 6, z)
 
+  const materials: THREE.MeshStandardMaterial[] = []
   for (const [parts, color] of [
     [rock, '#7e8c84'],
     [snow, '#f7fbff'],
     [green, '#5f9c55'],
   ] as const) {
-    const mesh = new THREE.Mesh(mergeGeometries(parts), new THREE.MeshStandardMaterial({ color, flatShading: true }))
+    const material = new THREE.MeshStandardMaterial({ color, flatShading: true })
+    materials.push(material)
+    const mesh = new THREE.Mesh(mergeGeometries(parts), material)
     mesh.receiveShadow = true
     for (const g of parts) g.dispose()
     scene.add(mesh)
+  }
+  const white = new THREE.Color('#f4f8fb')
+  return {
+    setSnow(amount: number) {
+      ;(land.material as THREE.MeshStandardMaterial).color.set('#a2d488').lerp(white, amount * 0.9)
+      materials[2].color.set('#5f9c55').lerp(white, amount * 0.75)
+      materials[0].color.set('#7e8c84').lerp(white, amount * 0.35)
+    },
   }
 }

@@ -12,6 +12,8 @@ export interface Settings {
   reduceMotion: boolean // no bobbing bubbles, floating pop-ups or waves
   music: boolean // gentle background music
   weather: boolean // rain showers now and then
+  snowMode: boolean // winter: snow on the ground, and showers fall as snow
+  disasters: boolean // tornados, lightning, floods and tsunamis now and then
   soundVolume: number // 0 (muted) to 1
   admin: AdminSettings
 }
@@ -36,6 +38,8 @@ export const DEFAULT_SETTINGS: Settings = {
   reduceMotion: false,
   music: false,
   weather: true,
+  snowMode: false,
+  disasters: true,
   soundVolume: 0.6,
   admin: { enabled: false, freeBuild: false, infiniteEnergy: false, instantTimers: false, calendarSpeed: 1 },
 }
@@ -48,6 +52,8 @@ export const SETTING_LABELS: Record<SwitchSetting, string> = {
   reduceMotion: 'Reduce motion',
   music: 'Background music',
   weather: 'Rain showers',
+  snowMode: '❄️ Snow mode (winter)',
+  disasters: 'Natural disasters (they damage, never destroy)',
 }
 
 export class SettingsStore {

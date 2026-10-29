@@ -50,3 +50,7 @@ sports-field,Sports Field,community,late,8,,3×2,6,650,🪵 4,48,698,90,,,0,,,45
 public-beach,Public Beach,community,late,9,Fun in the Sun,3×2,6,400,,0,400,0,,,0,,,20,0,,8,+8% within 5 tiles,,,,,—,—
 central-park,Central Park,community,late,11,,4×4,16,1800,🧱 4 🪵 8,156,1956,180,,,0,,,126,0,💧3,25,+12% within 7 tiles,,,,,—,—
 ski-resort,Ski Resort,business,late,13,Hit the Slopes,4×4,16,3500,🪵 10 🔩 8,320,3820,300,300,260,0,260,17,245,0,💧2 🔌4 🗑️2,0,,14.692307692307692,78.46153846153847,52,260,not required; +5% beside one,"★★ at level 15, ★★★ at 17"
+chicken-coop,Chicken Coop,farm,early,3,Down on the Farm,2×2,4,220,,0,220,0,45,22,0,22,1,11,0,,0,,10,7.5,29.333333333333332,22,—,—
+pig-pen,Pig Pen,farm,middle,5,Down on the Farm,2×2,4,420,,0,420,0,70,38,0,38,3,21,0,💧1,0,,11.052631578947368,12.894736842105262,32.57142857142857,38,—,—
+sheep-meadow,Sheep Meadow,farm,middle,7,,3×2,6,650,,0,650,0,90,58,0,58,4,32,0,💧1,0,,11.206896551724139,16.810344827586206,38.666666666666664,58,—,—
+cow-pasture,Cow Pasture,farm,late,9,,3×3,9,950,,0,950,0,120,92,0,92,6,47,0,💧2,0,,10.326086956521738,20.652173913043477,46,92,—,—

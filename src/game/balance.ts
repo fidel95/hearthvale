@@ -1,4 +1,4 @@
-import { BUILDING_TYPES, type BuildingType } from './buildings'
+import { BUILDING_TYPES, type BuildingType, isPlot } from './buildings'
 import { MAX_LOCATION_BONUS, ROAD_BONUS } from './communityRules'
 import { upgradeCost } from './construction'
 import { CROP_TYPES, type CropType } from './crops'
@@ -84,7 +84,7 @@ export function buildingRow(type: BuildingType): BuildingRow {
     type.supplies ? `supplies ${UTILITY_INFO[type.supplies.utility].icon} ${type.supplies.amount}` : '',
     type.amenity ? `+${type.amenity.bonus * 100}% within ${type.amenity.radius} tiles` : '',
     type.storage ? `stores 📦 ${type.storage}` : '',
-    type.category === 'farm' ? 'grows crops' : '',
+    isPlot(type) ? 'grows crops' : '',
     type.category === 'road' ? `+${ROAD_BONUS * 100}% for homes and shops beside it` : '',
     type.category === 'decoration' ? 'looks nice' : '',
   ]

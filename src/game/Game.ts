@@ -51,9 +51,12 @@ import { TrafficView } from './TrafficView'
 import { FlightView } from './FlightView'
 import { LeisureView } from './LeisureView'
 import { ArmyView } from './ArmyView'
+import { AnimalView } from './AnimalView'
 import { PARADE } from './Army'
+import { repairCost } from './Disasters'
 import { addMountains } from './MountainView'
 import { WeatherView } from './WeatherView'
+import { DisasterView } from './DisasterView'
 import { ShipView } from './ShipView'
 import { AutoSaver } from './save'
 import { UTILITY_INFO } from './utilityRules'
@@ -114,7 +117,12 @@ export class Game {
   private flightView: FlightView
   private leisureView: LeisureView
   private armyView: ArmyView
+  private animalView: AnimalView
   private weather: WeatherView
+  private disasterView: DisasterView
+  private mountains: { setSnow: (amount: number) => void }
+  private flashEl = document.createElement('div')
+  private lastSnow = -1
   private ambient = new THREE.HemisphereLight('#e8f4ff', '#8fbf6a', 1.3)
   private landView: LandView
   private shipView: ShipView
@@ -160,8 +168,22 @@ export class Game {
     this.flightView = new FlightView(this.scene, this.city)
     this.leisureView = new LeisureView(this.scene, this.city)
     this.armyView = new ArmyView(this.scene, this.city, this.state.army)
-    addMountains(this.scene)
+    this.animalView = new AnimalView(this.scene, this.city)
+    this.mountains = addMountains(this.scene)
     this.weather = new WeatherView(this.scene, () => this.controls.target, [this.sun, this.ambient])
+    this.disasterView = new DisasterView(this.scene, this.city, this.state.disasters, {
+      notice: (message, warn) => this.hud.toast(message, warn ? 'warn' : 'info'),
+      flash: () => {
+        this.flashEl.classList.remove('flash-on')
+        void this.flashEl.offsetWidth // restart the animation
+        this.flashEl.classList.add('flash-on')
+      },
+      thunder: () => this.sound.thunder(),
+      siren: () => this.sound.siren(),
+      setStorm: (on) => this.weather.setStorm(on),
+    })
+    this.flashEl.className = 'flash'
+    container.append(this.flashEl)
     const builder = new Builder(this.scene, this.city, this.player, this.docks, this.cityView, this.controls, this.renderer.domElement)
     this.incomeView = new IncomeView(this.scene, this.city, this.cityView, this.services, this.docks, (b) => builder.tap(b))
     builder.onHoverBuilding = (b) => this.incomeView.setHovered(b)
@@ -235,7 +257,12 @@ export class Game {
       this.flightView.setVisible(s.showTraffic)
       this.leisureView.setVisible(s.showPeople)
       this.armyView.setVisible(s.showTraffic)
+      this.animalView.setVisible(s.showPeople)
       this.weather.enabled = s.weather
+      this.weather.snow = s.snowMode
+      this.disasterView.enabled = s.disasters
+      this.leisureView.raining = this.weather.isRaining || s.snowMode
+      this.peopleView.setRaining(this.weather.isRaining && !s.snowMode)
       this.weather.showDrops = !s.reduceMotion
       builder.confirmPurchases = s.confirmPurchases
       document.body.classList.toggle('reduce-motion', s.reduceMotion)
@@ -249,9 +276,11 @@ export class Game {
     window.setInterval(() => this.applyPowers(), 500)
     // Rain: umbrellas up, the beach empties, and a word about it.
     this.weather.onChange = (raining) => {
-      this.peopleView.setRaining(raining)
-      this.leisureView.raining = raining
-      this.hud.toast(raining ? '🌧️ It\'s starting to rain. Umbrellas out!' : '☀️ The rain has stopped.', 'info')
+      const snow = this.settings.values.snowMode
+      this.peopleView.setRaining(raining && !snow)
+      this.leisureView.raining = raining || snow
+      if (snow) this.hud.toast(raining ? '❄️ It\'s snowing hard!' : '❄️ The snow is easing off.', 'info')
+      else this.hud.toast(raining ? '🌧️ It\'s starting to rain. Umbrellas out!' : '☀️ The rain has stopped.', 'info')
     }
     this.showTaxEvents(taxPanel)
     const cropPicker = new CropPicker(container, this.city, this.player, (message) => this.hud.toast(message))
@@ -336,7 +365,16 @@ export class Game {
     this.flightView.update(Math.min(dt, 100) / 1000)
     this.leisureView.update(Math.min(dt, 100) / 1000)
     this.armyView.update(Math.min(dt, 100) / 1000)
+    this.animalView.update(Math.min(dt, 100) / 1000)
     this.weather.update(Math.min(dt, 100) / 1000)
+    this.disasterView.raining = this.weather.isRaining && !this.weather.snow
+    this.disasterView.update(Math.min(dt, 100) / 1000)
+    // Snow settling or melting: update the land, trees and hills as it changes.
+    if (Math.abs(this.weather.snowCover - this.lastSnow) > 0.02 || (this.weather.snowCover !== this.lastSnow && (this.weather.snowCover === 0 || this.weather.snowCover === 1))) {
+      this.lastSnow = this.weather.snowCover
+      this.landView.setSnow(this.weather.snowCover)
+      this.mountains.setSnow(this.weather.snowCover)
+    }
     this.sound.setRain(this.weather.intensity)
     this.controls.update(Math.min(dt, 100) / 1000)
     const seconds = frameTime / 1000
@@ -464,6 +502,7 @@ export class Game {
     this.contextMenu = new ContextMenu(this.scene, this.cityView, this.incomeView, [
       { icon: 'ℹ️', label: 'Details', run: (b) => this.buildingPanel.open(b) },
       { icon: '✋', label: 'Move', run: move },
+      { icon: '🔧', label: 'Repair', run: (b) => this.repair(b), when: (b) => b.damaged },
       { icon: '🎖️', label: 'Parade', run: () => this.holdParade(), when: (b) => b.type.id === 'army-base' && this.city.isBuilt(b) },
       { icon: '⟳', label: 'Turn', run: (b) => builder.turnPlaced(b), when: (b) => !isTrack(b.type) },
       { icon: '🎒', label: 'Store', run: store, when: (b) => canStore(b, this.city, this.docks) },
@@ -475,6 +514,7 @@ export class Game {
     }
     // A tap on the map while a sheet is open just closes the sheet.
     builder.allowDrag = () => !this.visit
+    builder.onRepairRequest = (b) => this.repair(b)
     builder.interceptClick = (x, y) => {
       if (Sheet.closeCurrent()) return true
       if (!this.visit) return false
@@ -534,6 +574,8 @@ export class Game {
       energy: () => this.fillEnergy(),
       finishTimers: () => this.finishTimers(),
       toggleRain: () => this.weather.toggle(),
+      toggleSnow: () => this.settings.set('snowMode', !this.settings.values.snowMode),
+      disaster: (kind) => this.disasterView.trigger(kind),
       nextMonth: () => {
         for (const month of this.clock.skipMonth()) {
           this.services.endOfMonth()
@@ -542,6 +584,13 @@ export class Game {
       },
     })
     return this.admin
+  }
+
+  // Repair a building a disaster damaged (Disasters.ts has the rules).
+  private repair(b: PlacedBuilding) {
+    const cost = repairCost(b)
+    if (this.state.disasters.repair(b.id)) this.hud.toast(`🔧 ${b.type.name} repaired for 🪙 ${cost}. Repairs are a deductible expense.`)
+    else this.hud.toast(`Repairing the ${b.type.name} costs 🪙 ${cost}.`, 'warn')
   }
 
   // The Army Base's Parade button (Army.ts has the rules).

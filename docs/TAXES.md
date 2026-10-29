@@ -326,6 +326,12 @@ depreciates quickly while the station takes decades. An **airport** is mostly
 runway, taxiways and aprons, which are land improvements (asset class 00.3,
 15 years), so the game depreciates it over 15.
 
+**Animal pens** are single-purpose livestock structures: 10-year property
+(IRC §168(e)(3)(D)). Eggs, milk and wool sold count as **farm income**, like
+crops. **Repairs** after a disaster keep a building in its normal working
+condition, so they're deducted in full the year they're paid, unlike an
+upgrade, which improves it and is depreciated (Treas. Reg. §1.263(a)-3).
+
 An **army parade** is a running cost of the town's own (like utility
 upkeep): it's paid in coins and recorded as an operating expense, so it's
 deducted in full that year.

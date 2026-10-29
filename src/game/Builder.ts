@@ -1,6 +1,6 @@
 import * as THREE from 'three'
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
-import { footprint, type BuildingType, type Rotation, isTrack } from './buildings'
+import { footprint, type BuildingType, type Rotation, isTrack, isPlot } from './buildings'
 import type { CameraController, Carry } from './CameraController'
 import { duration, outOfEnergyMessage } from '../ui/dom'
 import { sizeOf, type City, type PlacedBuilding } from './City'
@@ -44,6 +44,8 @@ export class Builder {
   onPlantRequest?: (plot: PlacedBuilding) => void
   // An idle dock was tapped: show the shipments to order.
   onDockRequest?: (dock: PlacedBuilding) => void
+  // Tapping a damaged building asks to repair it (Game does it, with Disasters).
+  onRepairRequest?: (building: PlacedBuilding) => void
   // A construction site whose timer is done was tapped: finish it.
   onFinishRequest?: (building: PlacedBuilding) => void
   // The selected building changed (null: nothing selected).
@@ -252,10 +254,11 @@ export class Builder {
   // Does tapping this building do something right away (collect, harvest,
   // plant, unload)? If not, a tap selects it instead.
   hasQuickAction(b: PlacedBuilding, now: number): boolean {
+    if (b.damaged) return true
     if (b.construction) return this.city.production.constructionDone(b, now)
     if (b.type.requiresRoad && !this.city.hasRoadAccess(b)) return false
     if (b.type.goodsPerSale && this.city.production.isReady(b, now) && !this.city.production.hasStock(b)) return this.city.goods > 0
-    if (b.type.category === 'farm') return cropState(b.crop, now).stage !== 'growing'
+    if (isPlot(b.type)) return cropState(b.crop, now).stage !== 'growing'
     if (b.type.category === 'port') return this.docks.state(b, now).stage !== 'sailing'
     return this.city.production.isReady(b, now) && this.city.production.hasStock(b)
   }
@@ -271,6 +274,10 @@ export class Builder {
       if (this.player.hasEnergy(now)) return false
       this.onNotice?.(outOfEnergyMessage(this.player, now))
       return true
+    }
+    if (building.damaged) {
+      this.onRepairRequest?.(building)
+      return
     }
     if (building.construction) {
       if (this.city.production.constructionDone(building, now)) this.onFinishRequest?.(building)
@@ -288,7 +295,7 @@ export class Builder {
       else if (!outOfEnergy() && this.docks.unload(building, now) === 0) this.onNotice?.('Storage is full. Sell goods at your shops, or build a Barn or Warehouse.')
       return
     }
-    if (building.type.category !== 'farm') {
+    if (!isPlot(building.type)) {
       if (!this.city.production.isReady(building, now)) return
       if (!this.city.production.hasStock(building)) {
         // Out of stock: fill the shelves from town storage, if there's anything there.
@@ -357,7 +364,7 @@ export class Builder {
       const ready = (this.city.production.isReady(b, now) && this.city.production.hasStock(b)) || cropState(b.crop, now).stage === 'ripe'
       if (!ready) continue
       if (!this.player.hasEnergy(now)) return { actions, coins, outOfEnergy: true }
-      coins += b.type.category === 'farm' ? this.city.production.harvest(b.id, now) : this.city.production.collect(b.id, now)
+      coins += isPlot(b.type) ? this.city.production.harvest(b.id, now) : this.city.production.collect(b.id, now)
       actions++
     }
     return { actions, coins, outOfEnergy: false }

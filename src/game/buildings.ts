@@ -54,6 +54,7 @@ export type PlaceholderShape =
   | 'sportsfield'
   | 'bigpark'
   | 'skiresort'
+  | 'pen'
 
 export interface BuildingType {
   id: string
@@ -98,6 +99,8 @@ export interface BuildingType {
   // Needs a road touching one side of its footprint to work (shops: customers
   // have to get there). See City.hasRoadAccess.
   requiresRoad?: boolean
+  // Animal pens: which animals live here and how many (AnimalView draws them).
+  animals?: { kind: 'chicken' | 'pig' | 'sheep' | 'cow'; count: number }
   // Needs railway track touching one side to work (the train station).
   requiresRail?: boolean
   // Must be built on the shore, next to the sea (docks).
@@ -808,9 +811,67 @@ export const BUILDING_TYPES: BuildingType[] = [
     attractsVisitors: { lingerSeconds: 10 },
     placeholder: { shape: 'skiresort', color: '#f4f8fb', accent: '#c8463a', height: 2.4 },
   },
+  // ---- Farm animals: they earn farm income (eggs, pork, wool, milk) like a shop earns sales
+  {
+    id: 'chicken-coop',
+    name: 'Chicken Coop',
+    category: 'farm',
+    size: { x: 2, z: 2 },
+    cost: 220,
+    unlockLevel: 3,
+    income: { coins: 22, seconds: 45 }, // eggs
+    animals: { kind: 'chicken', count: 5 },
+    recoveryYears: 10, // a single-purpose livestock structure, IRC §168(e)(3)(D)
+    placeholder: { shape: 'pen', color: '#c8463a', accent: '#f2ead8', height: 0.5 },
+  },
+  {
+    id: 'pig-pen',
+    name: 'Pig Pen',
+    category: 'farm',
+    size: { x: 2, z: 2 },
+    cost: 420,
+    unlockLevel: 5,
+    income: { coins: 38, seconds: 70 },
+    needs: { water: 1 },
+    animals: { kind: 'pig', count: 3 },
+    recoveryYears: 10,
+    placeholder: { shape: 'pen', color: '#8a5a36', accent: '#e8c9a0', height: 0.5 },
+  },
+  {
+    id: 'sheep-meadow',
+    name: 'Sheep Meadow',
+    category: 'farm',
+    size: { x: 3, z: 2 },
+    cost: 650,
+    unlockLevel: 7,
+    income: { coins: 58, seconds: 90 }, // wool
+    needs: { water: 1 },
+    animals: { kind: 'sheep', count: 4 },
+    recoveryYears: 10,
+    placeholder: { shape: 'pen', color: '#5b6b7a', accent: '#f2ead8', height: 0.5 },
+  },
+  {
+    id: 'cow-pasture',
+    name: 'Cow Pasture',
+    category: 'farm',
+    size: { x: 3, z: 3 },
+    cost: 950,
+    unlockLevel: 9,
+    income: { coins: 92, seconds: 120 }, // milk
+    needs: { water: 2 },
+    animals: { kind: 'cow', count: 3 },
+    recoveryYears: 10,
+    placeholder: { shape: 'pen', color: '#b5432f', accent: '#f2ead8', height: 0.6 },
+  },
 ]
 
 export const BUILDINGS_BY_ID = new Map(BUILDING_TYPES.map((b) => [b.id, b]))
+
+// A crop plot: a farm building with no animals (animal pens are farm
+// buildings too, but earn like homes and shops instead of growing crops).
+export function isPlot(type: BuildingType): boolean {
+  return type.category === 'farm' && !type.animals
+}
 
 // Roads and railway track: 1×1 tiles you draw by dragging, drawn on screen
 // as one connected network (RoadView, RailView) rather than one by one.

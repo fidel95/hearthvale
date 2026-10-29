@@ -1,4 +1,4 @@
-import { BUILDING_TYPES, type BuildingType, type Category } from '../game/buildings'
+import { BUILDING_TYPES, type BuildingType, type Category, isPlot } from '../game/buildings'
 import type { City } from '../game/City'
 import { ROAD_BONUS } from '../game/communityRules'
 import type { PlacementSystem } from '../game/PlacementSystem'
@@ -31,7 +31,7 @@ function headline(type: BuildingType): string {
   if (type.supplies) return `Supplies ${UTILITY_INFO[type.supplies.utility].icon} ${type.supplies.amount}`
   if (type.amenity) return `+${type.amenity.bonus * 100}% nearby`
   if (type.storage) return `Stores 📦 ${type.storage}`
-  if (type.category === 'farm') return 'Grows crops'
+  if (isPlot(type)) return 'Grows crops'
   if (type.category === 'road') return `+${ROAD_BONUS * 100}% beside it`
   if (type.id === 'rail') return 'Trains run on it'
   if (type.townBonus) return `+${Math.round(type.townBonus * 100)}% town-wide`
@@ -44,7 +44,7 @@ function details(type: BuildingType): string[] {
   if (type.income) lines.push(`Earns 🪙 ${type.income.coins} every ${type.income.seconds} seconds`)
   if (type.residents) lines.push(`Home to 👥 ${type.residents} residents`)
   if (type.goodsPerSale) lines.push(`Sells 📦 ${type.goodsPerSale} goods each time`)
-  if (type.category === 'farm') lines.push('Plant crops on it: harvests stock your shops or sell at market')
+  if (isPlot(type)) lines.push('Plant crops on it: harvests stock your shops or sell at market')
   if (type.storage) lines.push(`Stores 📦 ${type.storage} goods`)
   if (type.supplies) lines.push(`Supplies ${UTILITY_INFO[type.supplies.utility].icon} ${type.supplies.amount} ${UTILITY_INFO[type.supplies.utility].name.toLowerCase()}`)
   if (type.amenity) {
@@ -64,6 +64,7 @@ function details(type: BuildingType): string[] {
     lines.push(`🎖️ Hold a parade (🪙 ${PARADE.cost}): +${PARADE.bonus * 100}% to all rent and sales for ${PARADE.durationMs / 60_000} minutes`)
   }
   if (type.id === 'airport') lines.push('✈️ Planes take off, fly round the town and land')
+  if (type.animals) lines.push(`🐾 ${type.animals.count} ${type.animals.kind === 'sheep' ? 'sheep' : type.animals.kind + 's'} live here; what they give sells as farm income`)
   if (type.id === 'public-beach') lines.push('🏖️ Sunbathers and swimmers come when it isn\'t raining')
   if (type.id === 'ski-resort') lines.push('⛷️ Skiers ski down and ride the chairlift back up')
   if (type.townBonus) lines.push(`+${Math.round(type.townBonus * 100)}% to all rent and sales in town`)

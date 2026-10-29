@@ -49,6 +49,8 @@ export interface PlacedBuilding {
   stock: number // shops: goods on the shelves
   // Under construction until endsAt; then it needs finishing (with materials).
   construction: { endsAt: number } | null
+  // Hit by a storm, flood or wave (Disasters.ts): it stops working until repaired.
+  damaged: boolean
 }
 
 // The plain-JSON form of a building, for the save file.
@@ -63,6 +65,7 @@ interface BuildingSave {
   level?: number // the fields from here on were added in Stage 9; older saves lack them
   stock?: number
   construction?: { endsAt: number } | null
+  damaged?: boolean
   stored?: boolean
 }
 
@@ -111,6 +114,9 @@ export type CityEvent =
   // Taken off the map into the inventory, and put back.
   | { kind: 'stored'; building: PlacedBuilding }
   | { kind: 'restored'; building: PlacedBuilding }
+  // A disaster damaged it, or it was repaired (Disasters.ts).
+  | { kind: 'damaged'; building: PlacedBuilding; cause: string }
+  | { kind: 'repaired'; building: PlacedBuilding; cost: number }
 
 export class City {
   private buildings = new Map<number, PlacedBuilding>()
@@ -196,7 +202,7 @@ export class City {
 
   // Working: built, and connected if it needs a road.
   isOperating(b: PlacedBuilding): boolean {
-    return this.isBuilt(b) && (!b.type.requiresRoad || this.hasRoadAccess(b)) && (!b.type.requiresRail || this.hasRailAccess(b))
+    return this.isBuilt(b) && !b.damaged && (!b.type.requiresRoad || this.hasRoadAccess(b)) && (!b.type.requiresRail || this.hasRailAccess(b))
   }
 
   buildingAt(tile: Tile): PlacedBuilding | undefined {
@@ -291,6 +297,7 @@ export class City {
       level: 1,
       stock: 0,
       construction,
+      damaged: false,
     }
     this.buildings.set(building.id, building)
     this.mark(building, building.id)
@@ -402,6 +409,7 @@ export class City {
         level: saved.level ?? 1,
         stock: saved.stock ?? 0,
         construction: saved.construction ?? null,
+        damaged: saved.damaged ?? false,
       }
       this.nextId = Math.max(this.nextId, building.id + 1)
       if (saved.stored) {
@@ -428,6 +436,7 @@ export class City {
       level: b.level,
       stock: b.stock,
       construction: b.construction,
+      ...(b.damaged ? { damaged: true } : {}),
       ...(stored ? { stored } : {}),
     }
   }
@@ -436,6 +445,11 @@ export class City {
     for (const t of footprintTiles(building.tile, sizeOf(building))) {
       this.occupied[t.z * GRID_SIZE + t.x] = value
     }
+  }
+
+  // For systems that change a building's state themselves (Disasters.ts).
+  announce(event: CityEvent) {
+    this.emit(event)
   }
 
   private emit(event: CityEvent) {

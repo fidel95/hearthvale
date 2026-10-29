@@ -474,6 +474,26 @@ function createPlaceholder(type: BuildingType): THREE.Group {
       add(roof, '#7a3a2a', 1.35, 0.41, 1.35)
       break
     }
+    case 'pen': {
+      // A fenced yard with a little shed at the back, a water trough and hay.
+      // AnimalView keeps the animals in front of the shed (PEN_YARD).
+      add(new THREE.BoxGeometry(w * 0.97, 0.03, d * 0.97), '#9cc46a', 0, 0, 0)
+      for (const z of [-d * 0.46, d * 0.46]) add(new THREE.BoxGeometry(w * 0.94, 0.03, 0.03), accent, 0, 0.14, z)
+      for (const x of [-w * 0.46, w * 0.46]) add(new THREE.BoxGeometry(0.03, 0.03, d * 0.94), accent, x, 0.14, 0)
+      for (let x = -w * 0.46; x <= w * 0.46 + 0.01; x += w * 0.92 / Math.round(w * 2)) {
+        for (const z of [-d * 0.46, d * 0.46]) add(new THREE.BoxGeometry(0.04, 0.2, 0.04), accent, x, 0.03, z)
+      }
+      for (let z = -d * 0.46; z <= d * 0.46 + 0.01; z += d * 0.92 / Math.round(d * 2)) {
+        for (const x of [-w * 0.46, w * 0.46]) add(new THREE.BoxGeometry(0.04, 0.2, 0.04), accent, x, 0.03, z)
+      }
+      add(new THREE.BoxGeometry(0.62, height, 0.5), color, -w * 0.5 + 0.42, 0.03, -d * 0.5 + 0.36)
+      const roof = new THREE.ConeGeometry(Math.SQRT1_2, 1, 4).rotateY(Math.PI / 4)
+      roof.scale(0.72, 0.28, 0.6)
+      add(roof, '#7a3a2a', -w * 0.5 + 0.42, 0.03 + height, -d * 0.5 + 0.36)
+      add(new THREE.BoxGeometry(0.4, 0.08, 0.12), '#8a8f96', w * 0.5 - 0.35, 0.03, -d * 0.5 + 0.2)
+      add(new THREE.CylinderGeometry(0.13, 0.13, 0.16, 10).rotateZ(Math.PI / 2), '#e8c55a', w * 0.5 - 0.3, 0.03, d * 0.5 - 0.25)
+      break
+    }
     case 'barn': {
       // A red barn: walls, a steep two-sided roof (a 4-sided cone stretched long) and white trim.
       add(new THREE.BoxGeometry(w * 0.8, height * 0.6, d * 0.85), color, 0, 0, 0)

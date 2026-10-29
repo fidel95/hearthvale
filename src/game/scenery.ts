@@ -23,6 +23,10 @@ function noise(x: number, z: number, salt: number): number {
 
 export class Scenery {
   private group = new THREE.Group()
+  private crowns: THREE.InstancedMesh | null = null
+  private crownColors: THREE.Color[] = []
+  private bushes: THREE.InstancedMesh | null = null
+  private snow = 0
 
   constructor(scene: THREE.Scene) {
     scene.add(this.group)
@@ -93,5 +97,23 @@ export class Scenery {
       blooms.setColorAt(i, new THREE.Color(f.color))
     })
     for (const mesh of [crowns, blooms]) if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true
+    blooms.userData.flowers = true
+    this.crowns = crowns
+    this.crownColors = trees.map((t) => new THREE.Color(t.color))
+    this.bushes = bush
+    this.setSnow(this.snow)
+  }
+
+  // Snow mode: trees and bushes turn white (by how much snow, 0 to 1), and
+  // the flowers are buried.
+  setSnow(amount: number) {
+    this.snow = amount
+    const white = new THREE.Color('#f4f8fb')
+    if (this.crowns) {
+      this.crownColors.forEach((c, i) => this.crowns!.setColorAt(i, c.clone().lerp(white, amount * 0.8)))
+      if (this.crowns.instanceColor) this.crowns.instanceColor.needsUpdate = true
+    }
+    if (this.bushes) (this.bushes.material as THREE.MeshStandardMaterial).color.set('#57a84a').lerp(white, amount * 0.8)
+    for (const child of this.group.children) if (child.userData.flowers) child.visible = amount < 0.5
   }
 }

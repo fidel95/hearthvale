@@ -120,6 +120,47 @@ export class Sound {
     this.rain.gain.setTargetAtTime(level * 0.35, ctx.currentTime, 0.5)
   }
 
+  // Thunder: a burst of low, rumbling noise that rolls away.
+  thunder() {
+    const ctx = this.context
+    if (!ctx || !this.master || this.volume === 0 || ctx.state !== 'running') return
+    const seconds = 2.5
+    const buffer = ctx.createBuffer(1, ctx.sampleRate * seconds, ctx.sampleRate)
+    const data = buffer.getChannelData(0)
+    for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / data.length, 2)
+    const noise = ctx.createBufferSource()
+    noise.buffer = buffer
+    const filter = ctx.createBiquadFilter()
+    filter.type = 'lowpass'
+    filter.frequency.value = 180
+    const gain = ctx.createGain()
+    gain.gain.value = 1.6
+    noise.connect(filter).connect(gain).connect(this.master)
+    noise.start(ctx.currentTime + 0.25 + Math.random() * 0.5) // light travels faster than sound
+  }
+
+  // A warning siren: a tone sliding up and down a few times.
+  siren() {
+    const ctx = this.context
+    if (!ctx || !this.master || this.volume === 0 || ctx.state !== 'running') return
+    const osc = ctx.createOscillator()
+    const gain = ctx.createGain()
+    osc.type = 'triangle'
+    const now = ctx.currentTime
+    for (let i = 0; i < 3; i++) {
+      osc.frequency.setValueAtTime(420, now + i * 1.2)
+      osc.frequency.linearRampToValueAtTime(820, now + i * 1.2 + 0.6)
+      osc.frequency.linearRampToValueAtTime(420, now + i * 1.2 + 1.2)
+    }
+    gain.gain.setValueAtTime(0, now)
+    gain.gain.linearRampToValueAtTime(0.25, now + 0.1)
+    gain.gain.setValueAtTime(0.25, now + 3.4)
+    gain.gain.linearRampToValueAtTime(0, now + 3.6)
+    osc.connect(gain).connect(this.master)
+    osc.start(now)
+    osc.stop(now + 3.7)
+  }
+
   // One note: a quick rise, then a fade (an "envelope"), so it doesn't click.
   private tone(freq: number, at: number, length: number, wave: OscillatorType, loudness: number) {
     const ctx = this.context!

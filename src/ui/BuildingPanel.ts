@@ -10,7 +10,7 @@ import type { Services } from '../game/Services'
 import type { Taxes } from '../game/Taxes'
 import { UTILITIES, UTILITY_INFO } from '../game/utilityRules'
 import { coins, duration, el, percent } from './dom'
-import { isTrack } from '../game/buildings'
+import { isTrack, isPlot } from '../game/buildings'
 import { Sheet, button } from './Sheet'
 
 // Everything about one building: status, a progress bar for whatever it's
@@ -279,7 +279,7 @@ export class BuildingPanel {
     const crop = cropState(b.crop, now)
     if (crop.stage === 'ripe') return '🧺 Harvest'
     if (crop.stage === 'withered') return '🥀 Clear'
-    if (b.type.category === 'farm' && crop.stage === 'empty') return '🌱 Plant'
+    if (isPlot(b.type) && crop.stage === 'empty') return '🌱 Plant'
     if (b.type.category === 'port') {
       const stage = this.docks.state(b, now).stage
       return stage === 'arrived' ? '🚢 Unload' : stage === 'idle' ? '⚓ Order goods' : null

@@ -43,6 +43,7 @@ export class LandView {
 
   private showSigns: boolean
   private scenery: Scenery
+  private snowSheet: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshStandardMaterial> | null = null
 
   // showSigns: false for a neighbor's town, where there's nothing for you to buy.
   constructor(scene: THREE.Scene, city: City, { showSigns = true } = {}) {
@@ -125,6 +126,23 @@ export class LandView {
       }
     }
     this.refreshSigns()
+  }
+
+  // Snow mode: a blanket of snow over the land (roads, farm fields and the
+  // sea stand above it, so they stay clear), and white trees.
+  setSnow(amount: number) {
+    if (!this.snowSheet) {
+      this.snowSheet = new THREE.Mesh(
+        new THREE.PlaneGeometry(260, 260).rotateX(-Math.PI / 2),
+        new THREE.MeshStandardMaterial({ color: '#f4f8fb', transparent: true, opacity: 0, depthWrite: false }),
+      )
+      this.snowSheet.position.y = 0.008
+      this.snowSheet.receiveShadow = true
+      this.scene.add(this.snowSheet)
+    }
+    this.snowSheet.material.opacity = amount * 0.92
+    this.snowSheet.visible = amount > 0.01
+    this.scenery.setSnow(amount)
   }
 
   setGridVisible(visible: boolean) {

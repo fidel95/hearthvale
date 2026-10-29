@@ -1,4 +1,4 @@
-import { BUILDING_TYPES, type BuildingType, type Rotation } from './buildings'
+import { BUILDING_TYPES, type BuildingType, type Rotation, isPlot } from './buildings'
 import { CROP_TYPES } from './crops'
 import type { Tile } from './grid'
 import { MATERIAL_IDS, type MaterialId } from './items'
@@ -119,7 +119,7 @@ export function planTown(n: Neighbor, level: number, day: string): PlannedBuildi
     const choices = available(category)
     const type = choices.length ? pick(choices) : available('home')[0]
     const p: PlannedBuilding = { type, tile, rotation: (Math.floor(rand() * 4) as Rotation) }
-    if (type.category === 'farm' && crops.length) {
+    if (isPlot(type) && crops.length) {
       const crop = pick(crops)
       // Today's state: some just planted, some ripe, a few withered.
       const age = daily() * (crop.growSeconds + crop.freshSeconds * 1.2)

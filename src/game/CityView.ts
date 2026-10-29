@@ -2,7 +2,7 @@ import * as THREE from 'three'
 import { sizeOf, type City, type PlacedBuilding } from './City'
 import { cropState } from './crops'
 import { footprintCenter } from './grid'
-import { isTrack } from './buildings'
+import { isTrack, isPlot } from './buildings'
 import { createBuildingObject, createConstructionSite, createCropObject, cropLookFor, disposeCropObject } from './models'
 
 const POP_MS = 350
@@ -38,6 +38,8 @@ export class CityView {
           this.create(event.building, true)
           break
         case 'moved':
+        case 'damaged': // knocked a little crooked until it's repaired
+        case 'repaired':
           this.position(event.building)
           break
         case 'removed':
@@ -54,7 +56,7 @@ export class CityView {
   update(now: number) {
     this.animatePops()
     for (const b of this.city.all()) {
-      if (b.type.category !== 'farm') continue
+      if (!isPlot(b.type)) continue
       const state = cropState(b.crop, now)
       if (state.stage === 'empty') {
         this.removeCrop(b.id)
@@ -149,5 +151,6 @@ export class CityView {
     obj.position.copy(footprintCenter(b.tile, sizeOf(b)))
     // A quarter turn each; the model is centered, so turning it in place fits the turned footprint.
     obj.rotation.y = (-b.rotation * Math.PI) / 2
+    obj.rotation.z = b.damaged ? 0.07 : 0
   }
 }

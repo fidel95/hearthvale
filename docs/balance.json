@@ -1608,6 +1608,134 @@
       "coinsPerEnergy": 260,
       "roads": "not required; +5% beside one",
       "upgrades": "★★ at level 15, ★★★ at 17"
+    },
+    {
+      "id": "chicken-coop",
+      "name": "Chicken Coop",
+      "category": "farm",
+      "role": "early",
+      "unlockLevel": 3,
+      "quests": [
+        "Down on the Farm"
+      ],
+      "footprint": "2×2",
+      "tiles": 4,
+      "cost": 220,
+      "materials": "",
+      "materialsValue": 0,
+      "totalCost": 220,
+      "buildSeconds": 0,
+      "cycleSeconds": 45,
+      "coinsPerCycle": 22,
+      "goodsPerCycle": 0,
+      "netPerCycle": 22,
+      "xpPerCycle": 1,
+      "buildXp": 11,
+      "residents": 0,
+      "needs": "",
+      "upkeepPerMonth": 0,
+      "effect": "",
+      "paybackCycles": 10,
+      "paybackMinutes": 7.5,
+      "coinsPerMinute": 29.333333333333332,
+      "coinsPerEnergy": 22,
+      "roads": "—",
+      "upgrades": "—"
+    },
+    {
+      "id": "pig-pen",
+      "name": "Pig Pen",
+      "category": "farm",
+      "role": "middle",
+      "unlockLevel": 5,
+      "quests": [
+        "Down on the Farm"
+      ],
+      "footprint": "2×2",
+      "tiles": 4,
+      "cost": 420,
+      "materials": "",
+      "materialsValue": 0,
+      "totalCost": 420,
+      "buildSeconds": 0,
+      "cycleSeconds": 70,
+      "coinsPerCycle": 38,
+      "goodsPerCycle": 0,
+      "netPerCycle": 38,
+      "xpPerCycle": 3,
+      "buildXp": 21,
+      "residents": 0,
+      "needs": "💧1",
+      "upkeepPerMonth": 0,
+      "effect": "",
+      "paybackCycles": 11.052631578947368,
+      "paybackMinutes": 12.894736842105262,
+      "coinsPerMinute": 32.57142857142857,
+      "coinsPerEnergy": 38,
+      "roads": "—",
+      "upgrades": "—"
+    },
+    {
+      "id": "sheep-meadow",
+      "name": "Sheep Meadow",
+      "category": "farm",
+      "role": "middle",
+      "unlockLevel": 7,
+      "quests": [],
+      "footprint": "3×2",
+      "tiles": 6,
+      "cost": 650,
+      "materials": "",
+      "materialsValue": 0,
+      "totalCost": 650,
+      "buildSeconds": 0,
+      "cycleSeconds": 90,
+      "coinsPerCycle": 58,
+      "goodsPerCycle": 0,
+      "netPerCycle": 58,
+      "xpPerCycle": 4,
+      "buildXp": 32,
+      "residents": 0,
+      "needs": "💧1",
+      "upkeepPerMonth": 0,
+      "effect": "",
+      "paybackCycles": 11.206896551724139,
+      "paybackMinutes": 16.810344827586206,
+      "coinsPerMinute": 38.666666666666664,
+      "coinsPerEnergy": 58,
+      "roads": "—",
+      "upgrades": "—"
+    },
+    {
+      "id": "cow-pasture",
+      "name": "Cow Pasture",
+      "category": "farm",
+      "role": "late",
+      "unlockLevel": 9,
+      "quests": [],
+      "footprint": "3×3",
+      "tiles": 9,
+      "cost": 950,
+      "materials": "",
+      "materialsValue": 0,
+      "totalCost": 950,
+      "buildSeconds": 0,
+      "cycleSeconds": 120,
+      "coinsPerCycle": 92,
+      "goodsPerCycle": 0,
+      "netPerCycle": 92,
+      "xpPerCycle": 6,
+      "buildXp": 47,
+      "residents": 0,
+      "needs": "💧2",
+      "upkeepPerMonth": 0,
+      "effect": "",
+      "paybackCycles": 10.326086956521738,
+      "paybackMinutes": 20.652173913043477,
+      "coinsPerMinute": 46,
+      "coinsPerEnergy": 92,
+      "roads": "—",
+      "upgrades": "—"
     }
   ],
   "crops": [
@@ -1778,7 +1906,8 @@
       ],
       "unlocks": [
         "Townhouse",
-        "Planter"
+        "Planter",
+        "Chicken Coop"
       ],
       "quests": [
         "Master Builder"
@@ -1811,10 +1940,12 @@
         "Duplex",
         "Bench",
         "Barn",
+        "Pig Pen",
         "🎃 Pumpkins"
       ],
       "quests": [
-        "Room for the Harvest"
+        "Room for the Harvest",
+        "Down on the Farm"
       ]
     },
     {
@@ -1843,6 +1974,7 @@
         "Fountain",
         "Library",
         "Bus Stop",
+        "Sheep Meadow",
         "🌽 Corn"
       ],
       "quests": [
@@ -1877,6 +2009,7 @@
         "Dock",
         "Fire Station",
         "Public Beach",
+        "Cow Pasture",
         "🌻 Sunflowers"
       ],
       "quests": [

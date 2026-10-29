@@ -8,6 +8,8 @@ import { cropState } from './crops'
 import { BLOCKED_TEXT } from './production'
 import { footprintCenter } from './grid'
 import type { Services } from './Services'
+import { isPlot } from './buildings'
+import { repairCost } from './Disasters'
 import { UTILITY_INFO, shortIcons } from './utilityRules'
 
 // Labels floating over buildings: bubbles that say "tap me" (coins to
@@ -133,11 +135,12 @@ export class IncomeView {
   // Which bubble a building should show right now, if any.
   private bubbleFor(b: PlacedBuilding, now: number): { kind: BubbleKind; icon: string } | null {
     if (b.construction) return this.city.production.constructionDone(b, now) ? { kind: 'build', icon: '🔨' } : null
+    if (b.damaged) return { kind: 'noroad', icon: '🔧' }
     if (b.type.requiresRoad && !this.city.hasRoadAccess(b)) return { kind: 'noroad', icon: '🚧' }
     if (b.type.requiresRail && !this.city.hasRailAccess(b)) return { kind: 'noroad', icon: '🛤️' }
     if (this.city.production.isReady(b, now)) return this.city.production.hasStock(b) ? { kind: 'coins', icon: '🪙' } : { kind: 'stock', icon: '📦' }
     if (b.type.category === 'port') return this.docks.state(b, now).stage === 'arrived' ? { kind: 'cargo', icon: '🚢' } : null
-    if (b.type.category !== 'farm') return null
+    if (!isPlot(b.type)) return null
     const state = cropState(b.crop, now)
     switch (state.stage) {
       case 'empty':
@@ -179,9 +182,10 @@ export class IncomeView {
   }
 
   private describeBuilt(b: PlacedBuilding, now: number): [string, string] {
+    if (b.damaged) return [b.type.name, `🔧 Damaged: tap to repair for 🪙 ${repairCost(b)}`]
     if (b.type.requiresRoad && !this.city.hasRoadAccess(b)) return [b.type.name, `🚧 ${BLOCKED_TEXT.road}`]
     if (b.type.requiresRail && !this.city.hasRailAccess(b)) return [b.type.name, `🛤️ ${BLOCKED_TEXT.rail}`]
-    if (b.type.category === 'farm') {
+    if (isPlot(b.type)) {
       const state = cropState(b.crop, now)
       switch (state.stage) {
         case 'empty':
@@ -226,7 +230,7 @@ export class IncomeView {
   }
 
   private abovePoint(b: PlacedBuilding): THREE.Vector3 {
-    const top = b.type.category === 'farm' ? FARM_LABEL_HEIGHT : this.cityView.topOf(b.id) + 0.3
+    const top = isPlot(b.type) ? FARM_LABEL_HEIGHT : this.cityView.topOf(b.id) + 0.3
     return footprintCenter(b.tile, sizeOf(b)).setY(top)
   }
 

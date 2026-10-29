@@ -1,6 +1,7 @@
 import type { City, CityEvent, PlacedBuilding } from './City'
 import { levelFactor } from './construction'
 import { cropState, type CropType } from './crops'
+import { isPlot } from './buildings'
 import type { Economy } from './Economy'
 
 // Everything buildings produce over time: collecting income, planting and
@@ -85,7 +86,7 @@ export class ProductionSystem {
   // free: true skips the cost, for the starting town.
   plant(id: number, crop: CropType, { now = Date.now(), free = false } = {}): boolean {
     const plot = this.city.get(id)
-    if (!plot || plot.type.category !== 'farm' || cropState(plot.crop, now).stage !== 'empty') return false
+    if (!plot || !isPlot(plot.type) || cropState(plot.crop, now).stage !== 'empty') return false
     if (!free && !this.economy.canAfford(crop.seedCost)) return false
 
     plot.crop = { cropId: crop.id, plantedAt: now }

@@ -2,6 +2,7 @@ import type { City, PlacedBuilding } from '../game/City'
 import { CROP_TYPES, cropState, profitPerMinute, type CropType } from '../game/crops'
 import type { Player } from '../game/Player'
 import { coins, el, outOfEnergyMessage, timeSpan } from './dom'
+import { isPlot } from '../game/buildings'
 import { Sheet } from './Sheet'
 
 // The seed window that opens when you tap an empty farm plot. Each crop shows
@@ -50,7 +51,7 @@ export class CropPicker {
   private emptyPlots(): PlacedBuilding[] {
     const now = Date.now()
     const plots = [...this.city.all()].filter(
-      (b) => b.type.category === 'farm' && b !== this.plot && cropState(b.crop, now).stage === 'empty',
+      (b) => isPlot(b.type) && b !== this.plot && cropState(b.crop, now).stage === 'empty',
     )
     return this.plot ? [this.plot, ...plots] : plots
   }

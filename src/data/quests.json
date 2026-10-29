@@ -516,6 +516,33 @@
         "coins": 1500,
         "xp": 90
       }
+    },
+    {
+      "id": "animals",
+      "title": "Down on the Farm",
+      "intro": "Animals earn farm income: hens lay eggs and pigs grow. Build them a home with a yard to wander in.",
+      "after": "growing",
+      "level": 5,
+      "tasks": [
+        {
+          "label": "Build a Chicken Coop",
+          "count": 1,
+          "have": {
+            "building": "chicken-coop"
+          }
+        },
+        {
+          "label": "Build a Pig Pen",
+          "count": 1,
+          "have": {
+            "building": "pig-pen"
+          }
+        }
+      ],
+      "reward": {
+        "coins": 250,
+        "xp": 25
+      }
     }
   ],
   "achievements": [

@@ -1739,3 +1739,29 @@ button {
     }
   }
 }
+
+
+/* Lightning: the whole screen lights up for an instant. */
+.flash {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 3;
+  background: #fffbe8;
+  opacity: 0;
+}
+
+.flash.flash-on {
+  animation: flash 0.45s ease-out;
+}
+
+@keyframes flash {
+  0% { opacity: 0.75; }
+  20% { opacity: 0.15; }
+  35% { opacity: 0.55; }
+  100% { opacity: 0; }
+}
+
+.reduce-motion .flash.flash-on {
+  animation: none;
+}

@@ -420,6 +420,22 @@ roll, a Catmull-Rom curve round the town, landing roll, turn round) in the
 airport's own coordinates, then turns and moves it to where the airport
 stands. It banks the plane by how fast its heading changes.
 
+## Animals, snow and disasters
+
+Animal pens are farm buildings with `animals` and `income`: they earn like
+shops (as farm income), while `isPlot()` picks out the crop plots wherever the
+code means "can grow crops". `AnimalView` walks each pen's animals to random
+spots in the yard and lets them eat. Snow mode is `WeatherView.snow`: showers
+fall as snowflakes (points), `snowCover` eases to 1, and Game hands it to
+`LandView.setSnow` (a white sheet just above the grass, under roads and
+fields), the scenery trees and the hills. `Disasters.ts` is the rule: damaged
+buildings stop operating until repaired (`repairCost`, an operating expense),
+crops on flooded tiles are lost, roads and decorations are spared; damage is
+saved per building. `DisasterView` schedules and draws them (a funnel of
+spinning rings with orbiting debris, a jagged bolt with a screen flash and
+thunder, a rising sheet of water, a wave of instanced columns along the
+coast) and asks `Disasters` what each one hits.
+
 ## The army
 
 `Army.ts` holds the one rule that touches the books: a parade costs coins (an
