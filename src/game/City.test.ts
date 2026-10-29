@@ -19,7 +19,7 @@ describe('City', () => {
     const start = city.coins
     expect(city.place(cottage, at(0, 0))).not.toBeNull()
     expect(city.coins).toBe(start - 100)
-    city.adjustCoins(-city.coins) // spend everything
+    city.economy.adjust(-city.coins) // spend everything
     expect(city.place(cottage, at(5, 5))).toBeNull()
   })
 
@@ -57,11 +57,11 @@ describe('City', () => {
     const city = new City()
     const placed = city.place(cottage, at(0, 0), { now: 0, free: true })!
     const start = city.coins
-    expect(city.collect(placed.id, 29_999)).toBe(0)
-    expect(city.collect(placed.id, 30_000)).toBe(15)
+    expect(city.production.collect(placed.id, 29_999)).toBe(0)
+    expect(city.production.collect(placed.id, 30_000)).toBe(15)
     expect(city.coins).toBe(start + 15)
     expect(placed.readyAt).toBe(60_000)
-    expect(city.collect(placed.id, 30_001)).toBe(0) // can't double-collect
+    expect(city.production.collect(placed.id, 30_001)).toBe(0) // can't double-collect
   })
 
   it('announces changes to listeners', () => {
@@ -97,7 +97,7 @@ describe('City', () => {
   it('round-trips crops through a save, and loads renamed building ids', () => {
     const city = new City()
     const plot = city.place(plotType, at(0, 0), { free: true })!
-    city.plant(plot.id, wheat, { now: 5000 })
+    city.production.plant(plot.id, wheat, { now: 5000 })
     const loaded = new City()
     loaded.load(JSON.parse(JSON.stringify(city.toSave())))
     expect(loaded.get(plot.id)!.crop).toEqual({ cropId: 'wheat', plantedAt: 5000 })
@@ -118,47 +118,47 @@ describe('Farming', () => {
 
   it('charges for seeds and only plants on an empty plot', () => {
     const { city, plot, start } = farm()
-    expect(city.plant(plot.id, strawberries, { now: 0 })).toBe(true)
+    expect(city.production.plant(plot.id, strawberries, { now: 0 })).toBe(true)
     expect(city.coins).toBe(start - 10)
-    expect(city.plant(plot.id, wheat, { now: 0 })).toBe(false) // already planted
+    expect(city.production.plant(plot.id, wheat, { now: 0 })).toBe(false) // already planted
     expect(city.coins).toBe(start - 10)
   })
 
   it('refuses to plant without enough coins, and only on farm plots', () => {
     const { city, plot } = farm()
     const home = city.place(cottage, at(5, 5), { free: true })!
-    expect(city.plant(home.id, strawberries)).toBe(false)
-    city.adjustCoins(-city.coins + 5)
-    expect(city.plant(plot.id, strawberries)).toBe(false)
+    expect(city.production.plant(home.id, strawberries)).toBe(false)
+    city.economy.adjust(-city.coins + 5)
+    expect(city.production.plant(plot.id, strawberries)).toBe(false)
   })
 
   it('harvests only when ripe, then empties the plot', () => {
     const { city, plot, start } = farm()
-    city.plant(plot.id, strawberries, { now: 0 })
-    expect(city.harvest(plot.id, 59_999)).toBe(0)
-    expect(city.harvest(plot.id, 60_000)).toBe(40)
+    city.production.plant(plot.id, strawberries, { now: 0 })
+    expect(city.production.harvest(plot.id, 59_999)).toBe(0)
+    expect(city.production.harvest(plot.id, 60_000)).toBe(40)
     expect(city.coins).toBe(start - 10 + 40)
     expect(plot.crop).toBeNull()
-    expect(city.harvest(plot.id, 60_001)).toBe(0) // nothing left to harvest
+    expect(city.production.harvest(plot.id, 60_001)).toBe(0) // nothing left to harvest
   })
 
   it('loses a crop that withers, which must be cleared before replanting', () => {
     const { city, plot, start } = farm()
-    city.plant(plot.id, strawberries, { now: 0 })
+    city.production.plant(plot.id, strawberries, { now: 0 })
     const withered = 60_000 + 180_000
-    expect(city.harvest(plot.id, withered)).toBe(0)
-    expect(city.plant(plot.id, strawberries, { now: withered })).toBe(false)
-    expect(city.clearPlot(plot.id, withered)).toBe(true)
+    expect(city.production.harvest(plot.id, withered)).toBe(0)
+    expect(city.production.plant(plot.id, strawberries, { now: withered })).toBe(false)
+    expect(city.production.clearPlot(plot.id, withered)).toBe(true)
     expect(city.coins).toBe(start - 10) // the seeds are lost, nothing earned
-    expect(city.plant(plot.id, strawberries, { now: withered })).toBe(true)
+    expect(city.production.plant(plot.id, strawberries, { now: withered })).toBe(true)
   })
 
   it('announces planting and harvesting', () => {
     const { city, plot } = farm()
     const events: CityEvent[] = []
     city.onChange((e) => events.push(e))
-    city.plant(plot.id, strawberries, { now: 0 })
-    city.harvest(plot.id, 60_000)
+    city.production.plant(plot.id, strawberries, { now: 0 })
+    city.production.harvest(plot.id, 60_000)
     expect(events.map((e) => e.kind)).toEqual(['planted', 'coins', 'harvested', 'coins'])
     expect(events[0]).toMatchObject({ cost: 10 })
     expect(events[2]).toMatchObject({ amount: 40 })
@@ -174,7 +174,7 @@ describe('Land', () => {
 
   it('sells only lots next to owned land, each one dearer than the last', () => {
     const city = new City()
-    city.adjustCoins(10_000)
+    city.economy.adjust(10_000)
     expect(city.canBuyLot({ x: 0, z: 0 })).toBe(false) // not next to the town
     expect(city.canBuyLot({ x: 2, z: 2 })).toBe(false) // already owned
     expect(city.nextLotPrice).toBe(500)
@@ -188,13 +188,13 @@ describe('Land', () => {
 
   it("refuses a lot you can't afford", () => {
     const city = new City()
-    city.adjustCoins(-city.coins + 499)
+    city.economy.adjust(-city.coins + 499)
     expect(city.buyLot({ x: 4, z: 2 })).toBe(false)
   })
 
   it('round-trips land through a save', () => {
     const city = new City()
-    city.adjustCoins(1000)
+    city.economy.adjust(1000)
     city.buyLot({ x: 1, z: 2 })
     const loaded = new City()
     loaded.load(JSON.parse(JSON.stringify(city.toSave())))

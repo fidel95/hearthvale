@@ -16,7 +16,7 @@ describe('the coast', () => {
 
   it('keeps buildings off the water, and lots that are all sea off the market', () => {
     const city = new City()
-    city.adjustCoins(100_000)
+    city.economy.adjust(100_000)
     expect(city.buyLot({ x: 2, z: 4 })).toBe(true) // the lot south of town reaches the shore
     const x = 25
     const shore = coastZ(x)

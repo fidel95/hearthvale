@@ -41,7 +41,7 @@ describe('Taxes', () => {
   it('records rent as income', () => {
     const { city, taxes } = setup()
     const home = city.place(cottage, at(0, 0), { now: 0, free: true })!
-    city.collect(home.id, 30_000)
+    city.production.collect(home.id, 30_000)
     expect(taxes.ledger.rentIncome).toBe(15)
   })
 
@@ -49,9 +49,9 @@ describe('Taxes', () => {
     const { city, taxes, events, runMonths } = setup()
     const shop = city.place(bakery, at(0, 0), { now: 0, free: true })!
     city.place(BUILDINGS_BY_ID.get('road')!, at(2, 0), { free: true }) // shops need a road
-    city.restock(shop.id)
+    city.production.restock(shop.id)
     const before = city.coins
-    city.collect(shop.id, 45_000)
+    city.production.collect(shop.id, 45_000)
     expect(city.coins).toBe(before + 40 + 3) // the sale plus 7% the customer paid
     expect(taxes.salesTaxHeld).toBe(3)
     expect(taxes.ledger.salesIncome).toBe(40) // the tax is not our income
@@ -78,7 +78,7 @@ describe('Taxes', () => {
   it('files the return after December and pays income + property tax', () => {
     const { city, taxes, events, runMonths } = setup()
     city.place(cottage, at(0, 0), { free: true })
-    city.adjustCoins(5000 - city.coins)
+    city.economy.adjust(5000 - city.coins)
     // Pretend we earned 3,000 in rent this year.
     taxes.ledger.rentIncome = 3000
 
@@ -110,8 +110,8 @@ describe('Taxes', () => {
 
   it('charges a 0.5% late penalty each month you are in tax debt', () => {
     const { city, taxes, events, runMonths } = setup()
-    city.adjustCoins(-city.coins)
-    city.bill(1000) // 1,000 coins of tax debt: coins stay at 0, the rest is owed
+    city.economy.adjust(-city.coins)
+    city.economy.bill(1000) // 1,000 coins of tax debt: coins stay at 0, the rest is owed
     expect(city.coins).toBe(0)
     expect(city.debt).toBe(1000)
     runMonths(1)
@@ -123,15 +123,15 @@ describe('Taxes', () => {
 
   it('pays debt from income before it reaches the coin balance', () => {
     const { city } = setup()
-    city.adjustCoins(-city.coins)
-    city.bill(30)
+    city.economy.adjust(-city.coins)
+    city.economy.bill(30)
     const home = city.place(cottage, at(0, 0), { now: 0, free: true })!
-    city.collect(home.id, 30_000) // 15 coins of rent, all to the debt
+    city.production.collect(home.id, 30_000) // 15 coins of rent, all to the debt
     expect(city.debt).toBe(15)
     expect(city.coins).toBe(0)
-    city.collect(home.id, 60_000) // 15 more clears it
+    city.production.collect(home.id, 60_000) // 15 more clears it
     expect(city.debt).toBe(0)
-    expect(() => city.adjustCoins(-1)).toThrow() // spending more than you have is a bug
+    expect(() => city.economy.adjust(-1)).toThrow() // spending more than you have is a bug
   })
 
   it('round-trips through a save', () => {
@@ -153,8 +153,8 @@ describe('Taxes', () => {
     const { city, taxes } = setup()
     const plot = city.place(plotType, at(0, 0), { free: true })!
     const before = city.coins
-    city.plant(plot.id, strawberries, { now: 0 })
-    city.harvest(plot.id, 60_000)
+    city.production.plant(plot.id, strawberries, { now: 0 })
+    city.production.harvest(plot.id, 60_000)
     expect(city.coins).toBe(before - 10 + 40) // no sales tax added on top
     expect(taxes.salesTaxHeld).toBe(0)
     const r = taxes.estimate()
@@ -165,13 +165,13 @@ describe('Taxes', () => {
 
   it('deducts seeds from taxable income', () => {
     const { city, taxes } = setup()
-    city.adjustCoins(100_000)
+    city.economy.adjust(100_000)
     const plots = [0, 2, 4, 6, 8].map((x) => city.place(plotType, at(x, 0), { free: true })!)
     // Plant and harvest enough to get above the standard deduction.
     for (let round = 0; round < 10; round++) {
       const now = round * 60_000
-      for (const p of plots) city.plant(p.id, strawberries, { now })
-      for (const p of plots) city.harvest(p.id, now + 60_000)
+      for (const p of plots) city.production.plant(p.id, strawberries, { now })
+      for (const p of plots) city.production.harvest(p.id, now + 60_000)
     }
     const r = taxes.estimate()
     expect(r.farmIncome).toBe(2000) // 50 harvests × 40
@@ -182,15 +182,15 @@ describe('Taxes', () => {
   it('gives no extra deduction for a withered crop (its seeds were already deducted)', () => {
     const { city, taxes } = setup()
     const plot = city.place(plotType, at(0, 0), { free: true })!
-    city.plant(plot.id, strawberries, { now: 0 })
-    city.clearPlot(plot.id, 10 * 60_000)
+    city.production.plant(plot.id, strawberries, { now: 0 })
+    city.production.clearPlot(plot.id, 10 * 60_000)
     expect(taxes.estimate().farmExpenses).toBe(10)
   })
 
   it('does not count free starter crops as an expense', () => {
     const { city, taxes } = setup()
     const plot = city.place(plotType, at(0, 0), { free: true })!
-    city.plant(plot.id, strawberries, { now: 0, free: true })
+    city.production.plant(plot.id, strawberries, { now: 0, free: true })
     expect(taxes.estimate().farmExpenses).toBe(0)
   })
 
@@ -203,7 +203,7 @@ describe('Taxes', () => {
 
   it('counts prize money (level-up rewards) as taxable income', () => {
     const { city, taxes } = setup()
-    city.awardCoins(50, 'Level 2 reward')
+    city.economy.award(50, 'Level 2 reward')
     expect(taxes.estimate().otherIncome).toBe(50)
     expect(taxes.estimate().grossIncome).toBe(50)
   })
@@ -218,7 +218,7 @@ describe('Taxes', () => {
 
   it('deducts running costs like utility upkeep as operating expenses', () => {
     const { city, taxes } = setup()
-    city.payExpense(30, 'Utility operating costs')
+    city.economy.expense(30, 'Utility operating costs')
     expect(taxes.estimate().operatingExpenses).toBe(30)
     taxes.ledger.rentIncome = 2000
     expect(taxes.estimate().taxableIncome).toBeCloseTo(2000 - 30 - STANDARD_DEDUCTION)

@@ -17,11 +17,11 @@ export type ProjectResult =
   | { ok: false; reason: 'materials'; missing: Materials }
 
 export function finishConstruction(city: City, inventory: Inventory, b: PlacedBuilding, now: number): ProjectResult {
-  if (!city.constructionDone(b, now)) return { ok: false, reason: 'not-ready' }
+  if (!city.production.constructionDone(b, now)) return { ok: false, reason: 'not-ready' }
   const needed = b.type.build?.materials ?? {}
   if (!inventory.hasAll(needed)) return { ok: false, reason: 'materials', missing: inventory.missing(needed) }
   const cost = inventory.use(needed)!
-  city.finish(b.id, now, cost)
+  city.production.finish(b.id, now, cost)
   return { ok: true }
 }
 
@@ -41,7 +41,7 @@ export function upgradeBuilding(
   if (city.coins < cost.coins) return { ok: false, reason: 'coins' }
   if (!inventory.hasAll(cost.materials)) return { ok: false, reason: 'materials', missing: inventory.missing(cost.materials) }
   const materialsCost = inventory.use(cost.materials)!
-  city.upgrade(b.id, cost.coins, materialsCost)
+  city.production.upgrade(b.id, cost.coins, materialsCost)
   return { ok: true }
 }
 

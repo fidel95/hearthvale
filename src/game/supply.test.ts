@@ -28,24 +28,24 @@ describe('goods and shops', () => {
     const { city } = town()
     const bakery = city.place(b('bakery'), at(0, 0), { now: 0, free: true })! // 4 goods a sale, shelves hold 40
     road(city)
-    expect(city.hasStock(bakery)).toBe(false) // a new shop starts empty
-    expect(city.collect(bakery.id, 45_000)).toBe(0)
-    expect(city.restock(bakery.id)).toBe(40) // all 40 starting goods
+    expect(city.production.hasStock(bakery)).toBe(false) // a new shop starts empty
+    expect(city.production.collect(bakery.id, 45_000)).toBe(0)
+    expect(city.production.restock(bakery.id)).toBe(40) // all 40 starting goods
     expect(city.goods).toBe(0)
-    expect(city.collect(bakery.id, 45_000)).toBe(40)
+    expect(city.production.collect(bakery.id, 45_000)).toBe(40)
     expect(bakery.stock).toBe(36)
     // Empty the shelves: 9 more sales use 36 goods.
-    for (let i = 2; i <= 10; i++) city.collect(bakery.id, i * 45_000)
+    for (let i = 2; i <= 10; i++) city.production.collect(bakery.id, i * 45_000)
     expect(bakery.stock).toBe(0)
-    expect(city.collect(bakery.id, 11 * 45_000)).toBe(0)
+    expect(city.production.collect(bakery.id, 11 * 45_000)).toBe(0)
   })
 
   it('restocks only as much as the shelves hold and storage has', () => {
     const { city } = town()
     const bakery = city.place(b('bakery'), at(0, 0), { free: true })!
-    city.addGoods(50, 0) // 90 in storage
-    expect(city.restock(bakery.id)).toBe(40) // shelves hold 40
-    expect(city.restock(bakery.id)).toBe(0) // already full
+    city.economy.addGoods(50, 0) // 90 in storage
+    expect(city.production.restock(bakery.id)).toBe(40) // shelves hold 40
+    expect(city.production.restock(bakery.id)).toBe(0) // already full
     expect(city.goods).toBe(50)
   })
 
@@ -53,22 +53,22 @@ describe('goods and shops', () => {
     const { city } = town()
     city.place(b('bakery'), at(0, 0), { free: true })
     const plot = city.place(b('farm-plot'), at(4, 0), { free: true })!
-    city.plant(plot.id, strawberries, { now: 0, free: true })
-    expect(city.harvest(plot.id, 60_000)).toBe(0) // all 6 went into storage
+    city.production.plant(plot.id, strawberries, { now: 0, free: true })
+    expect(city.production.harvest(plot.id, 60_000)).toBe(0) // all 6 went into storage
     expect(city.goods).toBe(46)
 
     // Fill storage to 2 short of full: 2 go in, the other 4 of 6 sell for 4/6 of 40.
-    city.addGoods(BASE_STORAGE - 2 - city.goods, 0)
-    city.plant(plot.id, strawberries, { now: 0, free: true })
-    expect(city.harvest(plot.id, 60_000)).toBe(Math.round((40 * 4) / 6))
+    city.economy.addGoods(BASE_STORAGE - 2 - city.goods, 0)
+    city.production.plant(plot.id, strawberries, { now: 0, free: true })
+    expect(city.production.harvest(plot.id, 60_000)).toBe(Math.round((40 * 4) / 6))
     expect(city.goods).toBe(BASE_STORAGE)
   })
 
   it('sells the whole harvest at the market when there are no shops', () => {
     const { city } = town()
     const plot = city.place(b('farm-plot'), at(0, 0), { free: true })!
-    city.plant(plot.id, strawberries, { now: 0, free: true })
-    expect(city.harvest(plot.id, 60_000)).toBe(40)
+    city.production.plant(plot.id, strawberries, { now: 0, free: true })
+    expect(city.production.harvest(plot.id, 60_000)).toBe(40)
     expect(city.goods).toBe(40)
   })
 
@@ -85,13 +85,13 @@ describe('inventory and cost of goods sold', () => {
     const bakery = city.place(b('bakery'), at(0, 0), { now: 0, free: true })!
     road(city)
     // 40 free starting goods, plus 40 bought for 240: 80 goods costing 240, 3 a unit on average.
-    city.addGoods(40, 240)
+    city.economy.addGoods(40, 240)
     expect(taxes.inventory).toEqual({ units: 80, cost: 240 })
     expect(taxes.estimate().costOfGoodsSold).toBe(0) // buying isn't an expense
 
-    city.restock(bakery.id) // moving goods onto the shelves isn't a sale
+    city.production.restock(bakery.id) // moving goods onto the shelves isn't a sale
     expect(taxes.estimate().costOfGoodsSold).toBe(0)
-    city.collect(bakery.id, 45_000) // sells 4 goods
+    city.production.collect(bakery.id, 45_000) // sells 4 goods
     expect(taxes.estimate().costOfGoodsSold).toBeCloseTo(12)
     expect(taxes.inventory.units).toBe(76)
     expect(taxes.inventory.cost).toBeCloseTo(228)
@@ -101,8 +101,8 @@ describe('inventory and cost of goods sold', () => {
     const { city, taxes } = town()
     city.place(b('bakery'), at(0, 0), { free: true })
     const plot = city.place(b('farm-plot'), at(4, 0), { free: true })!
-    city.plant(plot.id, strawberries, { now: 0, free: true })
-    city.harvest(plot.id, 60_000)
+    city.production.plant(plot.id, strawberries, { now: 0, free: true })
+    city.production.harvest(plot.id, 60_000)
     expect(taxes.inventory).toEqual({ units: 46, cost: 0 })
     expect(taxes.estimate().farmIncome).toBe(0) // not sold yet
   })
@@ -112,7 +112,7 @@ describe('Docks', () => {
   // A town that owns the lot by the sea, with a dock on the shore.
   function port() {
     const t = town()
-    t.city.adjustCoins(10_000)
+    t.city.economy.adjust(10_000)
     t.city.buyLot({ x: 2, z: 4 })
     const x = 22
     const shoreZ = Math.min(coastZ(x), coastZ(x + 1), coastZ(x + 2))
@@ -142,7 +142,7 @@ describe('Docks', () => {
 
   it("keeps what doesn't fit aboard", () => {
     const { city, docks, dock } = port()
-    city.addGoods(city.storageCapacity - city.goods - 10, 0) // room for 10
+    city.economy.addGoods(city.storageCapacity - city.goods - 10, 0) // room for 10
     docks.order(dock, small, 0)
     expect(docks.unload(dock, 60_000)).toBe(10)
     const state = docks.state(dock, 60_000)
@@ -163,12 +163,12 @@ describe('road access', () => {
   it("blocks a shop with no road beside it, until one's built", () => {
     const { city } = town()
     const bakery = city.place(b('bakery'), at(0, 0), { now: 0, free: true })!
-    city.restock(bakery.id)
+    city.production.restock(bakery.id)
     expect(productionState(city, bakery, 45_000)).toEqual({ state: 'blocked', reason: 'road' })
-    expect(city.collect(bakery.id, 45_000)).toBe(0)
+    expect(city.production.collect(bakery.id, 45_000)).toBe(0)
     road(city)
     expect(productionState(city, bakery, 45_000)).toEqual({ state: 'ready' })
-    expect(city.collect(bakery.id, 45_000)).toBe(40)
+    expect(city.production.collect(bakery.id, 45_000)).toBe(40)
   })
 
   it('knows which buildings removing a road would cut off', () => {
@@ -183,7 +183,7 @@ describe('road access', () => {
   it("homes don't need a road (they just earn more beside one)", () => {
     const { city } = town()
     const home = city.place(b('cottage'), at(0, 0), { now: 0, free: true })!
-    expect(city.collect(home.id, 30_000)).toBe(15)
+    expect(city.production.collect(home.id, 30_000)).toBe(15)
   })
 })
 

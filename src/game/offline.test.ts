@@ -23,9 +23,9 @@ describe('awaySummary', () => {
     const b = city.place(plot, at(3, 3), { free: true })!
     const c = city.place(plot, at(6, 3), { free: true })!
     // All plantings happen at time 0 by the player's clock: 3 energy used.
-    city.plant(a.id, strawberries, { now: 0 }) // ripe at 1 min, withers at 4 min
-    city.plant(b.id, potatoes, { now: 0 }) // still growing
-    city.plant(c.id, strawberries, { now: 150_000 }) // ripe at 3.5 min, still fresh at return
+    city.production.plant(a.id, strawberries, { now: 0 }) // ripe at 1 min, withers at 4 min
+    city.production.plant(b.id, potatoes, { now: 0 }) // still growing
+    city.production.plant(c.id, strawberries, { now: 150_000 }) // ripe at 3.5 min, still fresh at return
     const leftAt = 1000
     const back = 241_000 // just over 4 minutes later
 
@@ -44,7 +44,7 @@ describe('awaySummary', () => {
     const city = new City()
     const player = new Player(city, () => 0)
     const p = city.place(plot, at(0, 0), { free: true })!
-    city.plant(p.id, strawberries, { now: 0, free: true })
+    city.production.plant(p.id, strawberries, { now: 0, free: true })
     expect(awaySummary(city, player, new Docks(city), 300_000, 900_000).witheredCrops).toBe(0)
   })
 })

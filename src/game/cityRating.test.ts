@@ -26,8 +26,8 @@ describe('city rating', () => {
     city.place(b('oak-tree'), at(0, 2), { free: true })
     const nicer = services.rating().total
     expect(nicer).toBeGreaterThan(bare)
-    city.adjustCoins(-city.coins)
-    city.bill(500)
+    city.economy.adjust(-city.coins)
+    city.economy.bill(500)
     expect(services.rating().total).toBeLessThan(nicer)
   })
 })
@@ -54,6 +54,6 @@ describe('landmarks', () => {
     new Services(city)
     const home = city.place(b('cottage'), at(0, 0), { now: 0, free: true })!
     city.place(b('clock-tower'), at(10, 10), { free: true })
-    expect(city.payout(home)).toBe(Math.round(15 * 1.05))
+    expect(city.production.payout(home)).toBe(Math.round(15 * 1.05))
   })
 })

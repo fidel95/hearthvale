@@ -50,7 +50,7 @@ export class Docks {
         const shipment = this.shipments.get(event.building.id)
         if (!shipment) return
         this.shipments.delete(event.building.id)
-        city.adjustCoins(shipment.cost)
+        city.economy.adjust(shipment.cost)
       }
     })
   }
@@ -73,7 +73,7 @@ export class Docks {
     if (!this.canOrder(dock, option)) return false
     // Paid up front, as most suppliers want. Buying inventory isn't an
     // expense, so this is a plain coin change, not a payExpense.
-    this.city.adjustCoins(-option.cost)
+    this.city.economy.adjust(-option.cost)
     this.shipments.set(dock.id, {
       dockId: dock.id,
       optionId: option.id,
@@ -91,7 +91,7 @@ export class Docks {
     const state = this.state(dock, now)
     if (state.stage !== 'arrived') return 0
     const s = state.shipment
-    const taken = this.city.addGoods(s.units, s.cost)
+    const taken = this.city.economy.addGoods(s.units, s.cost)
     if (taken === 0) return 0
     const costTaken = (s.cost * taken) / s.units
     s.units -= taken

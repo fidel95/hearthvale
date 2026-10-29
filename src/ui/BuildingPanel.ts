@@ -111,7 +111,7 @@ export class BuildingPanel {
 
     // ---- Goods: the shop's shelves, and the town storage they're filled from.
     if (b.type.goodsPerSale && this.city.isBuilt(b)) {
-      const capacity = this.city.stockCapacity(b)
+      const capacity = this.city.production.stockCapacity(b)
       const track = el('div', 'progress')
       const fill = el('div', 'progress-fill')
       fill.style.width = `${(b.stock / capacity) * 100}%`
@@ -196,7 +196,7 @@ export class BuildingPanel {
     }
     if (b.type.goodsPerSale && this.city.isBuilt(b)) {
       const restock = button('📦 Restock', () => a.restock(b))
-      restock.disabled = b.stock >= this.city.stockCapacity(b) || this.city.goods === 0
+      restock.disabled = b.stock >= this.city.production.stockCapacity(b) || this.city.goods === 0
       buttons.push(restock)
     }
     if (this.city.isBuilt(b) && canUpgrade(b.type, b.level)) {
@@ -244,7 +244,7 @@ export class BuildingPanel {
       return {
         title: '⏱️ Production',
         share: 1 - left / total,
-        text: left > 0 ? `${coins(this.city.payout(b))} ready in ${duration(left)}` : `${coins(this.city.payout(b))} ready to collect`,
+        text: left > 0 ? `${coins(this.city.production.payout(b))} ready in ${duration(left)}` : `${coins(this.city.production.payout(b))} ready to collect`,
       }
     }
     const crop = cropState(b.crop, now)
@@ -266,8 +266,8 @@ export class BuildingPanel {
   }
 
   private collectLabel(b: PlacedBuilding, now: number): string | null {
-    if (b.construction) return this.city.constructionDone(b, now) ? '🔨 Finish' : null
-    if (this.city.isReady(b, now) && this.city.hasStock(b)) return `🪙 Collect ${this.city.payout(b)}`
+    if (b.construction) return this.city.production.constructionDone(b, now) ? '🔨 Finish' : null
+    if (this.city.production.isReady(b, now) && this.city.production.hasStock(b)) return `🪙 Collect ${this.city.production.payout(b)}`
     const crop = cropState(b.crop, now)
     if (crop.stage === 'ripe') return '🧺 Harvest'
     if (crop.stage === 'withered') return '🥀 Clear'

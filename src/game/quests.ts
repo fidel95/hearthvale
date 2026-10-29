@@ -216,7 +216,7 @@ export class Quests {
     this.claimed.add(quest.id)
     const { coins = 0, xp = 0, materials = {} } = quest.reward
     // Quest rewards are prizes, so taxable, like the other rewards.
-    this.world.city.awardCoins(coins, `Quest: ${quest.title}`)
+    this.world.city.economy.award(coins, `Quest: ${quest.title}`)
     for (const id of MATERIAL_IDS) this.inventory.add(id, materials[id] ?? 0)
     this.world.player.grantXp(xp)
     this.emit({ kind: 'claimed', quest })

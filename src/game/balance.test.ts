@@ -42,7 +42,7 @@ describe('2. nobody gets stuck for good', () => {
 
   it('a town with nothing that earns and no coins can claim the grant, which buys a home', () => {
     const city = new City()
-    city.adjustCoins(-city.coins)
+    city.economy.adjust(-city.coins)
     expect(isStuck(city)).toBe(true)
     expect(canClaimGrant(city, null, 0)).toBe(true)
     expect(canClaimGrant(city, 0, 30 * 60_000)).toBe(false) // at most once an hour
@@ -51,7 +51,7 @@ describe('2. nobody gets stuck for good', () => {
 
   it("a town with a home, or a home in storage, isn't stuck", () => {
     const city = new City()
-    city.adjustCoins(-city.coins)
+    city.economy.adjust(-city.coins)
     const home = city.place(BUILDINGS_BY_ID.get('cottage')!, { x: 25, z: 25 }, { free: true })!
     expect(isStuck(city)).toBe(false)
     city.store(home.id)

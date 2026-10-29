@@ -111,7 +111,7 @@ export class InventoryPanel {
         const list = el('div', 'item-list')
         for (const shop of shops) {
           const row = el('div', 'item-row')
-          row.append(el('span', 'item-icon', '🏪'), el('span', 'item-name', shop.type.name), el('span', 'item-count', `${shop.stock}/${this.city.stockCapacity(shop)} on shelves`))
+          row.append(el('span', 'item-icon', '🏪'), el('span', 'item-name', shop.type.name), el('span', 'item-count', `${shop.stock}/${this.city.production.stockCapacity(shop)} on shelves`))
           list.append(row)
         }
         parts.push(list)

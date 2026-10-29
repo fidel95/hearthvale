@@ -211,12 +211,12 @@ export class Builder {
   // Does tapping this building do something right away (collect, harvest,
   // plant, unload)? If not, a tap selects it instead.
   hasQuickAction(b: PlacedBuilding, now: number): boolean {
-    if (b.construction) return this.city.constructionDone(b, now)
+    if (b.construction) return this.city.production.constructionDone(b, now)
     if (b.type.requiresRoad && !this.city.hasRoadAccess(b)) return false
-    if (b.type.goodsPerSale && this.city.isReady(b, now) && !this.city.hasStock(b)) return this.city.goods > 0
+    if (b.type.goodsPerSale && this.city.production.isReady(b, now) && !this.city.production.hasStock(b)) return this.city.goods > 0
     if (b.type.category === 'farm') return cropState(b.crop, now).stage !== 'growing'
     if (b.type.category === 'port') return this.docks.state(b, now).stage !== 'sailing'
-    return this.city.isReady(b, now) && this.city.hasStock(b)
+    return this.city.production.isReady(b, now) && this.city.production.hasStock(b)
   }
 
   // What tapping a building does when no tool is selected (also used by the
@@ -232,7 +232,7 @@ export class Builder {
       return true
     }
     if (building.construction) {
-      if (this.city.constructionDone(building, now)) this.onFinishRequest?.(building)
+      if (this.city.production.constructionDone(building, now)) this.onFinishRequest?.(building)
       else this.onNotice?.(`🚧 ${building.type.name} will be ready to finish in ${duration(building.construction.endsAt - now)}`)
       return
     }
@@ -248,15 +248,15 @@ export class Builder {
       return
     }
     if (building.type.category !== 'farm') {
-      if (!this.city.isReady(building, now)) return
-      if (!this.city.hasStock(building)) {
+      if (!this.city.production.isReady(building, now)) return
+      if (!this.city.production.hasStock(building)) {
         // Out of stock: fill the shelves from town storage, if there's anything there.
-        if (this.city.restock(building.id) === 0) {
+        if (this.city.production.restock(building.id) === 0) {
           this.onNotice?.(`${building.type.name} needs goods to sell, and storage is empty. Harvest crops, or order a shipment at a Dock.`)
         }
         return
       }
-      if (!outOfEnergy()) this.city.collect(building.id, now)
+      if (!outOfEnergy()) this.city.production.collect(building.id, now)
       return
     }
     const state = cropState(building.crop, now)
@@ -269,10 +269,10 @@ export class Builder {
         this.onNotice?.(`${state.crop.emoji} ${state.crop.name} will be ready in ${duration(state.readyAt - now)}`)
         break
       case 'ripe':
-        this.city.harvest(building.id, now)
+        this.city.production.harvest(building.id, now)
         break
       case 'withered':
-        this.city.clearPlot(building.id, now)
+        this.city.production.clearPlot(building.id, now)
         break
     }
   }
@@ -313,10 +313,10 @@ export class Builder {
     let actions = 0
     let coins = 0
     for (const b of this.city.all()) {
-      const ready = (this.city.isReady(b, now) && this.city.hasStock(b)) || cropState(b.crop, now).stage === 'ripe'
+      const ready = (this.city.production.isReady(b, now) && this.city.production.hasStock(b)) || cropState(b.crop, now).stage === 'ripe'
       if (!ready) continue
       if (!this.player.hasEnergy(now)) return { actions, coins, outOfEnergy: true }
-      coins += b.type.category === 'farm' ? this.city.harvest(b.id, now) : this.city.collect(b.id, now)
+      coins += b.type.category === 'farm' ? this.city.production.harvest(b.id, now) : this.city.production.collect(b.id, now)
       actions++
     }
     return { actions, coins, outOfEnergy: false }

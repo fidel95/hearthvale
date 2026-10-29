@@ -96,7 +96,7 @@ export class CropPicker {
         outOfEnergy = true
         break
       }
-      if (!this.city.plant(plot.id, crop)) break // out of coins
+      if (!this.city.production.plant(plot.id, crop)) break // out of coins
       planted++
     }
     if (outOfEnergy) {

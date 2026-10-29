@@ -32,8 +32,8 @@ describe('Quests', () => {
     const welcome = QUESTS[0]
     expect(quests.activeQuests().map((q) => q.id)).toEqual(['welcome'])
     const home = city.place(b('cottage'), at(0, 0), { now: 0, free: true })!
-    city.collect(home.id, 30_000)
-    city.collect(home.id, 60_000)
+    city.production.collect(home.id, 30_000)
+    city.production.collect(home.id, 60_000)
     expect(quests.progress(welcome, welcome.tasks[0])).toBe(2)
     expect(quests.isDone(welcome)).toBe(false)
   })
@@ -41,10 +41,10 @@ describe('Quests', () => {
   it('announces a finished quest, pays its reward when claimed, and opens the next ones', () => {
     const { city, player, quests, events } = town()
     const home = city.place(b('cottage'), at(0, 0), { now: 0, free: true })!
-    for (let i = 1; i <= 3; i++) city.collect(home.id, i * 30_000)
+    for (let i = 1; i <= 3; i++) city.production.collect(home.id, i * 30_000)
     const plot = city.place(b('farm-plot'), at(4, 0), { free: true })!
-    city.plant(plot.id, CROPS_BY_ID.get('strawberries')!, { now: 0, free: true })
-    city.harvest(plot.id, 60_000)
+    city.production.plant(plot.id, CROPS_BY_ID.get('strawberries')!, { now: 0, free: true })
+    city.production.harvest(plot.id, 60_000)
     expect(events.map((e) => e.kind)).toContain('questDone')
 
     const coins = city.coins
@@ -66,7 +66,7 @@ describe('Quests', () => {
     const { city, quests, events } = town()
     const landlord = ACHIEVEMENTS.find((a) => a.id === 'landlord')!
     const home = city.place(b('cottage'), at(0, 0), { now: 0, free: true })!
-    for (let i = 1; i <= 10; i++) city.collect(home.id, i * 30_000)
+    for (let i = 1; i <= 10; i++) city.production.collect(home.id, i * 30_000)
     expect(quests.tierOf(landlord)).toBe(1)
     expect(events).toContainEqual({ kind: 'achievement', achievement: landlord, tier: 1 })
   })
@@ -74,7 +74,7 @@ describe('Quests', () => {
   it('round-trips through a save', () => {
     const { city, quests } = town()
     const home = city.place(b('cottage'), at(0, 0), { now: 0, free: true })!
-    city.collect(home.id, 30_000)
+    city.production.collect(home.id, 30_000)
     const save = JSON.parse(JSON.stringify(quests.toSave()))
     const other = town()
     other.quests.load(save)

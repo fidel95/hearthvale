@@ -158,7 +158,7 @@ export class Collections {
     const times = this.timesCompleted(collection.id) + 1
     this.completed.set(collection.id, times)
     const { coins, xp, energy } = collection.reward
-    this.city.awardCoins(coins, `${collection.name} collection`)
+    this.city.economy.award(coins, `${collection.name} collection`)
     this.player.grantXp(xp)
     this.player.grantEnergy(energy)
     this.emit({ kind: 'completed', collection, times })

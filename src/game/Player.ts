@@ -176,7 +176,7 @@ export class Player {
     this.storedEnergy = maxEnergy(level)
     this.energyAt = now
     const reward = levelReward(level)
-    this.city.awardCoins(reward, `Level ${level} reward`)
+    this.city.economy.award(reward, `Level ${level} reward`)
     this.emit({ kind: 'levelUp', level, reward, maxEnergy: maxEnergy(level), ...unlocksAt(level) })
     this.emit({ kind: 'energy' })
   }

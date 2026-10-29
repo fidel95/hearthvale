@@ -45,7 +45,7 @@ describe('construction', () => {
     const { city, taxes, runMonths } = town()
     const house = city.place(townhouse, at(0, 0), { now: 0 })!
     expect(city.isBuilt(house)).toBe(false)
-    expect(city.isReady(house, 999_999)).toBe(false)
+    expect(city.production.isReady(house, 999_999)).toBe(false)
     runMonths(2)
     expect(taxes.ledger.depreciation).toBe(0)
   })
@@ -59,7 +59,7 @@ describe('construction', () => {
     expect(finishConstruction(city, inventory, house, 60_000)).toEqual({ ok: true })
     expect(city.isBuilt(house)).toBe(true)
     expect(inventory.count('lumber')).toBe(0)
-    expect(city.isReady(house, 60_000 + 60_000)).toBe(true) // its income timer starts now
+    expect(city.production.isReady(house, 60_000 + 60_000)).toBe(true) // its income timer starts now
   })
 
   it('adds the materials to the building’s cost for depreciation', () => {
@@ -84,7 +84,7 @@ describe('upgrades', () => {
     const cottage = city.place(b('cottage'), at(0, 0), { now: 0, free: true })!
     const cost = upgradeCost(cottage.type, 2) // 75 coins, 4 lumber + 2 bricks, and a player level
     expect(upgradeBuilding(city, inventory, player, cottage)).toEqual({ ok: false, reason: 'level' })
-    city.adjustCoins(10_000)
+    city.economy.adjust(10_000)
     player.grantXp(xpForLevel(cost.playerLevel))
     expect(upgradeBuilding(city, inventory, player, cottage)).toMatchObject({ ok: false, reason: 'materials' })
     inventory.buy(cost.materials)
@@ -92,14 +92,14 @@ describe('upgrades', () => {
     expect(upgradeBuilding(city, inventory, player, cottage)).toEqual({ ok: true })
     expect(cottage.level).toBe(2)
     expect(city.coins).toBe(coins - cost.coins)
-    expect(city.payout(cottage)).toBe(Math.round(15 * levelFactor(2))) // 22.5, rounded
+    expect(city.production.payout(cottage)).toBe(Math.round(15 * levelFactor(2))) // 22.5, rounded
   })
 
   it('counts as an improvement: higher basis and higher assessed value', () => {
     const { city, taxes } = town()
     const cottage = city.place(b('cottage'), at(0, 0), { free: true })!
     const before = taxes.properties()[0].value
-    city.upgrade(cottage.id, 75, 50)
+    city.production.upgrade(cottage.id, 75, 50)
     expect(taxes.properties()[0].value).toBeCloseTo(before * 1.5)
     expect(taxes.toSave().assets.find(([id]) => id === cottage.id)![1].basis).toBe(100 + 125)
   })
@@ -163,7 +163,7 @@ describe('turning buildings', () => {
     const { city } = town()
     const home = city.place(b('cottage'), at(0, 0), { now: 0, free: true })!
     expect(home.lastCollectedAt).toBeNull()
-    city.collect(home.id, 30_000)
+    city.production.collect(home.id, 30_000)
     expect(home.lastCollectedAt).toBe(30_000)
   })
 })
@@ -171,7 +171,7 @@ describe('turning buildings', () => {
 describe('land and level rewards', () => {
   it('needs the level, coins and materials to buy land', () => {
     const { city, inventory, player } = town()
-    city.adjustCoins(10_000)
+    city.economy.adjust(10_000)
     const lot = { x: 4, z: 2 }
     expect(buyLand(city, inventory, player, lot)).toEqual({ ok: false, reason: 'level' })
     player.grantXp(xpForLevel(expansionLevel(1)))

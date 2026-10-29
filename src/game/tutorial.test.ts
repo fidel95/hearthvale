@@ -15,11 +15,11 @@ describe('Tutorial', () => {
     tutorial.complete('camera') // the game reports a pan or zoom
     expect(tutorial.current?.id).toBe('collect')
     const home = city.place(BUILDINGS_BY_ID.get('cottage')!, at(0, 0), { now: 0, free: true })!
-    city.collect(home.id, 30_000)
+    city.production.collect(home.id, 30_000)
     expect(tutorial.current?.id).toBe('harvest')
     const plot = city.place(BUILDINGS_BY_ID.get('farm-plot')!, at(4, 0), { free: true })!
-    city.plant(plot.id, CROPS_BY_ID.get('strawberries')!, { now: 0, free: true })
-    city.harvest(plot.id, 60_000)
+    city.production.plant(plot.id, CROPS_BY_ID.get('strawberries')!, { now: 0, free: true })
+    city.production.harvest(plot.id, 60_000)
     expect(tutorial.current?.id).toBe('plant')
   })
 
@@ -52,7 +52,7 @@ describe('population capacity', () => {
   it('stops new homes once residents fill the room, until community buildings add more', () => {
     const city = new City()
     const services = new Services(city)
-    city.adjustCoins(100_000)
+    city.economy.adjust(100_000)
     // 20 cottages × 2 residents = 40, the base capacity.
     for (let i = 0; i < 20; i++) city.place(BUILDINGS_BY_ID.get('cottage')!, at((i % 10) * 2, Math.floor(i / 10) * 2), { free: true })
     expect(services.roomFor(2)).toBe(false)

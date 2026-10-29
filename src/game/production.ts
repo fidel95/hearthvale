@@ -26,7 +26,7 @@ export function productionState(city: City, b: PlacedBuilding, now: number): Pro
   if (b.type.requiresRoad && !city.hasRoadAccess(b)) return { state: 'blocked', reason: 'road' }
   if (b.type.income) {
     if (now < b.readyAt) return { state: 'producing', readyAt: b.readyAt }
-    return city.hasStock(b) ? { state: 'ready' } : { state: 'blocked', reason: 'stock' }
+    return city.production.hasStock(b) ? { state: 'ready' } : { state: 'blocked', reason: 'stock' }
   }
   if (b.type.category === 'farm') {
     const crop = cropState(b.crop, now)

@@ -69,13 +69,13 @@ export class Visit {
       const b = this.city.place(p.type, p.tile, { free: true, now, rotation: p.rotation })
       if (!b) continue
       if (p.readySecondsAgo !== undefined) b.readyAt = now - p.readySecondsAgo * 1000
-      if (p.crop) this.city.plant(b.id, CROPS_BY_ID.get(p.crop.cropId)!, { now: now - p.crop.secondsAgo * 1000, free: true })
+      if (p.crop) this.city.production.plant(b.id, CROPS_BY_ID.get(p.crop.cropId)!, { now: now - p.crop.secondsAgo * 1000, free: true })
     }
   }
 
   // What a building needs help with right now, if anything.
   private helpFor(b: PlacedBuilding, now: number): HelpKind | null {
-    if (b.type.category === 'home' && this.city.isReady(b, now)) return 'collect'
+    if (b.type.category === 'home' && this.city.production.isReady(b, now)) return 'collect'
     const crop = cropState(b.crop, now).stage
     return crop === 'ripe' ? 'harvest' : crop === 'withered' ? 'clear' : null
   }
@@ -125,8 +125,8 @@ export class Visit {
       return
     }
     // Do it in their town too, so you see the result.
-    if (kind === 'harvest') this.city.harvest(b.id, now)
-    if (kind === 'clear') this.city.clearPlot(b.id, now)
+    if (kind === 'harvest') this.city.production.harvest(b.id, now)
+    if (kind === 'clear') this.city.production.clearPlot(b.id, now)
     if (kind === 'collect') b.readyAt = now + (b.type.income?.seconds ?? 0) * 1000
     this.popup(b, `+${HELP_REWARD.coins} 🪙 +${HELP_REWARD.xp} ⭐`)
     this.refreshBubbles(now)

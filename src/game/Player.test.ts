@@ -34,11 +34,11 @@ describe('Player XP', () => {
   it('earns XP for collecting and harvesting', () => {
     const { city, player, now } = setup()
     const home = city.place(cottage, at(0, 0), { now: now(), free: true })!
-    city.collect(home.id, now() + 30_000)
+    city.production.collect(home.id, now() + 30_000)
     expect(player.xp).toBe(1)
     const plot = city.place(plotType, at(5, 5), { free: true })!
-    city.plant(plot.id, strawberries, { now: now() })
-    city.harvest(plot.id, now() + 60_000)
+    city.production.plant(plot.id, strawberries, { now: now() })
+    city.production.harvest(plot.id, now() + 60_000)
     expect(player.xp).toBe(2)
   })
 
@@ -60,7 +60,7 @@ describe('Player XP', () => {
 
   it('rewards every level when one action jumps several', () => {
     const { city, player } = setup()
-    city.adjustCoins(10_000)
+    city.economy.adjust(10_000)
     const levels: number[] = []
     player.onChange((e) => e.kind === 'levelUp' && levels.push(e.level))
     city.place(BUILDINGS_BY_ID.get('modern-house')!, at(0, 0)) // 30 XP: level 1 → 3
@@ -80,7 +80,7 @@ describe('Player energy', () => {
     const home = city.place(cottage, at(10, 10), { now: 0, free: true })!
     return () => {
       home.readyAt = 0 // ready now
-      return city.collect(home.id, clock())
+      return city.production.collect(home.id, clock())
     }
   }
 
@@ -89,17 +89,17 @@ describe('Player energy', () => {
     const full = maxEnergy(1)
     expect(player.energy(now())).toBe(full)
     const plot = city.place(plotType, at(0, 0), { free: true })!
-    city.plant(plot.id, strawberries, { now: now() }) // −1
-    city.harvest(plot.id, now() + 60_000) // −1
-    city.plant(plot.id, strawberries, { now: now() }) // −1
-    city.clearPlot(plot.id, now() + 10 * 60 * 60_000) // −1 (long withered)
+    city.production.plant(plot.id, strawberries, { now: now() }) // −1
+    city.production.harvest(plot.id, now() + 60_000) // −1
+    city.production.plant(plot.id, strawberries, { now: now() }) // −1
+    city.production.clearPlot(plot.id, now() + 10 * 60 * 60_000) // −1 (long withered)
     expect(player.energy(now())).toBe(full - 4)
   })
 
   it("doesn't use energy for free starter crops", () => {
     const { city, player, now } = setup()
     const plot = city.place(plotType, at(0, 0), { free: true })!
-    city.plant(plot.id, strawberries, { now: now(), free: true })
+    city.production.plant(plot.id, strawberries, { now: now(), free: true })
     expect(player.energy(now())).toBe(maxEnergy(1))
   })
 

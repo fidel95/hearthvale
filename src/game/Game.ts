@@ -335,7 +335,7 @@ export class Game {
     const now = Date.now()
     for (const start of STARTING_TOWN) {
       const b = this.city.place(BUILDINGS_BY_ID.get(start.typeId)!, start.tile, { free: true })!
-      if (start.crop) this.city.plant(b.id, CROPS_BY_ID.get(start.crop.cropId)!, { now: now - start.crop.secondsIn * 1000, free: true })
+      if (start.crop) this.city.production.plant(b.id, CROPS_BY_ID.get(start.crop.cropId)!, { now: now - start.crop.secondsIn * 1000, free: true })
     }
     for (const id of MATERIAL_IDS) this.inventory.add(id, STARTING_MATERIALS[id] ?? 0)
     return null
@@ -423,7 +423,7 @@ export class Game {
       {
         collect: (b) => builder.tap(b),
         restock: (b) => {
-          if (this.city.restock(b.id) === 0) this.hud.toast('Nothing to restock: storage is empty or the shelves are full')
+          if (this.city.production.restock(b.id) === 0) this.hud.toast('Nothing to restock: storage is empty or the shelves are full')
         },
         upgrade: (b) => explain(upgradeBuilding(this.city, this.inventory, this.player, b, (n) => this.services.roomFor(n)), 'Upgrade'),
         buyMaterials: (m) => {
@@ -574,12 +574,12 @@ export class Game {
 
   private debugPanel(container: HTMLElement): DebugPanel {
     this.debug ??= new DebugPanel(container, {
-      coins: () => this.city.adjustCoins(1000),
+      coins: () => this.city.economy.adjust(1000),
       xp: () => this.player.grantXp(100),
       materials: () => {
         for (const id of MATERIAL_IDS) this.inventory.add(id, 10)
       },
-      goods: () => this.city.addGoods(100, 0),
+      goods: () => this.city.economy.addGoods(100, 0),
       energy: () => this.player.grantEnergy(this.player.maxEnergy),
       finishTimers: () => {
         const now = Date.now()
@@ -651,7 +651,7 @@ export class Game {
         button(`Accept 🪙 ${GRANT}`, () => {
           modal.close()
           this.lastGrantAt = Date.now()
-          this.city.awardCoins(GRANT, 'County grant', { payDebt: false })
+          this.city.economy.award(GRANT, 'County grant', { payDebt: false })
         }),
       )
     }

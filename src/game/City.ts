@@ -1,6 +1,8 @@
 import { BUILDINGS_BY_ID, RENAMED_BUILDING_IDS, footprint, type BuildingType, type Rotation } from './buildings'
-import { levelFactor } from './construction'
-import { CROPS_BY_ID, cropState, type CropType, type PlantedCrop } from './crops'
+import { CROPS_BY_ID, type CropType, type PlantedCrop } from './crops'
+import { Economy } from './Economy'
+import { Emitter } from './events'
+import { ProductionSystem } from './ProductionSystem'
 import {
   GRID_SIZE,
   LOT_FOOTPRINT,
@@ -23,9 +25,6 @@ import { isWater } from './terrain'
 // keeps the rules testable (City.test.ts) and makes saving a matter of
 // dumping this data (toSave / load).
 
-const STARTING_COINS = 600
-// A new town has some goods in stock so its first shop can open right away.
-const STARTING_GOODS = 40
 // The town square stores this many goods; barns, warehouses and docks add more.
 export const BASE_STORAGE = 100
 
@@ -121,13 +120,11 @@ export class City {
   // Tile (x, z) lives at index z * GRID_SIZE + x.
   private occupied: (number | null)[] = new Array(GRID_SIZE * GRID_SIZE).fill(null)
   private nextId = 1
-  private listeners: ((event: CityEvent) => void)[] = []
-  private _coins = STARTING_COINS
-  private _goods = STARTING_GOODS
-  // What the town owes and couldn't pay (taxes, bills). Coins never go below
-  // zero: a bill bigger than the coins on hand leaves the rest owed, and
-  // income pays it down before it reaches the coin balance.
-  private _debt = 0
+  readonly events = new Emitter<CityEvent>()
+  // Coins, goods and debt, and the rules for changing them.
+  readonly economy = new Economy((e) => this.events.emit(e), () => this.storageCapacity)
+  // Collecting, harvesting, restocking, finishing, upgrading.
+  readonly production = new ProductionSystem(this, this.economy, (e) => this.events.emit(e))
   private land = new Map<string, OwnedLot>(
     START_LOTS.map((lot) => [lotKey(lot), { lot, price: START_LOT_VALUE }]),
   )
@@ -139,35 +136,21 @@ export class City {
   // Services sets this from nearby parks, schools and roads.
   valueMultiplier: (building: PlacedBuilding) => number = () => 1
 
-  // A getter with no setter: other code can read coins but must go through
-  // place / collect / adjustCoins to change them.
+  // Quick reads of the economy (changes go through city.economy).
   get coins() {
-    return this._coins
+    return this.economy.coins
+  }
+
+  get goods() {
+    return this.economy.goods
   }
 
   get debt() {
-    return this._debt
-  }
-
-  // A bill the town must pay (taxes, running costs, penalties): from coins as
-  // far as they go, the rest becomes debt. Returns what was owed beyond the coins.
-  bill(amount: number): number {
-    if (amount <= 0) return 0
-    const paid = Math.min(this._coins, amount)
-    const owed = amount - paid
-    if (paid > 0) {
-      this._coins -= paid
-      this.emit({ kind: 'coins', coins: this._coins })
-    }
-    if (owed > 0) {
-      this._debt += owed
-      this.emit({ kind: 'debt', debt: this._debt })
-    }
-    return owed
+    return this.economy.debt
   }
 
   onChange(listener: (event: CityEvent) => void) {
-    this.listeners.push(listener)
+    this.events.on(listener)
   }
 
   all(): Iterable<PlacedBuilding> {
@@ -248,18 +231,18 @@ export class City {
   // land's value (clearing land is part of its cost, and land isn't depreciated).
   buyLot(lot: Lot, materialsCost = 0): boolean {
     const price = this.nextLotPrice
-    if (!this.canBuyLot(lot) || this._coins < price) return false
+    if (!this.canBuyLot(lot) || !this.economy.canAfford(price)) return false
     const owned = { lot, price: price + materialsCost }
     this.land.set(lotKey(lot), owned)
     this.emit({ kind: 'land', bought: owned })
-    this.adjustCoins(-price)
+    this.economy.adjust(-price)
     return true
   }
 
   // ---- Buildings
 
   canAfford(type: BuildingType): boolean {
-    return this._coins >= type.cost
+    return this.economy.canAfford(type.cost)
   }
 
   // ignoreId lets a building being moved (or turned) overlap its own current spot.
@@ -303,7 +286,7 @@ export class City {
     this.mark(building, building.id)
     const paid = free ? 0 : type.cost
     this.emit({ kind: 'added', building, paid })
-    this.adjustCoins(-paid)
+    this.economy.adjust(-paid)
     return building
   }
 
@@ -328,40 +311,11 @@ export class City {
     return true
   }
 
-  isReady(building: PlacedBuilding, now: number): boolean {
-    return building.type.income !== undefined && !building.construction && now >= building.readyAt
-  }
-
-  // ---- Construction, upgrades and storing
-  // (Finishing and upgrading also use materials from the Inventory; projects.ts
-  // checks those and calls these.)
+  // ---- Construction state and storing
 
   // Built and working: not a construction site.
   isBuilt(building: PlacedBuilding): boolean {
     return building.construction === null
-  }
-
-  // The construction timer has run out: it can be finished.
-  constructionDone(building: PlacedBuilding, now: number): boolean {
-    return building.construction !== null && now >= building.construction.endsAt
-  }
-
-  finish(id: number, now: number, materialsCost = 0): boolean {
-    const b = this.buildings.get(id)
-    if (!b || !this.constructionDone(b, now)) return false
-    b.construction = null
-    if (b.type.income) b.readyAt = now + b.type.income.seconds * 1000
-    this.emit({ kind: 'finished', building: b, materialsCost })
-    return true
-  }
-
-  upgrade(id: number, coins: number, materialsCost = 0): boolean {
-    const b = this.buildings.get(id)
-    if (!b || !this.isBuilt(b) || this._coins < coins) return false
-    b.level++
-    this.emit({ kind: 'upgraded', building: b, cost: coins + materialsCost })
-    this.adjustCoins(-coins)
-    return true
   }
 
   // Take a finished building off the map and keep it for later.
@@ -391,171 +345,18 @@ export class City {
 
   // ---- Goods
 
-  get goods() {
-    return this._goods
-  }
-
+  // How many goods town storage holds: the town square plus storage buildings.
   get storageCapacity(): number {
     let capacity = BASE_STORAGE
     for (const b of this.buildings.values()) if (this.isBuilt(b)) capacity += b.type.storage ?? 0
     return capacity
   }
 
-  // Shops sell from their own shelves; everything else always has "stock".
-  hasStock(building: PlacedBuilding): boolean {
-    return building.stock >= (building.type.goodsPerSale ?? 0)
-  }
-
-  // How many goods a shop's shelves hold (more at higher levels).
-  stockCapacity(building: PlacedBuilding): number {
-    return Math.round((building.type.stockCapacity ?? 0) * levelFactor(building.level))
-  }
-
-  // Fill a shop's shelves from town storage, as far as both allow. Returns the units moved.
-  restock(id: number): number {
-    const b = this.buildings.get(id)
-    if (!b || !b.type.goodsPerSale || !this.isBuilt(b)) return 0
-    const units = Math.min(this.stockCapacity(b) - b.stock, this._goods)
-    if (units <= 0) return 0
-    b.stock += units
-    this.emit({ kind: 'restocked', building: b, units })
-    this.adjustGoods(-units)
-    return units
-  }
-
-  // Goods bought and delivered. Only what fits in storage is taken (and paid
-  // for, proportionally, in the cost recorded). Returns the units taken.
-  addGoods(units: number, cost: number): number {
-    const taken = Math.min(units, Math.max(0, this.storageCapacity - this._goods))
-    if (taken <= 0) return 0
-    this.emit({ kind: 'goodsIn', units: taken, cost: (cost * taken) / units })
-    this.adjustGoods(taken)
-    return taken
-  }
-
-  private adjustGoods(delta: number) {
-    if (delta === 0) return
-    this._goods += delta
-    this.emit({ kind: 'goods', goods: this._goods })
-  }
-
-  // Collect a building's income if it's ready (and, for a shop, if there are
-  // goods to sell). Returns the coins earned (0 if not ready or out of stock).
-  collect(id: number, now: number): number {
-    const building = this.buildings.get(id)
-    if (!building || !building.type.income || !this.isReady(building, now) || !this.hasStock(building)) return 0
-    if (!this.isOperating(building)) return 0 // e.g. a shop with no road
-
-    const amount = this.payout(building)
-    const goodsUsed = building.type.goodsPerSale ?? 0
-    // The next timer starts when you collect, not when it became ready,
-    // so leaving money uncollected doesn't stack up extra payouts.
-    building.readyAt = now + building.type.income.seconds * 1000
-    building.lastCollectedAt = now
-    building.stock -= goodsUsed
-    this.emit({ kind: 'collected', building, amount, goodsUsed })
-    this.adjustCoins(amount)
-    return amount
-  }
-
-  // What collecting from this building pays right now (less when utilities fall short).
-  payout(building: PlacedBuilding): number {
-    const coins = (building.type.income?.coins ?? 0) * levelFactor(building.level)
-    return Math.round(coins * this.incomeMultiplier(building))
-  }
-
-  // What a crop on this plot sells for right now (less without enough water).
-  harvestValue(plot: PlacedBuilding, crop: CropType): number {
-    return Math.round(crop.sellPrice * this.incomeMultiplier(plot))
-  }
-
-  // Plant a crop on an empty farm plot, paying for the seeds.
-  // free: true skips the cost, for the starting town.
-  plant(id: number, crop: CropType, { now = Date.now(), free = false } = {}): boolean {
-    const plot = this.buildings.get(id)
-    if (!plot || plot.type.category !== 'farm' || cropState(plot.crop, now).stage !== 'empty') return false
-    if (!free && this._coins < crop.seedCost) return false
-
-    plot.crop = { cropId: crop.id, plantedAt: now }
-    const cost = free ? 0 : crop.seedCost
-    this.emit({ kind: 'planted', building: plot, crop, cost })
-    this.adjustCoins(-cost)
-    return true
-  }
-
-  // Harvest a ripe crop. If the town has shops, the harvest goes into storage
-  // as goods for them to sell, and whatever doesn't fit is sold at the market.
-  // With no shops it's all sold. Returns the coins earned (0 if not ripe, or
-  // if it all went into storage).
-  harvest(id: number, now: number): number {
-    const plot = this.buildings.get(id)
-    if (!plot) return 0
-    const state = cropState(plot.crop, now)
-    if (state.stage !== 'ripe') return 0
-
-    plot.crop = null
-    const goods = Math.round(state.crop.goods * this.incomeMultiplier(plot)) // less without enough water
-    const hasShops = [...this.buildings.values()].some((b) => b.type.goodsPerSale && this.isBuilt(b))
-    const room = hasShops ? Math.max(0, this.storageCapacity - this._goods) : 0
-    const stored = Math.min(goods, room)
-    const amount = goods > 0 ? Math.round((this.harvestValue(plot, state.crop) * (goods - stored)) / goods) : 0
-    this.emit({ kind: 'harvested', building: plot, crop: state.crop, goods: stored, amount })
-    this.adjustGoods(stored)
-    this.adjustCoins(amount)
-    return amount
-  }
-
-  // Clear a withered crop so the plot can be planted again. The seeds are lost.
-  clearPlot(id: number, now: number): boolean {
-    const plot = this.buildings.get(id)
-    if (!plot) return false
-    const state = cropState(plot.crop, now)
-    if (state.stage !== 'withered') return false
-
-    plot.crop = null
-    this.emit({ kind: 'cleared', building: plot, crop: state.crop })
-    return true
-  }
-
-  // Prize money, like a level-up reward. It's income (Taxes counts it), so
-  // it gets its own event rather than a bare adjustCoins.
-  awardCoins(amount: number, reason: string, options: { payDebt?: boolean } = {}) {
-    if (amount <= 0) return
-    this.emit({ kind: 'award', amount, reason })
-    this.adjustCoins(amount, options)
-  }
-
-  // A running cost, like utility upkeep. It's a deductible expense (Taxes
-  // counts it), so it gets its own event. Like taxes, it can leave debt.
-  payExpense(amount: number, reason: string) {
-    if (amount <= 0) return
-    this.emit({ kind: 'expense', amount, reason })
-    this.bill(amount)
-  }
-
-  // Add or spend coins. Income pays any debt first. Spending can never take
-  // coins below zero: every purchase checks it can afford it first, so trying
-  // to is a bug, and throws. (Bills that may exceed the coins use bill().)
-  // payDebt: false keeps a grant out of the debt collector's hands (safetyNet.ts).
-  adjustCoins(delta: number, { payDebt = true } = {}) {
-    if (delta === 0) return
-    if (delta < 0 && this._coins + delta < 0) throw new Error(`Spending ${-delta} coins with only ${this._coins}`)
-    if (delta > 0 && payDebt && this._debt > 0) {
-      const toDebt = Math.min(this._debt, delta)
-      this._debt -= toDebt
-      delta -= toDebt
-      this.emit({ kind: 'debt', debt: this._debt })
-      if (delta === 0) return
-    }
-    this._coins += delta
-    this.emit({ kind: 'coins', coins: this._coins })
-  }
-
   toSave(): CitySave {
     return {
-      coins: this._coins,
-      goods: this._goods,
-      debt: this._debt,
+      coins: this.economy.coins,
+      goods: this.economy.goods,
+      debt: this.economy.debt,
       nextId: this.nextId,
       buildings: [
         ...[...this.buildings.values()].map((b) => this.saveBuilding(b, false)),
@@ -602,13 +403,7 @@ export class City {
       this.emit({ kind: 'added', building, paid: 0 })
     }
     this.nextId = Math.max(this.nextId, save.nextId)
-    // Older saves kept debt as negative coins.
-    this._coins = Math.max(0, save.coins)
-    this._debt = save.debt ?? Math.max(0, -save.coins)
-    this.emit({ kind: 'debt', debt: this._debt })
-    this._goods = save.goods ?? STARTING_GOODS
-    this.emit({ kind: 'goods', goods: this._goods })
-    this.emit({ kind: 'coins', coins: this._coins })
+    this.economy.load(save)
   }
 
   private saveBuilding(b: PlacedBuilding, stored: boolean): BuildingSave {
@@ -634,6 +429,6 @@ export class City {
   }
 
   private emit(event: CityEvent) {
-    for (const listener of this.listeners) listener(event)
+    this.events.emit(event)
   }
 }

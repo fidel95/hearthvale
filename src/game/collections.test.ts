@@ -25,16 +25,16 @@ describe('Collections', () => {
   it('sometimes finds an item when collecting rent, preferring ones you have fewest of', () => {
     const { city, inventory } = town([0.05, 0]) // drop (under 10%), then the first of the fewest
     const cottage = city.place(BUILDINGS_BY_ID.get('cottage')!, at(0, 0), { now: 0, free: true })!
-    city.collect(cottage.id, 30_000)
+    city.production.collect(cottage.id, 30_000)
     expect(inventory.count('teddy-bear')).toBe(1)
-    city.collect(cottage.id, 60_000)
+    city.production.collect(cottage.id, 60_000)
     expect(inventory.count('candle')).toBe(1) // teddy bear isn't among the fewest any more
   })
 
   it('finds nothing when the roll misses', () => {
     const { city, inventory } = town([0.99])
     const cottage = city.place(BUILDINGS_BY_ID.get('cottage')!, at(0, 0), { now: 0, free: true })!
-    city.collect(cottage.id, 30_000)
+    city.production.collect(cottage.id, 30_000)
     expect(inventory.all()).toHaveLength(0)
   })
 

@@ -88,7 +88,7 @@ export class Services {
 
   // Called once for every game month that ends: pay to run the utility buildings.
   endOfMonth() {
-    if (this.report.upkeep > 0) this.city.payExpense(this.report.upkeep, 'Running costs')
+    if (this.report.upkeep > 0) this.city.economy.expense(this.report.upkeep, 'Running costs')
   }
 
   private compute(): ServiceReport {

@@ -55,7 +55,7 @@ export class Inventory {
   buy(materials: Materials): boolean {
     const price = this.priceOf(materials)
     if (this.city.coins < price) return false
-    this.city.adjustCoins(-price)
+    this.city.economy.adjust(-price)
     for (const id of MATERIAL_IDS) {
       const n = materials[id] ?? 0
       if (n > 0) this.add(id, n, n * MATERIALS[id].price!)

@@ -88,7 +88,7 @@ export class Neighbors {
     if (s.helped.length >= HELPS_PER_DAY || s.helped.includes(spot)) return false
     s.helped.push(spot)
     s.friendship += HELP_REWARD.friendship
-    this.city.awardCoins(HELP_REWARD.coins, `Helping ${n.name}`)
+    this.city.economy.award(HELP_REWARD.coins, `Helping ${n.name}`)
     this.player.grantXp(HELP_REWARD.xp)
     for (const listener of this.listeners) listener({ kind: 'helped' })
     this.emit()
@@ -137,7 +137,7 @@ export class Neighbors {
     s.requestDone = true
     s.friendship += 3
     const thanks = Math.round(r.amount * MATERIALS[r.material].price! * 1.5)
-    this.city.adjustCoins(thanks)
+    this.city.economy.adjust(thanks)
     this.player.grantXp(5)
     this.emit()
     return thanks

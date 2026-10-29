@@ -37,15 +37,15 @@ export function awaySummary(city: City, player: Player, docks: Docks, leftAt: nu
     energyGained: player.energy(now) - player.energy(leftAt),
   }
   for (const b of city.all()) {
-    if (city.isReady(b, now)) {
+    if (city.production.isReady(b, now)) {
       summary.readyBuildings++
-      summary.readyCoins += city.payout(b)
+      summary.readyCoins += city.production.payout(b)
     }
     if (b.type.category === 'port' && docks.state(b, now).stage === 'arrived') summary.shipsWaiting++
     const state = cropState(b.crop, now)
     if (state.stage === 'ripe') {
       summary.ripeCrops++
-      summary.ripeValue += city.harvestValue(b, state.crop)
+      summary.ripeValue += city.production.harvestValue(b, state.crop)
     }
     // Withered now, but not yet when you left: it withered while you were away.
     if (state.stage === 'withered' && b.crop) {

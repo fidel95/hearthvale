@@ -334,7 +334,7 @@ export class Taxes {
         if (tax > 0) {
           this.salesTaxHeld += tax
           this.ledger.salesTaxCollected += tax
-          this.city.adjustCoins(tax)
+          this.city.economy.adjust(tax)
           this.emit({ kind: 'salesTax', building, amount: tax })
         }
         break
@@ -375,7 +375,7 @@ export class Taxes {
   private remitSalesTax(quarter: number) {
     const amount = this.salesTaxHeld
     if (amount <= 0) return
-    this.city.bill(amount)
+    this.city.economy.bill(amount)
     this.ledger.salesTaxRemitted += amount
     this.salesTaxHeld = 0
     this.emit({ kind: 'remitted', amount, quarter })
@@ -383,7 +383,7 @@ export class Taxes {
 
   private fileReturn() {
     const taxReturn = this.estimate()
-    this.city.bill(taxReturn.amountDue)
+    this.city.economy.bill(taxReturn.amountDue)
     this.lastReturn = taxReturn
     this.ledger = emptyLedger(taxReturn.year + 1)
     this.emit({ kind: 'taxDay', taxReturn })
@@ -394,7 +394,7 @@ export class Taxes {
     const debt = this.city.debt
     if (debt <= 0) return
     const penalty = Math.max(1, Math.round(debt * LATE_PENALTY_PER_MONTH))
-    this.city.bill(penalty)
+    this.city.economy.bill(penalty)
     this.ledger.penalties += penalty
     this.emit({ kind: 'penalty', amount: penalty })
   }
