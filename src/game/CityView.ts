@@ -20,7 +20,8 @@ export class CityView {
     city.onChange((event) => {
       switch (event.kind) {
         case 'added': {
-          const obj = createBuildingObject(event.building.type)
+          // Roads are drawn together by RoadView; here they only get an empty placeholder.
+          const obj = event.building.type.category === 'road' ? new THREE.Group() : createBuildingObject(event.building.type)
           this.objects.set(event.building.id, obj)
           this.scene.add(obj)
           this.position(event.building)

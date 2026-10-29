@@ -67,6 +67,9 @@ export class City {
   // What share of its full income a building earns right now (0 to 1).
   // Services sets this from the utility report; without it everything earns in full.
   incomeMultiplier: (building: PlacedBuilding) => number = () => 1
+  // How a building's location changes its value for property tax (1 = no change).
+  // Services sets this from nearby parks, schools and roads.
+  valueMultiplier: (building: PlacedBuilding) => number = () => 1
 
   // A getter with no setter: other code can read coins but must go through
   // place / collect / adjustCoins to change them.
@@ -85,6 +88,8 @@ export class City {
   get(id: number): PlacedBuilding | undefined {
     return this.buildings.get(id)
   }
+
+  isRoad = (tile: Tile): boolean => this.buildingAt(tile)?.type.category === 'road'
 
   buildingAt(tile: Tile): PlacedBuilding | undefined {
     if (!inBounds(tile)) return undefined

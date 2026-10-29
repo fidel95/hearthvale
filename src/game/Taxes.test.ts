@@ -3,6 +3,7 @@ import { BUILDINGS_BY_ID } from './buildings'
 import { City } from './City'
 import { CROPS_BY_ID } from './crops'
 import { GameClock, MONTH_MS } from './GameClock'
+import { Services } from './Services'
 import { Taxes, type TaxEvent } from './Taxes'
 import { STANDARD_DEDUCTION, annualPropertyTax, incomeTax } from './taxRules'
 
@@ -202,5 +203,14 @@ describe('Taxes', () => {
     expect(taxes.estimate().operatingExpenses).toBe(30)
     taxes.ledger.rentIncome = 2000
     expect(taxes.estimate().taxableIncome).toBeCloseTo(2000 - 30 - STANDARD_DEDUCTION)
+  })
+
+  it('assesses a home near a park higher, so it pays more property tax', () => {
+    const { city, taxes } = setup()
+    new Services(city)
+    const home = city.place(cottage, at(0, 0), { free: true })!
+    const plain = taxes.properties().find((p) => p.building === home)!.annualTax
+    city.place(BUILDINGS_BY_ID.get('park')!, at(3, 0), { free: true })
+    expect(taxes.properties().find((p) => p.building === home)!.annualTax).toBeCloseTo(plain * 1.1)
   })
 })

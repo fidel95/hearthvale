@@ -1,9 +1,10 @@
-import { BUILDING_TYPES } from '../game/buildings'
+import { BUILDING_TYPES, type Category } from '../game/buildings'
 import type { Builder, Mode } from '../game/Builder'
 import type { City } from '../game/City'
 import { MONTH_NAMES, type GameClock } from '../game/GameClock'
 import type { Player } from '../game/Player'
 import type { Services } from '../game/Services'
+import { ROAD_BONUS } from '../game/communityRules'
 import { UTILITIES, UTILITY_INFO } from '../game/utilityRules'
 import { duration, el } from './dom'
 
@@ -24,6 +25,16 @@ function hintFor(mode: Mode): string {
       return 'Tap a building to demolish it'
   }
 }
+
+// The build menu's tabs, and which categories each one shows.
+const CATALOG_TABS: { label: string; categories: Category[] }[] = [
+  { label: 'Homes', categories: ['home'] },
+  { label: 'Shops', categories: ['business'] },
+  { label: 'Farms', categories: ['farm'] },
+  { label: 'Town', categories: ['road', 'community'] },
+  { label: 'Utilities', categories: ['utility'] },
+  { label: 'Decor', categories: ['decoration'] },
+]
 
 export interface HudCallbacks {
   onOpenTaxes: () => void
@@ -80,6 +91,9 @@ export class Hud {
     // ---- Bottom: catalog and tools
     const catalog = el('div', 'catalog')
     catalog.hidden = true
+    const tabs = el('div', 'catalog-tabs')
+    const grid = el('div', 'catalog-grid')
+    catalog.append(tabs, grid)
     // Every building is listed; ones above your level show what level unlocks them.
     const catalogItems = BUILDING_TYPES.map((type) => {
       const item = el('button', 'catalog-item')
@@ -96,17 +110,33 @@ export class Hud {
         item.append(el('span', 'catalog-meta', `${people}uses ${needs.join(' ')}`))
       }
       if (type.supplies) {
-        const { utility, amount, upkeep } = type.supplies
-        item.append(el('span', 'catalog-meta', `Supplies ${UTILITY_INFO[utility].icon} ${amount} · 🪙 ${upkeep}/month to run`))
+        const { utility, amount } = type.supplies
+        item.append(el('span', 'catalog-meta', `Supplies ${UTILITY_INFO[utility].icon} ${amount}`))
       }
+      if (type.amenity) {
+        const { bonus, radius } = type.amenity
+        item.append(el('span', 'catalog-meta', `+${bonus * 100}% for homes & shops within ${radius} tiles`))
+      }
+      if (type.category === 'road') item.append(el('span', 'catalog-meta', `Drag to draw · homes & shops beside a road earn +${ROAD_BONUS * 100}%`))
+      if (type.upkeep) item.append(el('span', 'catalog-meta', `🪙 ${type.upkeep}/month to run`))
       item.append(lock)
       item.addEventListener('click', () => {
         catalog.hidden = true
         builder.setMode({ kind: 'build', type })
       })
-      catalog.append(item)
+      grid.append(item)
       return { item, lock, type }
     })
+    const showTab = (tab: (typeof CATALOG_TABS)[number]) => {
+      for (const { item, type } of catalogItems) item.hidden = !tab.categories.includes(type.category)
+      for (const button of tabs.children) button.classList.toggle('active', button.textContent === tab.label)
+    }
+    for (const tab of CATALOG_TABS) {
+      const button = el('button', 'catalog-tab', tab.label)
+      button.addEventListener('click', () => showTab(tab))
+      tabs.append(button)
+    }
+    showTab(CATALOG_TABS[0])
     const refreshCatalog = () => {
       for (const { item, lock, type } of catalogItems) {
         const unlocked = player.isUnlocked(type)

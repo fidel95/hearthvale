@@ -45,6 +45,7 @@ to make each in-game month last one second, so you can watch a whole tax year in
 | Action | Mouse | Touch |
 |---|---|---|
 | Pan | Drag | Drag |
+| Draw roads | Drag (with Road selected) | Drag |
 | Zoom | Scroll wheel | Pinch |
 | Collect rent / sales | Click the 🪙 bubble or the building | Tap |
 | Plant, harvest, clear crops | Click the plot or its bubble | Tap |
@@ -56,6 +57,8 @@ to make each in-game month last one second, so you can watch a whole tax year in
 - **Energy (⚡):** collecting, harvesting, planting and clearing use 1 energy each; building and moving don't. It refills by 1 every 2 minutes, in real time, even while the game is closed.
 - **Land:** the world is 60×60 tiles, in 10×10 lots. You start with the middle four. Tap a 🏷️ sign on a lot next to your land to buy it; each lot costs more than the last and needs a higher level. Land pays property tax but is never depreciated.
 - **Utilities:** homes, shops and farms use 💧 water, 🔌 electricity and 🗑️ trash pickup. The county covers a small town for free; after that, build a Water Tower, Power Plant or Solar Farm, and Recycling Center. Plants cost coins every month to run (deductible on your taxes). When supply falls short, income drops: the top-left line turns red and the **Town** window shows what to build.
+- **Roads:** pick Road from the build menu's Town tab and drag across the map to draw (a tap places one tile). Roads join up into straights, corners and crossings by themselves. Homes and shops touching a road earn +5%, and walkers prefer roads.
+- **Community buildings:** a Park, Fire Station and School each raise the income of homes and shops nearby (+10%, +10%, +15%), shown as a blue area while placing. Bonuses stack up to +40%. A better location also raises a building's assessed value, so property tax goes up too, as it does in real life. Each has a monthly running cost.
 - **People:** each home has residents (👥). About one in two is out walking at any time, between home, shops and neighbors.
 - **Farming:** build a Farm Plot, then tap it (🌱) to choose seeds. Crops grow through sprout, young and grown stages, then ripen (the crop's bubble appears): tap to harvest and sell. Wait too long and it withers (🥀): the harvest is lost and you tap to clear the plot. Quick crops earn the most per minute; slow ones can be left overnight. Tick "Plant all empty plots" to sow every empty plot at once.
 - **Move:** tap a building to pick it up, then tap where it should go.
@@ -95,7 +98,8 @@ src/
     crops.ts              the crop catalog and crop stages (empty → growing → ripe → withered)
     land.ts               starting land and expansion prices
     utilityRules.ts       water, power and trash: demand, supply, effect on income (pure functions)
-    Services.ts           keeps the utility report current and pays running costs monthly
+    communityRules.ts     location bonuses (parks, schools, roads) and road shapes (pure functions)
+    Services.ts           keeps utilities and location bonuses current; pays running costs monthly
     pathfinding.ts        A* shortest paths on the tile grid
     offline.ts            what happened while you were away (for the welcome-back window)
     progression.ts        XP, level and energy rules (pure functions)
@@ -109,6 +113,7 @@ src/
     CityView.ts           keeps 3D objects in sync with City
     LandView.ts           the ground, owned land and "for sale" signs
     PeopleView.ts         residents walking around town
+    RoadView.ts           draws the road network as one merged mesh
     models.ts             loads .glb models, draws placeholder shapes and crops
     Builder.ts            build / move / demolish tools, ghost preview, what a tap does
     IncomeView.ts         HTML labels over buildings: bubbles, pop-ups, info card
@@ -140,8 +145,8 @@ docs/                     the docs linked above
 | 5 | ✅ | Energy, XP and levels, unlocks; level rewards taxed as prizes |
 | 5.5 | ✅ | Expandable land, utilities (water, power, trash), walking residents, save upgrades |
 | 6 | ✅ | "Welcome back" summary, collect all, save upgrades |
-| 7 | ⏳ | Roads (walkers prefer them), community buildings |
-| 8 | | Supply chain: farm goods stock shops (cost of goods becomes deductible) |
+| 7 | ✅ | Roads (drag to draw, autotiled), parks, fire stations, schools, location bonuses |
+| 8 | ⏳ | Supply chain: farm goods stock shops (cost of goods becomes deductible) |
 | 9 | | Quests and goals |
 | 10 | | Land expansions, decorations that boost payouts |
 | 11 | | Simulated neighbors to visit and help |

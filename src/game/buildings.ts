@@ -4,9 +4,21 @@
 
 import type { Utility } from './utilityRules'
 
-export type Category = 'home' | 'business' | 'farm' | 'decoration' | 'utility'
+export type Category = 'home' | 'business' | 'farm' | 'decoration' | 'utility' | 'community' | 'road'
 
-export type PlaceholderShape = 'house' | 'shop' | 'field' | 'tree' | 'tower' | 'plant' | 'recycling' | 'solar'
+export type PlaceholderShape =
+  | 'house'
+  | 'shop'
+  | 'field'
+  | 'tree'
+  | 'tower'
+  | 'plant'
+  | 'recycling'
+  | 'solar'
+  | 'road'
+  | 'park'
+  | 'school'
+  | 'firestation'
 
 export interface BuildingType {
   id: string
@@ -21,8 +33,12 @@ export interface BuildingType {
   residents?: number
   // Units of each utility this building uses (utilityRules.ts).
   needs?: Partial<Record<Utility, number>>
-  // Utility buildings: what they supply, and what they cost to run each game month.
-  supplies?: { utility: Utility; amount: number; upkeep: number }
+  // Utility buildings: what they supply.
+  supplies?: { utility: Utility; amount: number }
+  // Coins it costs to run each game month (utilities and community buildings).
+  upkeep?: number
+  // Community buildings: homes and shops within `radius` tiles earn `bonus` more (communityRules.ts).
+  amenity?: { bonus: number; radius: number }
   // Depreciation period in years, when it differs from its category's (taxRules.ts).
   recoveryYears?: number
   // How to draw it when there's no model (or the model fails to load).
@@ -161,7 +177,8 @@ export const BUILDING_TYPES: BuildingType[] = [
     size: { x: 2, z: 2 },
     cost: 250,
     unlockLevel: 2,
-    supplies: { utility: 'water', amount: 20, upkeep: 15 },
+    supplies: { utility: 'water', amount: 20 },
+    upkeep: 15,
     recoveryYears: 25, // water utility property
     placeholder: { shape: 'tower', color: '#8fb8d8', accent: '#5b7f9e', height: 2 },
   },
@@ -172,7 +189,8 @@ export const BUILDING_TYPES: BuildingType[] = [
     size: { x: 3, z: 2 },
     cost: 500,
     unlockLevel: 3,
-    supplies: { utility: 'power', amount: 30, upkeep: 30 }, // fuel makes it expensive to run
+    supplies: { utility: 'power', amount: 30 },
+    upkeep: 30, // fuel makes it expensive to run
     recoveryYears: 20, // electric utility steam production plant
     placeholder: { shape: 'plant', color: '#b9b4ab', accent: '#d9a441', height: 1.1 },
   },
@@ -183,7 +201,8 @@ export const BUILDING_TYPES: BuildingType[] = [
     size: { x: 2, z: 2 },
     cost: 300,
     unlockLevel: 3,
-    supplies: { utility: 'trash', amount: 20, upkeep: 20 },
+    supplies: { utility: 'trash', amount: 20 },
+    upkeep: 20,
     recoveryYears: 7, // waste reduction and resource recovery plants
     placeholder: { shape: 'recycling', color: '#5e9e6e', accent: '#2f6f8f', height: 0.9 },
   },
@@ -194,9 +213,58 @@ export const BUILDING_TYPES: BuildingType[] = [
     size: { x: 3, z: 3 },
     cost: 1200,
     unlockLevel: 6,
-    supplies: { utility: 'power', amount: 25, upkeep: 5 }, // no fuel: cheap to run
+    supplies: { utility: 'power', amount: 25 },
+    upkeep: 5, // no fuel: cheap to run
     recoveryYears: 5, // solar energy property gets a short 5-year period
     placeholder: { shape: 'solar', color: '#2c3e66', accent: '#c9ccd2', height: 0.5 },
+  },
+  // ---- Roads and community buildings
+  {
+    // Drawn by dragging. Its look depends on which neighbors are roads too (CityView).
+    id: 'road',
+    name: 'Road',
+    category: 'road',
+    size: { x: 1, z: 1 },
+    cost: 10,
+    unlockLevel: 1,
+    placeholder: { shape: 'road', color: '#5d6168', accent: '#f2f2f2', height: 0.03 },
+  },
+  {
+    id: 'park',
+    name: 'Park',
+    category: 'community',
+    size: { x: 2, z: 2 },
+    cost: 200,
+    unlockLevel: 3,
+    needs: { water: 1 },
+    upkeep: 5,
+    amenity: { bonus: 0.1, radius: 4 },
+    recoveryYears: 15, // land improvements
+    placeholder: { shape: 'park', color: '#6fbf5a', accent: '#d9c79a', height: 0.6 },
+  },
+  {
+    id: 'fire-station',
+    name: 'Fire Station',
+    category: 'community',
+    size: { x: 2, z: 2 },
+    cost: 600,
+    unlockLevel: 4,
+    needs: { water: 2, power: 2, trash: 1 },
+    upkeep: 20,
+    amenity: { bonus: 0.1, radius: 6 },
+    placeholder: { shape: 'firestation', color: '#c8463a', accent: '#f0e6d8', height: 1.1 },
+  },
+  {
+    id: 'school',
+    name: 'School',
+    category: 'community',
+    size: { x: 3, z: 2 },
+    cost: 900,
+    unlockLevel: 5,
+    needs: { water: 3, power: 3, trash: 2 },
+    upkeep: 30,
+    amenity: { bonus: 0.15, radius: 6 },
+    placeholder: { shape: 'school', color: '#e2c08d', accent: '#a0473b', height: 1.2 },
   },
 ]
 

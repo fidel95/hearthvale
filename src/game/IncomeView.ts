@@ -6,7 +6,7 @@ import type { CityView } from './CityView'
 import { cropState } from './crops'
 import { footprintCenter } from './grid'
 import type { Services } from './Services'
-import { shortIcons } from './utilityRules'
+import { UTILITY_INFO, shortIcons } from './utilityRules'
 
 // Labels floating over buildings: bubbles that say "tap me" (coins to
 // collect, crops to harvest, plots to plant), "+15" pop-ups and the hover
@@ -158,6 +158,9 @@ export class IncomeView {
           return [`${b.type.name} · ${state.crop.name}`, 'Withered · tap to clear']
       }
     }
+    const { amenity, supplies, upkeep } = b.type
+    if (amenity) return [b.type.name, `+${Math.round(amenity.bonus * 100)}% for homes & shops within ${amenity.radius} tiles · 🪙 ${upkeep}/month`]
+    if (supplies) return [b.type.name, `Supplies ${UTILITY_INFO[supplies.utility].icon} ${supplies.amount} · 🪙 ${upkeep}/month`]
     if (!b.type.income) return [b.type.name, '']
     const status = this.city.isReady(b, now)
       ? `Ready! Click to collect 🪙 ${this.city.payout(b)}`
@@ -165,10 +168,12 @@ export class IncomeView {
     return [b.type.name, status + this.shortNote(b)]
   }
 
-  // " · ⚠️ short on 💧🔌" when utilities are cutting this building's income.
+  // " · 📍 +15%" for a good location, " · ⚠️ short on 💧🔌" when utilities cut income.
   private shortNote(b: PlacedBuilding): string {
-    if (this.city.incomeMultiplier(b) >= 1) return ''
-    return ` · ⚠️ short on ${shortIcons(this.services.report)}`
+    const bonus = this.services.bonus(b).total
+    let note = bonus > 0 ? ` · 📍 +${Math.round(bonus * 100)}%` : ''
+    if (this.services.utilityShare(b) < 1) note += ` · ⚠️ short on ${shortIcons(this.services.report)}`
+    return note
   }
 
   private abovePoint(b: PlacedBuilding): THREE.Vector3 {

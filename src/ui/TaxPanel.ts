@@ -46,7 +46,7 @@ function returnRows(r: TaxReturn): Row[] {
   rows.push(
     ['Gross income', coins(r.grossIncome), 'total'],
     ['− Seeds (farm expenses)', coins(r.farmExpenses), 'minus'],
-    ['− Utility operating costs', coins(r.operatingExpenses), 'minus'],
+    ['− Running costs (utilities, community)', coins(r.operatingExpenses), 'minus'],
     ['− Property tax', coins(r.propertyTax), 'minus'],
     ['− Depreciation', coins(r.depreciation), 'minus'],
     ['− Standard deduction', coins(r.standardDeduction), 'minus'],

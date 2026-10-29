@@ -188,13 +188,37 @@ and pays running costs at each month's end via `City.payExpense`.
 Supply is town-wide, as if every building were connected to every pipe and
 wire. That keeps it understandable; coverage areas or pipes could come later.
 
+## Roads and community buildings
+
+Roads are ordinary 1×1 buildings (category `road`), so placing, saving,
+demolishing and taxes all work as for anything else. Two things are special:
+
+- **Drawing.** In road mode, `Builder` sets `CameraController.paint`, so a
+  one-finger drag paints tiles instead of panning. A fast drag skips tiles
+  between pointer events, so `paintRoad` fills in every tile from the last
+  one painted.
+- **Rendering.** `CityView` gives roads an empty placeholder; `RoadView`
+  rebuilds the whole network, merged into one mesh per color, at most once a
+  frame after a change. Each tile's shape comes from `roadMask`, a 4-bit
+  number of which neighbors are roads (bitmask autotiling).
+
+Community buildings have an `amenity: { bonus, radius }`. `locationBonus`
+(`communityRules.ts`) sums the amenities whose footprint is within `radius`
+tiles of a home or shop, adds `ROAD_BONUS` if one touches a road, and caps it.
+`Services` recomputes every building's bonus when anything is added, moved or
+removed, and gives City two hooks:
+
+- `incomeMultiplier(b)` = utility share × (1 + bonus): what it earns,
+- `valueMultiplier(b)` = 1 + bonus: what it's worth, for property tax.
+
 ## People
 
 `PeopleView` is purely visual: nothing is saved and nothing affects the
 game. Homes send out about one walker per two residents (max 40). A walker
-picks a destination (a shop half the time), finds a path with A*
-(`pathfinding.ts`, through owned tiles with no building), walks it tile by
-tile, pauses, and goes on or goes home. If something gets built in its way,
+picks a destination (a shop or park half the time), finds a path with A*
+(`pathfinding.ts`, through owned tiles that are empty or road, with grass
+costing 2.5× a road step so paths stick to roads), walks it tile by tile,
+lingers longer in parks, pauses, and goes on or goes home. If something gets built in its way,
 it plans again from where it stands.
 
 ## XP, levels and energy

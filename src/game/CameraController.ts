@@ -21,6 +21,10 @@ export class CameraController {
 
   // Called when the user clicks or taps (presses and releases without dragging).
   onClick?: (clientX: number, clientY: number) => void
+  // When set, a one-finger drag paints (e.g. roads) instead of panning:
+  // called with each pointer position, first = true at the start of a drag.
+  // Pinching still zooms.
+  paint: ((clientX: number, clientY: number, first: boolean) => void) | null = null
 
   private camera: THREE.OrthographicCamera
   private canvas: HTMLCanvasElement
@@ -94,7 +98,14 @@ export class CameraController {
 
     const moved = Math.hypot(e.clientX - this.gesture.start.x, e.clientY - this.gesture.start.y)
     if (!this.gesture.moved && moved < DRAG_THRESHOLD) return
+    const starting = !this.gesture.moved
     this.gesture.moved = true
+    if (this.paint && !this.gesture.multiTouch) {
+      // Paint from where the drag began, so the first tile isn't skipped.
+      if (starting) this.paint(this.gesture.start.x, this.gesture.start.y, true)
+      this.paint(e.clientX, e.clientY, false)
+      return
+    }
     this.canvas.style.cursor = 'grabbing'
     this.keepGrabPointUnder(e.clientX, e.clientY)
   }

@@ -1,20 +1,27 @@
 import type { Tile } from './grid'
 
-// A* pathfinding on the tile grid: the shortest way from one tile to another,
+// A* pathfinding on the tile grid: the cheapest way from one tile to another,
 // stepping up, down, left or right, through tiles where `passable` is true.
+// Each step costs `cost(tile)` (default 1), so walkers can prefer roads by
+// making grass cost more.
 //
-// A* explores tiles in order of (steps so far + a guess of steps left). The
-// guess here is the Manhattan distance (|dx| + |dz|), which never
-// overestimates on a 4-direction grid, so the first path found is a shortest one.
+// A* explores tiles in order of (cost so far + a guess of the cost left). The
+// guess here is the Manhattan distance (|dx| + |dz|). As long as no step costs
+// less than 1, that never overestimates, so the first path found is a cheapest one.
 
 const key = (t: Tile) => `${t.x},${t.z}`
 
-export function findPath(start: Tile, goal: Tile, passable: (tile: Tile) => boolean, maxVisited = 5000): Tile[] | null {
+export function findPath(
+  start: Tile,
+  goal: Tile,
+  passable: (tile: Tile) => boolean,
+  { cost = () => 1, maxVisited = 5000 }: { cost?: (tile: Tile) => number; maxVisited?: number } = {},
+): Tile[] | null {
   if (!passable(goal)) return null
   const guess = (t: Tile) => Math.abs(t.x - goal.x) + Math.abs(t.z - goal.z)
 
   const open = new MinHeap<Tile>()
-  const steps = new Map<string, number>([[key(start), 0]])
+  const spent = new Map<string, number>([[key(start), 0]]) // cheapest known cost to reach each tile
   const cameFrom = new Map<string, Tile>()
   open.push(start, guess(start))
   let visited = 0
@@ -24,7 +31,7 @@ export function findPath(start: Tile, goal: Tile, passable: (tile: Tile) => bool
     if (current.x === goal.x && current.z === goal.z) return rebuild(cameFrom, current)
     if (++visited > maxVisited) return null // give up rather than freeze on a huge search
 
-    const here = steps.get(key(current))!
+    const here = spent.get(key(current))!
     for (const next of [
       { x: current.x + 1, z: current.z },
       { x: current.x - 1, z: current.z },
@@ -33,11 +40,12 @@ export function findPath(start: Tile, goal: Tile, passable: (tile: Tile) => bool
     ]) {
       if (!passable(next)) continue
       const k = key(next)
-      const known = steps.get(k)
-      if (known !== undefined && known <= here + 1) continue
-      steps.set(k, here + 1)
+      const total = here + cost(next)
+      const known = spent.get(k)
+      if (known !== undefined && known <= total) continue
+      spent.set(k, total)
       cameFrom.set(k, current)
-      open.push(next, here + 1 + guess(next))
+      open.push(next, total + guess(next))
     }
   }
   return null

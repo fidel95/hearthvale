@@ -40,10 +40,12 @@ export function unlocksAt(level: number): { buildings: BuildingType[]; crops: Cr
 
 // ---- XP for actions
 
-// Building: 1 XP per 20 coins spent, so bigger investments level you faster.
-// Free buildings (the starting town, loading a save) give none.
+// Building: 1 XP per full 20 coins spent, so bigger investments level you
+// faster. Cheap things (a 10-coin road tile) give none, or drawing roads would
+// be the fastest way to level. Free buildings (the starting town, loading a
+// save) give none either.
 export function buildXp(paid: number): number {
-  return paid > 0 ? Math.ceil(paid / 20) : 0
+  return Math.floor(paid / 20)
 }
 
 // Collecting rent or sales: about 1 XP per 15 coins, at least 1.

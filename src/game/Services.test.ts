@@ -38,6 +38,26 @@ describe('Services', () => {
     const before = city.coins
     services.endOfMonth()
     expect(city.coins).toBe(before - 15)
-    expect(expenses).toEqual([{ kind: 'expense', amount: 15, reason: 'Utility operating costs' }])
+    expect(expenses).toEqual([{ kind: 'expense', amount: 15, reason: 'Running costs' }])
+  })
+
+  it('raises income near a park and charges its running cost', () => {
+    const city = new City()
+    const services = new Services(city)
+    const home = city.place(cottage, at(0, 0), { now: 0, free: true })!
+    city.place(BUILDINGS_BY_ID.get('park')!, at(3, 0), { free: true })
+    expect(services.bonus(home)).toEqual({ total: 0.1, sources: ['Park'] })
+    expect(city.collect(home.id, 30_000)).toBe(Math.round(15 * 1.1))
+    expect(city.valueMultiplier(home)).toBeCloseTo(1.1)
+    expect(services.report.upkeep).toBe(5)
+  })
+
+  it('updates bonuses when a building moves away', () => {
+    const city = new City()
+    const services = new Services(city)
+    const home = city.place(cottage, at(0, 0), { free: true })!
+    const park = city.place(BUILDINGS_BY_ID.get('park')!, at(3, 0), { free: true })!
+    city.move(park.id, at(15, 15))
+    expect(services.bonus(home).total).toBe(0)
   })
 })

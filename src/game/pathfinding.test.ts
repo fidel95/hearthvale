@@ -27,6 +27,16 @@ describe('findPath', () => {
     }
   })
 
+  it('takes a longer but cheaper route when steps cost different amounts', () => {
+    // 'r' is road (cost 1), '.' is grass (cost 4). Straight across is 2 grass
+    // steps (8); dropping to the road and back is 3 road steps + 1 grass (7).
+    const rows = ['...', 'rrr']
+    const map = grid(['...', '...'])
+    const cost = (t: { x: number; z: number }) => (rows[t.z][t.x] === 'r' ? 1 : 4)
+    const path = findPath({ x: 0, z: 0 }, { x: 2, z: 0 }, map, { cost })!
+    expect(path.map((t) => rows[t.z][t.x]).join('')).toBe('.rrr.')
+  })
+
   it('returns null when the goal is walled off or blocked', () => {
     expect(findPath({ x: 0, z: 0 }, { x: 2, z: 0 }, grid(['.#.']))).toBeNull()
     expect(findPath({ x: 0, z: 0 }, { x: 1, z: 0 }, grid(['.#.']))).toBeNull()

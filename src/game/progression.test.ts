@@ -23,9 +23,10 @@ describe('levels', () => {
 })
 
 describe('XP for actions', () => {
-  it('gives 1 XP per 20 coins spent building, none for free buildings', () => {
+  it('gives 1 XP per full 20 coins spent building, none for cheap or free ones', () => {
     expect(buildXp(100)).toBe(5)
-    expect(buildXp(15)).toBe(1)
+    expect(buildXp(30)).toBe(1)
+    expect(buildXp(10)).toBe(0) // a road tile
     expect(buildXp(0)).toBe(0)
   })
 

@@ -146,6 +146,41 @@ function createPlaceholder(type: BuildingType): THREE.Group {
       }
       break
     }
+    case 'road': {
+      // Just the asphalt; RoadView draws placed roads with their markings.
+      add(new THREE.BoxGeometry(w, height, d), color, 0, 0, 0)
+      break
+    }
+    case 'park': {
+      // Grass, a path, a fountain and two trees.
+      add(new THREE.BoxGeometry(w * 0.95, 0.04, d * 0.95), color, 0, 0, 0)
+      add(new THREE.BoxGeometry(w * 0.95, 0.045, 0.3), accent, 0, 0, 0)
+      add(new THREE.CylinderGeometry(0.3, 0.34, 0.12, 12), '#c9c6bd', 0, 0.04, 0)
+      add(new THREE.CylinderGeometry(0.22, 0.22, 0.05, 12), '#6fb7e0', 0, 0.12, 0)
+      for (const [x, z] of [[-0.55, -0.55], [0.55, 0.55]]) {
+        add(new THREE.CylinderGeometry(0.05, 0.06, 0.25, 6), '#7a5233', x, 0.04, z)
+        add(new THREE.IcosahedronGeometry(0.28, 0), '#3f8f3a', x, 0.24, z)
+      }
+      break
+    }
+    case 'school': {
+      // A long brick building with a bell tower and a flag.
+      add(new THREE.BoxGeometry(w * 0.85, height * 0.6, d * 0.65), color, 0, 0, 0)
+      add(new THREE.BoxGeometry(w * 0.9, 0.08, d * 0.7), accent, 0, height * 0.6, 0)
+      add(new THREE.BoxGeometry(0.45, height * 0.45, 0.45), color, 0, height * 0.6, 0)
+      add(new THREE.ConeGeometry(0.36, 0.35, 4).rotateY(Math.PI / 4), accent, 0, height * 1.05, 0)
+      add(new THREE.CylinderGeometry(0.02, 0.02, height * 0.9, 4), '#dddddd', w * 0.35, 0, d * 0.42)
+      add(new THREE.BoxGeometry(0.3, 0.18, 0.02), '#3f6fd0', w * 0.35 + 0.15, height * 0.7, d * 0.42)
+      break
+    }
+    case 'firestation': {
+      // A red station with two big garage doors facing the street.
+      add(new THREE.BoxGeometry(w * 0.85, height * 0.8, d * 0.75), color, 0, 0, 0)
+      add(new THREE.BoxGeometry(w * 0.9, 0.08, d * 0.8), accent, 0, height * 0.8, 0)
+      for (const x of [-0.4, 0.4]) add(new THREE.BoxGeometry(0.6, height * 0.55, 0.02), accent, x, 0, d * 0.375 + 0.01)
+      add(new THREE.BoxGeometry(0.25, height * 0.5, 0.25), color, -w * 0.32, height * 0.8, -d * 0.2)
+      break
+    }
     case 'tree': {
       add(new THREE.CylinderGeometry(0.07, 0.09, height * 0.4, 6), color, 0, 0, 0)
       add(new THREE.IcosahedronGeometry(0.38, 0), accent, 0, height * 0.35, 0)

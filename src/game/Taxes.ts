@@ -221,11 +221,14 @@ export class Taxes {
 
   // Every building we own with its assessed value and yearly property tax.
   properties(): { building: PlacedBuilding; value: number; annualTax: number }[] {
-    return [...this.city.all()].map((building) => ({
-      building,
-      value: assessedValue(building.type),
-      annualTax: annualPropertyTax(building.type),
-    }))
+    return [...this.city.all()].map((building) => {
+      const location = this.city.valueMultiplier(building)
+      return {
+        building,
+        value: assessedValue(building.type) * location,
+        annualTax: annualPropertyTax(building.type) * location,
+      }
+    })
   }
 
   toSave(): TaxesSave {
@@ -293,7 +296,9 @@ export class Taxes {
       // Mid-month convention: a building placed this month counts for half of it.
       const fraction = asset.placedMonth === monthIndex ? 0.5 : 1
 
-      this.ledger.propertyTax += (annualPropertyTax(building.type) / 12) * fraction
+      // A good location (parks, schools, roads nearby) raises the assessed value.
+      const location = this.city.valueMultiplier(building)
+      this.ledger.propertyTax += ((annualPropertyTax(building.type) * location) / 12) * fraction
 
       const remaining = asset.basis - asset.depreciated
       const depreciation = Math.min(remaining, monthlyDepreciation(asset.basis, building.type) * fraction)

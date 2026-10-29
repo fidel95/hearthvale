@@ -247,16 +247,46 @@ button {
 
 .catalog {
   margin-bottom: 12px;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  display: flex;
+  flex-direction: column;
   gap: 8px;
   width: min(640px, 100%);
-  max-height: 45vh;
-  overflow-y: auto;
+  max-height: 50vh;
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 14px;
   padding: 10px;
+}
+
+/* The tab row scrolls sideways on narrow phones instead of wrapping. */
+.catalog-tabs {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  flex-shrink: 0;
+}
+
+.catalog-tab {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.catalog-tab.active {
+  background: var(--ink);
+  color: #fff;
+}
+
+.catalog-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px;
+  overflow-y: auto;
 }
 
 .catalog-item {

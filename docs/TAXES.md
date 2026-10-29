@@ -80,6 +80,13 @@ Value                      = NOI ÷ capitalization rate ("cap rate")
 Potential income assumes you always collect on time. Buildings with no income
 (trees, planters) are valued at what they cost (the "cost approach").
 
+**Location matters.** Real assessors value a home near a good school or a
+park higher, because it rents for more. In the game, the same location bonus
+that raises a building's income (parks, schools, fire stations, a road)
+raises its assessed value by the same percentage. A cottage next to a park
+(+10%) is assessed at 2,970 instead of 2,700, and pays 29.70 a year instead
+of 27.
+
 **Example: Cottage** (15 coins every 30 s, costs 100)
 
 ```
@@ -114,6 +121,8 @@ placed in service you get half a month (the **mid-month convention**).
 | Power Plant | Electric utility steam production plant | 20 | 500 ÷ 20 = 25 per year |
 | Recycling Center | Waste reduction and resource recovery plant | 7 | 300 ÷ 7 = 42.86 per year |
 | Solar Farm | Solar energy property | 5 | 1,200 ÷ 5 = 240 per year |
+| Roads, Park | Land improvements | 15 | Road tile: 10 ÷ 15 = 0.67 per year |
+| Fire Station, School | Nonresidential real property | 39 | School: 900 ÷ 39 = 23.08 per year |
 
 Solar's short 5-year period is a real, deliberate tax incentive: deducting
 the cost faster makes clean energy cheaper to build. Compare it with the

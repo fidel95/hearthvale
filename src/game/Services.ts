@@ -1,9 +1,11 @@
-import type { City } from './City'
+import type { City, PlacedBuilding } from './City'
+import { locationBonus, type LocationBonus } from './communityRules'
 import { UTILITIES, incomeMultiplier, serviceReport, type ServiceReport, type Utility } from './utilityRules'
 
-// Keeps the town's utility report up to date, tells City how much each
-// building earns, and pays the plants' running costs every game month.
-// The rules themselves are in utilityRules.ts.
+// Keeps the town's utility report and every building's location bonus up to
+// date, tells City how much each building earns and is worth, and pays the
+// running costs of utility and community buildings every game month.
+// The rules themselves are in utilityRules.ts and communityRules.ts.
 
 export type ServicesEvent =
   | { kind: 'changed'; report: ServiceReport }
@@ -12,15 +14,19 @@ export type ServicesEvent =
 
 export class Services {
   report: ServiceReport
+  private bonuses = new Map<number, LocationBonus>()
   private city: City
   private listeners: ((event: ServicesEvent) => void)[] = []
 
   constructor(city: City) {
     this.city = city
     this.report = this.compute()
-    city.incomeMultiplier = (b) => incomeMultiplier(this.report, b.type.category)
+    // Earnings: cut by utility shortages, raised by a good location.
+    city.incomeMultiplier = (b) => this.utilityShare(b) * (1 + this.bonus(b).total)
+    // Value for property tax: a good location raises it (shortages are temporary, so they don't).
+    city.valueMultiplier = (b) => 1 + this.bonus(b).total
     city.onChange((event) => {
-      if (event.kind === 'added' || event.kind === 'removed') this.refresh()
+      if (event.kind === 'added' || event.kind === 'removed' || event.kind === 'moved') this.refresh()
     })
   }
 
@@ -28,9 +34,19 @@ export class Services {
     this.listeners.push(listener)
   }
 
+  // The share of its income a building gets from the utilities (1 = fully served).
+  utilityShare(b: PlacedBuilding): number {
+    return incomeMultiplier(this.report, b.type.category)
+  }
+
+  // What a building's surroundings add to its income and value.
+  bonus(b: PlacedBuilding): LocationBonus {
+    return this.bonuses.get(b.id) ?? { total: 0, sources: [] }
+  }
+
   // Called once for every game month that ends: pay to run the utility buildings.
   endOfMonth() {
-    if (this.report.upkeep > 0) this.city.payExpense(this.report.upkeep, 'Utility operating costs')
+    if (this.report.upkeep > 0) this.city.payExpense(this.report.upkeep, 'Running costs')
   }
 
   private compute(): ServiceReport {
@@ -40,6 +56,10 @@ export class Services {
   private refresh() {
     const before = this.report
     this.report = this.compute()
+    // Any building can change the bonus of the ones around it, so redo them all. Cheap for a town this size.
+    const all = [...this.city.all()]
+    this.bonuses.clear()
+    for (const b of all) this.bonuses.set(b.id, locationBonus(b, all, this.city.isRoad))
     this.emit({ kind: 'changed', report: this.report })
     const newlyShort = UTILITIES.filter((u) => before.utilities[u].level >= 1 && this.report.utilities[u].level < 1)
     if (newlyShort.length > 0) this.emit({ kind: 'shortage', utilities: newlyShort })

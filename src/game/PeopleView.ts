@@ -25,6 +25,7 @@ interface Walker {
   offset: THREE.Vector2 // a small sideways shift so walkers don't overlap exactly
   pause: number // seconds left standing still
   goingHome: boolean
+  visiting: string | null // the type of building headed to, e.g. 'park'
   phase: number // for the walking bob
 }
 
@@ -79,8 +80,15 @@ export class PeopleView {
     for (const walker of [...this.walkers]) this.move(walker, dt)
   }
 
-  // A walker can stand on owned land that has no building on it.
-  private passable = (tile: Tile) => inBounds(tile) && this.city.ownsTile(tile) && !this.city.buildingAt(tile)
+  // A walker can stand on owned land that's empty or a road.
+  private passable = (tile: Tile) => {
+    if (!inBounds(tile) || !this.city.ownsTile(tile)) return false
+    const here = this.city.buildingAt(tile)
+    return !here || here.type.category === 'road'
+  }
+
+  // Walking on grass "costs" more than on a road, so paths stick to roads when they can.
+  private cost = (tile: Tile) => (this.city.isRoad(tile) ? 1 : 2.5)
 
   // Free tiles right next to a building: where someone would come and go.
   private doorsteps(b: PlacedBuilding): Tile[] {
@@ -114,6 +122,7 @@ export class PeopleView {
       offset: new THREE.Vector2((Math.random() - 0.5) * 0.5, (Math.random() - 0.5) * 0.5),
       pause: 0,
       goingHome: false,
+      visiting: null,
       phase: Math.random() * Math.PI * 2,
     }
     if (!this.chooseDestination(walker)) return
@@ -130,13 +139,16 @@ export class PeopleView {
       const home = this.city.get(walker.homeId)
       goal = home && pick(this.doorsteps(home))
     } else {
-      // Mostly visit another building (shops are popular), sometimes just wander.
-      const others = [...this.city.all()].filter((b) => b.id !== walker.homeId && b.type.category !== 'decoration')
-      const shops = others.filter((b) => b.type.category === 'business')
-      const target = shops.length > 0 && Math.random() < 0.5 ? pick(shops) : others.length > 0 ? pick(others) : null
+      // Mostly visit another building (shops and parks are popular), sometimes just wander.
+      const others = [...this.city.all()].filter(
+        (b) => b.id !== walker.homeId && b.type.category !== 'decoration' && b.type.category !== 'road',
+      )
+      const favorites = others.filter((b) => b.type.category === 'business' || b.type.id === 'park')
+      const target = favorites.length > 0 && Math.random() < 0.5 ? pick(favorites) : others.length > 0 ? pick(others) : null
+      walker.visiting = target?.type.id ?? null
       goal = target ? pick(this.doorsteps(target)) : this.randomSpotNear(from)
     }
-    const path = goal && findPath(from, goal, this.passable)
+    const path = goal && findPath(from, goal, this.passable, { cost: this.cost })
     if (!path || path.length < 2) return false
     walker.path = path
     walker.step = 0
@@ -172,7 +184,8 @@ export class PeopleView {
         // Arrived.
         walker.step = walker.path.length - 1
         walker.t = 0
-        walker.pause = walker.goingHome ? 0.3 : 1 + Math.random() * 3
+        // People linger in parks.
+        walker.pause = walker.goingHome ? 0.3 : walker.visiting === 'park' ? 5 + Math.random() * 6 : 1 + Math.random() * 3
         break
       }
       // Something was built in the way since the path was planned: plan again.

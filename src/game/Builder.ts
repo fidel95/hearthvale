@@ -43,6 +43,10 @@ export class Builder {
   private hoverTile: Tile | null = null
   private footprint: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>
   private ghost: THREE.Group | null = null
+  // While placing a community building: the area its bonus reaches.
+  private area: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>
+  // The last tile painted in a road drag, to fill in tiles a fast drag skips over.
+  private lastPainted: Tile | null = null
   // One shared see-through material for the ghost; we just recolor it.
   private ghostMaterial = new THREE.MeshLambertMaterial({ transparent: true, opacity: 0.6 })
 
@@ -66,6 +70,12 @@ export class Builder {
     )
     this.footprint.visible = false
     scene.add(this.footprint)
+    this.area = new THREE.Mesh(
+      new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2),
+      new THREE.MeshBasicMaterial({ color: '#5aa0e0', transparent: true, opacity: 0.18, depthWrite: false }),
+    )
+    this.area.visible = false
+    scene.add(this.area)
 
     canvas.addEventListener('pointermove', (e) => this.updateHover(e.clientX, e.clientY))
     canvas.addEventListener('pointerleave', () => {
@@ -95,6 +105,8 @@ export class Builder {
       this.scene.add(this.ghost)
     }
     if (mode.kind === 'move' && mode.carrying) this.cityView.setVisible(mode.carrying.id, false)
+    // Roads are drawn by dragging; everything else drags the camera.
+    this.controls.paint = mode.kind === 'build' && mode.type.category === 'road' ? (x, y, first) => this.paintRoad(x, y, first) : null
 
     this.refresh()
     this.onModeChange?.(mode)
@@ -132,6 +144,35 @@ export class Builder {
         this.city.clearPlot(building.id, now)
         break
     }
+  }
+
+  // One step of a road drag: place road on every tile from the last one painted
+  // to this one (a fast drag can jump several tiles between pointer events).
+  private paintRoad(clientX: number, clientY: number, first: boolean) {
+    if (this.mode.kind !== 'build') return
+    const type = this.mode.type
+    const point = this.controls.groundPointAt(clientX, clientY)
+    const tile = point && worldToTile(point)
+    if (!tile) return
+    if (first) this.lastPainted = null
+    const from = this.lastPainted ?? tile
+    // Step one tile at a time along x, then along z.
+    const steps: Tile[] = []
+    let { x, z } = from
+    steps.push({ x, z })
+    while (x !== tile.x) steps.push({ x: (x += Math.sign(tile.x - x)), z })
+    while (z !== tile.z) steps.push({ x, z: (z += Math.sign(tile.z - z)) })
+    for (const t of steps) {
+      if (!this.city.canPlace(type, t)) continue
+      if (!this.city.canAfford(type)) {
+        if (first) this.onNotice?.(`Not enough coins for a ${type.name}`)
+        break
+      }
+      this.city.place(type, t)
+    }
+    this.lastPainted = tile
+    this.hoverTile = tile
+    this.refresh()
   }
 
   // Collect every ready building and harvest every ripe crop, one energy
@@ -204,6 +245,7 @@ export class Builder {
   // Redraw the footprint and ghost for the current mode and hovered tile.
   private refresh() {
     this.footprint.visible = false
+    this.area.visible = false
     if (this.ghost) this.ghost.visible = false
     const tile = this.hoverTile
     // The info card only shows in select mode, so it doesn't get in the way while building.
@@ -221,6 +263,13 @@ export class Builder {
       this.ghostMaterial.color.set(color)
       this.ghost!.position.copy(footprintCenter(anchor, type.size))
       this.ghost!.visible = true
+      if (type.amenity) {
+        // Show the reach: the footprint grown by the radius on every side.
+        const r = type.amenity.radius
+        this.area.position.copy(footprintCenter(anchor, type.size)).setY(0.015)
+        this.area.scale.set(type.size.x + 2 * r, 1, type.size.z + 2 * r)
+        this.area.visible = true
+      }
       return
     }
 

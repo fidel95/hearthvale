@@ -31,7 +31,7 @@ export interface UtilityStatus {
 
 export interface ServiceReport {
   population: number
-  upkeep: number // coins per game month to run every utility building
+  upkeep: number // coins per game month to run every utility and community building
   utilities: Record<Utility, UtilityStatus>
 }
 
@@ -43,10 +43,8 @@ export function serviceReport(types: Iterable<BuildingType>): ServiceReport {
   for (const type of types) {
     population += type.residents ?? 0
     for (const u of UTILITIES) demand[u] += type.needs?.[u] ?? 0
-    if (type.supplies) {
-      supply[type.supplies.utility] += type.supplies.amount
-      upkeep += type.supplies.upkeep
-    }
+    if (type.supplies) supply[type.supplies.utility] += type.supplies.amount
+    upkeep += type.upkeep ?? 0
   }
   const status = (u: Utility): UtilityStatus => ({
     supply: supply[u],

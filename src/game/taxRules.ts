@@ -111,6 +111,8 @@ export const RECOVERY_YEARS: Record<Category, number | null> = {
   decoration: 15, // land improvements (landscaping, fences, ...)
   farm: null, // land
   utility: 20, // a default; each utility building sets its own class (buildings.ts recoveryYears)
+  community: 39, // nonresidential real property (a park overrides it: land improvement)
+  road: 15, // land improvements: roads, sidewalks
 }
 
 // Depreciation for one full month. In the month a building is placed you get

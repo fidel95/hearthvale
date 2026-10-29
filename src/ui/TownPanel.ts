@@ -1,6 +1,7 @@
 import { BUILDING_TYPES } from '../game/buildings'
 import type { City } from '../game/City'
 import type { Services } from '../game/Services'
+import { MAX_LOCATION_BONUS } from '../game/communityRules'
 import { COUNTY_SUPPLY, UTILITIES, UTILITY_INFO, incomeMultiplier } from '../game/utilityRules'
 import { coins, el, percent } from './dom'
 
@@ -97,6 +98,22 @@ export class TownPanel {
         "Homes and shops can't run without water and power, so their income scales with both. Uncollected trash makes the town less pleasant: up to a quarter less. Farms only need water, for irrigation.",
       ),
     )
+    // Location: how parks, schools, fire stations and roads lift homes and shops.
+    const earners = [...this.city.all()].filter((b) => b.type.category === 'home' || b.type.category === 'business')
+    const boosted = earners.filter((b) => this.services.bonus(b).total > 0)
+    const average = earners.length > 0 ? earners.reduce((sum, b) => sum + this.services.bonus(b).total, 0) / earners.length : 0
+    const community = el('section', 'tax-section')
+    community.append(
+      el('h3', '', '🏫 Community'),
+      el('p', '', `${boosted.length} of ${earners.length} homes and shops get a location bonus, +${percent(average)} on average.`),
+      el(
+        'p',
+        'muted',
+        `Parks, fire stations and schools raise the income of homes and shops nearby, and so does being beside a road. Like real property, a better location also means a higher assessed value, so property tax goes up too. Bonuses stack up to +${percent(MAX_LOCATION_BONUS)}.`,
+      ),
+    )
+    parts.push(community)
+
     const running = el('section', 'tax-section')
     running.append(
       el('h3', '', 'Running costs'),
@@ -104,7 +121,7 @@ export class TownPanel {
       el(
         'p',
         'muted',
-        "Paid at the end of each month, like a real town's utility bills. Running costs are a business expense, so they're deducted from your taxable income. Compare the Power Plant (cheap to build, fuel makes it costly to run) with the Solar Farm (costly to build, almost free to run).",
+        "Utility and community buildings are paid for at the end of each month, like a real town's bills. Running costs are a business expense, so they're deducted from your taxable income. Compare the Power Plant (cheap to build, fuel makes it costly to run) with the Solar Farm (costly to build, almost free to run).",
       ),
     )
     parts.push(effect, running)

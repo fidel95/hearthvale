@@ -316,7 +316,44 @@ the `*.test.ts` files, and [TAXES.md](TAXES.md)
 
 ---
 
+## Stage 7: roads and community
+
+**Files:** `communityRules.ts`, `RoadView.ts`, `Builder.paintRoad`,
+`CameraController.paint`, `pathfinding.ts` (costs), `Services.ts` (bonuses),
+`ui/Hud.ts` (catalog tabs)
+
+- **Bitmask autotiling.** Each road tile asks its four neighbors "are you a
+  road?" and packs the answers into 4 bits: 16 possible shapes, picked with
+  no if-else chains. Many 2D games tile walls, water and paths this way.
+- **Rebuild once per frame.** Dragging a road can add 10 tiles in one frame.
+  RoadView marks itself dirty and rebuilds once in `update()`, not 10 times.
+  This "dirty flag" pattern shows up everywhere in UI and game code.
+- **Weighted A*.** Give each step a cost instead of counting steps, and A*
+  finds the cheapest path. Roads cost 1, grass 2.5, so walkers detour to a
+  road when it's worth it. The heuristic must never overestimate, which holds
+  as long as no step costs less than 1.
+- **Input modes.** The same drag pans the camera, or paints roads. The
+  controller doesn't know about roads; Builder lends it a `paint` function
+  while road mode is on. Small hooks like this keep classes independent.
+- **Location, location, location.** Amenities raise income and value with
+  one number, `valueMultiplier`, which Taxes uses for property tax: the real
+  link between a nice neighborhood and a higher tax bill.
+- **Balance bugs are bugs.** Roads first gave 1 XP per tile, making a scribble
+  of road the fastest way to level. A playtest (the screenshot was full of
+  "+1 ⭐") caught it; `buildXp` now rounds down, with a test for road tiles.
+- **Testing with a frozen clock.** Playwright waits for an element to stop
+  moving before clicking it, which needs animation frames, which a frozen
+  test clock never delivers. The browser tests click through the DOM instead.
+
+**Try it:**
+
+1. Add a Library: 2×2, +5% within 8 tiles, cheap to run. Only data changes.
+2. Make roads required: homes with no road beside them earn half. Where
+   does that rule belong? (In `locationBonus`, or next to it in `Services`.)
+3. Give RoadView crosswalks at junctions (`links.length >= 3`).
+
+---
+
 ## Coming next
 
-- **Stage 7:** roads (walkers will prefer them), community buildings.
 - **Stage 8:** a supply chain, with cost of goods sold as a real deduction.

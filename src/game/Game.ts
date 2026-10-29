@@ -18,6 +18,7 @@ import { IncomeView } from './IncomeView'
 import { LandView } from './LandView'
 import { WELCOME_BACK_AFTER_MS, awaySummary } from './offline'
 import { PeopleView } from './PeopleView'
+import { RoadView } from './RoadView'
 import { Player } from './Player'
 import { Services } from './Services'
 import { AutoSaver, clearSave, readSave } from './save'
@@ -52,6 +53,7 @@ export class Game {
   // Views and UI that react to the state.
   private cityView: CityView
   private peopleView: PeopleView
+  private roadView: RoadView
   private incomeView: IncomeView
   private hud: Hud
   private saver: AutoSaver
@@ -86,6 +88,7 @@ export class Game {
     const landView = new LandView(this.scene, this.city)
     this.cityView = new CityView(this.scene, this.city)
     this.peopleView = new PeopleView(this.scene, this.city)
+    this.roadView = new RoadView(this.scene, this.city)
     this.taxes = new Taxes(this.city, this.clock)
     const builder = new Builder(this.scene, this.city, this.player, this.cityView, this.controls, this.renderer.domElement)
     this.incomeView = new IncomeView(this.scene, this.city, this.cityView, this.services, (b) => builder.tap(b))
@@ -146,6 +149,7 @@ export class Game {
 
     const now = Date.now()
     this.cityView.update(now)
+    this.roadView.update()
     // Capped, so a tab coming back from the background doesn't teleport everyone.
     this.peopleView.update(Math.min(dt, 100) / 1000)
     this.incomeView.update(now)
