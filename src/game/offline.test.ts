@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { BUILDINGS_BY_ID } from './buildings'
 import { City } from './City'
 import { CROPS_BY_ID } from './crops'
+import { Docks } from './Docks'
 import { awaySummary } from './offline'
 import { Player } from './Player'
 import { ENERGY_REGEN_MS } from './progression'
@@ -28,7 +29,7 @@ describe('awaySummary', () => {
     const leftAt = 1000
     const back = 2 * ENERGY_REGEN_MS + 1000 // just over 4 minutes later
 
-    const s = awaySummary(city, player, leftAt, back)
+    const s = awaySummary(city, player, new Docks(city), leftAt, back)
     expect(s.readyBuildings).toBe(2)
     expect(s.readyCoins).toBe(30)
     expect(s.ripeCrops).toBe(1)
@@ -42,6 +43,6 @@ describe('awaySummary', () => {
     const player = new Player(city, () => 0)
     const p = city.place(plot, at(0, 0), { free: true })!
     city.plant(p.id, strawberries, { now: 0, free: true })
-    expect(awaySummary(city, player, 300_000, 900_000).witheredCrops).toBe(0)
+    expect(awaySummary(city, player, new Docks(city), 300_000, 900_000).witheredCrops).toBe(0)
   })
 })

@@ -47,6 +47,7 @@ function returnRows(r: TaxReturn): Row[] {
     ['Gross income', coins(r.grossIncome), 'total'],
     ['− Seeds (farm expenses)', coins(r.farmExpenses), 'minus'],
     ['− Running costs (utilities, community)', coins(r.operatingExpenses), 'minus'],
+    ['− Cost of goods sold', coins(r.costOfGoodsSold), 'minus'],
     ['− Property tax', coins(r.propertyTax), 'minus'],
     ['− Depreciation', coins(r.depreciation), 'minus'],
     ['− Standard deduction', coins(r.standardDeduction), 'minus'],
@@ -197,6 +198,18 @@ export class TaxPanel {
         ),
       ),
       section(
+        'Inventory',
+        table([
+          ['Goods in storage', `📦 ${this.taxes.inventory.units}`],
+          ['What they cost you', coins(this.taxes.inventory.cost), 'total'],
+        ]),
+        el(
+          'p',
+          'muted',
+          "Goods are an asset, not an expense: buying a shipment isn't deductible. Each time a shop sells goods, their share of the cost moves to cost of goods sold, at the average cost per unit. Goods from your own farms cost nothing here, because their seeds were already deducted.",
+        ),
+      ),
+      section(
         'Property tax',
         table([
           ...properties
@@ -269,6 +282,10 @@ export class TaxPanel {
       [
         'Utilities',
         "Water towers, power plants and recycling centers cost money every month to run. Those running costs are ordinary business expenses, deducted in full the year you pay them. The plants themselves are depreciated over their real US classes: water 25 years, power plants 20, recycling 7, solar just 5 (a deliberate incentive).",
+      ],
+      [
+        'Inventory',
+        "Real stores deduct the cost of goods when they sell them, not when they buy them (cost of goods sold). Goods left in storage at year end are an asset carried into next year.",
       ],
       [
         'Prizes',

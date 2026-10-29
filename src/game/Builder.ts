@@ -5,6 +5,7 @@ import { duration, outOfEnergyMessage } from '../ui/dom'
 import type { City, PlacedBuilding } from './City'
 import type { CityView } from './CityView'
 import { cropState } from './crops'
+import type { Docks } from './Docks'
 import { footprintCenter, worldToTile, type Tile } from './grid'
 import { createBuildingObject } from './models'
 import type { Player } from './Player'
@@ -34,10 +35,13 @@ export class Builder {
   onNotice?: (message: string) => void
   // An empty farm plot was tapped: show the seeds to choose from.
   onPlantRequest?: (plot: PlacedBuilding) => void
+  // An idle dock was tapped: show the shipments to order.
+  onDockRequest?: (dock: PlacedBuilding) => void
 
   private scene: THREE.Scene
   private city: City
   private player: Player
+  private docks: Docks
   private cityView: CityView
   private controls: CameraController
   private hoverTile: Tile | null = null
@@ -54,6 +58,7 @@ export class Builder {
     scene: THREE.Scene,
     city: City,
     player: Player,
+    docks: Docks,
     cityView: CityView,
     controls: CameraController,
     canvas: HTMLCanvasElement,
@@ -61,6 +66,7 @@ export class Builder {
     this.scene = scene
     this.city = city
     this.player = player
+    this.docks = docks
     this.cityView = cityView
     this.controls = controls
 
@@ -124,8 +130,20 @@ export class Builder {
       this.onNotice?.(outOfEnergyMessage(this.player, now))
       return true
     }
+    if (building.type.category === 'port') {
+      const state = this.docks.state(building, now)
+      if (state.stage === 'idle') this.onDockRequest?.(building)
+      else if (state.stage === 'sailing') this.onNotice?.(`🚢 Ship arriving in ${duration(state.shipment.arrivesAt - now)}`)
+      else if (!outOfEnergy() && this.docks.unload(building, now) === 0) this.onNotice?.('Storage is full. Sell goods at your shops, or build a Barn or Warehouse.')
+      return
+    }
     if (building.type.category !== 'farm') {
-      if (this.city.isReady(building, now) && !outOfEnergy()) this.city.collect(building.id, now)
+      if (!this.city.isReady(building, now)) return
+      if (!this.city.hasStock(building)) {
+        this.onNotice?.(`${building.type.name} needs 📦 ${building.type.goodsPerSale} goods to sell. Harvest crops, or order a shipment at a Dock.`)
+        return
+      }
+      if (!outOfEnergy()) this.city.collect(building.id, now)
       return
     }
     const state = cropState(building.crop, now)
@@ -182,7 +200,7 @@ export class Builder {
     let actions = 0
     let coins = 0
     for (const b of this.city.all()) {
-      const ready = this.city.isReady(b, now) || cropState(b.crop, now).stage === 'ripe'
+      const ready = (this.city.isReady(b, now) && this.city.hasStock(b)) || cropState(b.crop, now).stage === 'ripe'
       if (!ready) continue
       if (!this.player.hasEnergy(now)) return { actions, coins, outOfEnergy: true }
       coins += b.type.category === 'farm' ? this.city.harvest(b.id, now) : this.city.collect(b.id, now)

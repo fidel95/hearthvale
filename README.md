@@ -57,6 +57,9 @@ to make each in-game month last one second, so you can watch a whole tax year in
 - **Energy (⚡):** collecting, harvesting, planting and clearing use 1 energy each; building and moving don't. It refills by 1 every 2 minutes, in real time, even while the game is closed.
 - **Land:** the world is 60×60 tiles, in 10×10 lots. You start with the middle four. Tap a 🏷️ sign on a lot next to your land to buy it; each lot costs more than the last and needs a higher level. Land pays property tax but is never depreciated.
 - **Utilities:** homes, shops and farms use 💧 water, 🔌 electricity and 🗑️ trash pickup. The county covers a small town for free; after that, build a Water Tower, Power Plant or Solar Farm, and Recycling Center. Plants cost coins every month to run (deductible on your taxes). When supply falls short, income drops: the top-left line turns red and the **Town** window shows what to build.
+- **The coast:** the south of the world is sea, with a beach, sailboats and fishing boats. Buy the lots south of town to reach the shore.
+- **Goods and storage (📦):** shops need goods to sell (the Bakery uses 4 a sale, the General Store 7) and show a grey 📦 bubble when they run out. Once you have a shop, harvests go into storage as goods; whatever doesn't fit is sold at the market for coins. Storage starts at 100; a Barn adds 150, a Warehouse 400, a Dock 100.
+- **Docks and shipping:** build a Dock on the shore and tap it to order goods: a coastal freighter (40 goods, 1 minute) or a container ship (150, cheaper per good, 5 minutes). The ship sails in from the horizon and arrives on time; tap 🚢 to unload (⚡1). Ships keep sailing while the game is closed.
 - **Roads:** pick Road from the build menu's Town tab and drag across the map to draw (a tap places one tile). Roads join up into straights, corners and crossings by themselves. Homes and shops touching a road earn +5%, and walkers prefer roads.
 - **Community buildings:** a Park, Fire Station and School each raise the income of homes and shops nearby (+10%, +10%, +15%), shown as a blue area while placing. Bonuses stack up to +40%. A better location also raises a building's assessed value, so property tax goes up too, as it does in real life. Each has a monthly running cost.
 - **People:** each home has residents (👥). About one in two is out walking at any time, between home, shops and neighbors.
@@ -75,13 +78,13 @@ to make each in-game month last one second, so you can watch a whole tax year in
 
 ### Taxes in one paragraph
 
-Homes earn rent, shops earn sales and farms earn crop sales. Level-up rewards are prize money, which is taxable too. Shops also
+Homes earn rent, shops earn sales and farms earn crop sales. Level-up rewards are prize money, which is taxable too. Goods are inventory: buying a shipment isn't deductible, but each sale deducts what its goods cost (cost of goods sold). Shops also
 collect 7% sales tax from customers, which you hold for the state and hand
 over each quarter. Crops are sold wholesale, so they carry no sales tax, and
 the seeds you buy are a deductible farm expense. Every
 building owes property tax on its assessed value. On Tax Day, your income
 minus deductions is taxed using the real US 2024 brackets, scaled ÷10.
-Deductions are the standard deduction, seeds, utility running costs, property tax (on buildings and land) and depreciation. If a bill pushes your coins below zero, you're in tax debt,
+Deductions are the standard deduction, seeds, cost of goods sold, running costs, property tax (on buildings and land) and depreciation. If a bill pushes your coins below zero, you're in tax debt,
 and a 0.5% penalty is added each month until you've paid it off.
 [docs/TAXES.md](docs/TAXES.md) has the details.
 
@@ -97,6 +100,8 @@ src/
     buildings.ts          the building catalog (pure data)
     crops.ts              the crop catalog and crop stages (empty → growing → ripe → withered)
     land.ts               starting land and expansion prices
+    terrain.ts            the coastline: which tiles are sea
+    Docks.ts              shipments: ordering, sailing time, unloading
     utilityRules.ts       water, power and trash: demand, supply, effect on income (pure functions)
     communityRules.ts     location bonuses (parks, schools, roads) and road shapes (pure functions)
     Services.ts           keeps utilities and location bonuses current; pays running costs monthly
@@ -114,6 +119,7 @@ src/
     LandView.ts           the ground, owned land and "for sale" signs
     PeopleView.ts         residents walking around town
     RoadView.ts           draws the road network as one merged mesh
+    ShipView.ts           sailboats, fishing boats and cargo ships
     models.ts             loads .glb models, draws placeholder shapes and crops
     Builder.ts            build / move / demolish tools, ghost preview, what a tap does
     IncomeView.ts         HTML labels over buildings: bubbles, pop-ups, info card
@@ -126,6 +132,7 @@ src/
     LandPanel.ts          the window for buying land
     TownPanel.ts          the Town window: population and utilities
     WelcomeBackPanel.ts   the "Welcome back" summary
+    DockPanel.ts          ordering shipments at a dock
     dom.ts                small DOM helpers
 public/models/            3D models served as-is (Kenney City Kit, CC0)
 assets-src/               raw downloaded asset packs (git-ignored)
@@ -146,8 +153,8 @@ docs/                     the docs linked above
 | 5.5 | ✅ | Expandable land, utilities (water, power, trash), walking residents, save upgrades |
 | 6 | ✅ | "Welcome back" summary, collect all, save upgrades |
 | 7 | ✅ | Roads (drag to draw, autotiled), parks, fire stations, schools, location bonuses |
-| 8 | ⏳ | Supply chain: farm goods stock shops (cost of goods becomes deductible) |
-| 9 | | Quests and goals |
+| 8 | ✅ | Coast and sea, goods and storage, docks and cargo ships, inventory and cost of goods sold |
+| 9 | ⏳ | Quests and goals |
 | 10 | | Land expansions, decorations that boost payouts |
 | 11 | | Simulated neighbors to visit and help |
 | 12 | | Polish (animation, sound, citizens) and deploy |

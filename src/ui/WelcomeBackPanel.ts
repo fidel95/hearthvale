@@ -36,6 +36,7 @@ export class WelcomeBackPanel {
     if (s.readyBuildings > 0) lines.push(`🪙 ${s.readyBuildings} building${s.readyBuildings === 1 ? '' : 's'} ready to collect (${coins(s.readyCoins)})`)
     if (s.ripeCrops > 0) lines.push(`🧺 ${s.ripeCrops} crop${s.ripeCrops === 1 ? '' : 's'} ripe (${coins(s.ripeValue)})`)
     if (s.witheredCrops > 0) lines.push(`🥀 ${s.witheredCrops} crop${s.witheredCrops === 1 ? '' : 's'} withered while you were away`)
+    if (s.shipsWaiting > 0) lines.push(`🚢 ${s.shipsWaiting} ship${s.shipsWaiting === 1 ? '' : 's'} in port, waiting to unload`)
     if (s.energyGained > 0) lines.push(`⚡ +${s.energyGained} energy`)
     if (lines.length === 0) lines.push('Nothing new yet.')
 

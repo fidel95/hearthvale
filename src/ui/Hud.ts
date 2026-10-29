@@ -29,8 +29,8 @@ function hintFor(mode: Mode): string {
 // The build menu's tabs, and which categories each one shows.
 const CATALOG_TABS: { label: string; categories: Category[] }[] = [
   { label: 'Homes', categories: ['home'] },
-  { label: 'Shops', categories: ['business'] },
-  { label: 'Farms', categories: ['farm'] },
+  { label: 'Shops', categories: ['business', 'port'] },
+  { label: 'Farms', categories: ['farm', 'storage'] },
   { label: 'Town', categories: ['road', 'community'] },
   { label: 'Utilities', categories: ['utility'] },
   { label: 'Decor', categories: ['decoration'] },
@@ -48,6 +48,7 @@ export class Hud {
   private xpBar = el('div', 'xp-fill')
   private energy = el('div', 'energy')
   private town = el('div', 'town-line')
+  private goods = el('div', 'town-line')
   private date = el('div', 'date-label')
   private monthBar = el('div', 'month-bar-fill')
   private toasts = el('div', 'toasts')
@@ -71,7 +72,7 @@ export class Hud {
     monthBar.append(this.monthBar)
     const xpBar = el('div', 'xp-bar')
     xpBar.append(this.xpBar)
-    status.append(this.coins, this.level, xpBar, this.energy, this.town, this.date, monthBar)
+    status.append(this.coins, this.level, xpBar, this.energy, this.town, this.goods, this.date, monthBar)
 
     // ---- Top middle: what the current tool does, with a way out on touch screens (no Esc key)
     const hint = el('div', 'hint')
@@ -109,6 +110,9 @@ export class Hud {
         const people = type.residents ? `👥 ${type.residents} · ` : ''
         item.append(el('span', 'catalog-meta', `${people}uses ${needs.join(' ')}`))
       }
+      if (type.goodsPerSale) item.append(el('span', 'catalog-meta', `Sells 📦 ${type.goodsPerSale} goods each time`))
+      if (type.storage) item.append(el('span', 'catalog-meta', `Stores 📦 ${type.storage} goods`))
+      if (type.onShore) item.append(el('span', 'catalog-meta', 'Build on the shore · order shipments by sea'))
       if (type.supplies) {
         const { utility, amount } = type.supplies
         item.append(el('span', 'catalog-meta', `Supplies ${UTILITY_INFO[utility].icon} ${amount}`))
@@ -217,6 +221,14 @@ export class Hud {
     }
     services.onChange(showTown)
     showTown()
+
+    // Goods in storage, out of what fits. Red when full: harvests are being sold off instead.
+    const showGoods = () => {
+      const full = city.goods >= city.storageCapacity
+      this.goods.replaceChildren(el('span', full ? 'short' : '', `📦 ${city.goods}/${city.storageCapacity} goods`))
+    }
+    city.onChange((e) => (e.kind === 'goods' || e.kind === 'added' || e.kind === 'removed') && showGoods())
+    showGoods()
       refreshCatalog()
     })
     showLevel()

@@ -9,7 +9,11 @@ export interface CropType {
   emoji: string
   seedCost: number // paid when planting
   growSeconds: number // planting → ripe
-  sellPrice: number // coins for the harvest
+  sellPrice: number // coins for the harvest, sold wholesale at the market
+  // Goods the harvest adds to storage when your shops can use them. Shops sell
+  // a good for about 10 coins, more than the market pays, so stocking your own
+  // shops earns more than selling wholesale (that's a store's markup).
+  goods: number
   xp: number // experience for harvesting it
   unlockLevel: number // the player level that makes it available (progression.ts)
   // How long it stays ripe before it withers and the harvest is lost.
@@ -32,6 +36,7 @@ export const CROP_TYPES: CropType[] = [
     seedCost: 10,
     growSeconds: 1 * MINUTE,
     sellPrice: 40,
+    goods: 6,
     xp: 1,
     unlockLevel: 1,
     freshSeconds: 3 * MINUTE,
@@ -44,6 +49,7 @@ export const CROP_TYPES: CropType[] = [
     seedCost: 15,
     growSeconds: 5 * MINUTE,
     sellPrice: 120,
+    goods: 18,
     xp: 2,
     unlockLevel: 2,
     freshSeconds: 15 * MINUTE,
@@ -56,6 +62,7 @@ export const CROP_TYPES: CropType[] = [
     seedCost: 30,
     growSeconds: 20 * MINUTE,
     sellPrice: 360,
+    goods: 54,
     xp: 4,
     unlockLevel: 4,
     freshSeconds: 1 * HOUR,
@@ -68,6 +75,7 @@ export const CROP_TYPES: CropType[] = [
     seedCost: 40,
     growSeconds: 1 * HOUR,
     sellPrice: 750,
+    goods: 110,
     xp: 7,
     unlockLevel: 7,
     freshSeconds: 3 * HOUR,
@@ -80,6 +88,7 @@ export const CROP_TYPES: CropType[] = [
     seedCost: 60,
     growSeconds: 4 * HOUR,
     sellPrice: 2000,
+    goods: 300,
     xp: 12,
     unlockLevel: 9,
     freshSeconds: 8 * HOUR,
@@ -92,6 +101,7 @@ export const CROP_TYPES: CropType[] = [
     seedCost: 80,
     growSeconds: 8 * HOUR,
     sellPrice: 3000,
+    goods: 450,
     xp: 16,
     unlockLevel: 10,
     freshSeconds: 16 * HOUR,

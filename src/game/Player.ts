@@ -65,6 +65,10 @@ export class Player {
         case 'cleared':
           this.spendEnergy(now)
           break
+        case 'goodsIn': // unloading a ship
+          this.spendEnergy(now)
+          this.addXp(Math.max(1, Math.floor(event.units / 20)), now)
+          break
       }
     })
   }

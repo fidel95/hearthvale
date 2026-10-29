@@ -121,7 +121,9 @@ placed in service you get half a month (the **mid-month convention**).
 | Power Plant | Electric utility steam production plant | 20 | 500 ÷ 20 = 25 per year |
 | Recycling Center | Waste reduction and resource recovery plant | 7 | 300 ÷ 7 = 42.86 per year |
 | Solar Farm | Solar energy property | 5 | 1,200 ÷ 5 = 240 per year |
-| Roads, Park | Land improvements | 15 | Road tile: 10 ÷ 15 = 0.67 per year |
+| Roads, Park, Dock | Land improvements (docks and wharves) | 15 | Dock: 800 ÷ 15 = 53.33 per year |
+| Barn | Farm buildings | 20 | 150 ÷ 20 = 7.50 per year |
+| Warehouse | Nonresidential real property | 39 | 500 ÷ 39 = 12.82 per year |
 | Fire Station, School | Nonresidential real property | 39 | School: 900 ÷ 39 = 23.08 per year |
 
 Solar's short 5-year period is a real, deliberate tax incentive: deducting
@@ -192,6 +194,34 @@ Harvest (income)       40 coins     ← counted when harvested
 Taxable profit         30 coins
 ```
 
+## 4b. Inventory and cost of goods sold
+
+**Real rule:** a business that sells goods can't deduct them when it buys
+them. Goods on the shelf are **inventory**, an asset. Their cost is deducted
+when they're sold, as **cost of goods sold** (COGS). At the end of the year,
+the cost of unsold goods carries into next year. A business picks a method
+for working out which goods were sold; the **average cost** method uses
+total cost ÷ units.
+
+**In the game:**
+
+| What happens | Tax effect |
+|---|---|
+| You order a shipment (pay 240 for 40 goods) | Nothing deducted; inventory cost +240 |
+| The ship is unloaded | Inventory: +40 units |
+| A harvest goes into storage | Inventory: + units at no cost (the seeds were already deducted) |
+| A shop sells, using 4 goods | COGS += 4 × average cost; inventory shrinks |
+| Year ends with goods left | Their cost stays in inventory: no deduction yet |
+
+```
+40 free starting goods + 40 bought for 240  → 80 goods costing 240 (3 each on average)
+Bakery sells: 40 coins income, uses 4 goods → cost of goods sold 12
+Profit on that sale                          → 28 (plus 3 sales tax collected for the state)
+```
+
+The Taxes window shows inventory (units and cost) and the year's cost of
+goods sold. Selling surplus crops at the market is still farm income, as before.
+
 ## 5. Income tax
 
 **Real rule:** federal income tax uses **marginal brackets**. Each rate applies
@@ -216,7 +246,7 @@ dollar amounts divided by 10 (1 coin ≈ $10):
 
 ```
 Gross income     = rent + shop sales + crop sales + prizes   (not the sales tax)
-Taxable income   = gross − seeds − utility costs − property tax − depreciation − standard deduction   (never below 0)
+Taxable income   = gross − seeds − cost of goods sold − running costs − property tax − depreciation − standard deduction   (never below 0)
 Income tax       = sum over brackets of (income in bracket × rate)
 ```
 
@@ -325,6 +355,7 @@ come in later stages:
 - **Operating expenses.** The 40% expense ratio is only used to value property; you don't actually pay or deduct those costs. Stage 8 adds real costs (goods for shops), which become deductible as cost of goods sold.
 - **Passive activity loss rules**, which limit rental losses against other income, and **depreciation recapture** on sale. You can't sell buildings in the game.
 - **Interest on unpaid tax and the 25% penalty cap.** The game only charges the 0.5% monthly penalty.
+- **Inventory methods.** Real businesses can choose FIFO, LIFO or average cost; the game uses average cost. Large businesses must also add some overhead into inventory cost (the "uniform capitalization" rules); small ones are exempt.
 - **Utility bills.** Real towns charge residents for water, power and trash, which would be income for a town that owns the plants. In the game you own every building, so the plants are pure costs.
 - **Mid-month convention for land.** Land tax accrues for the full month a lot is bought.
 - **Farmland assessment.** Many states value farmland at what it earns farming ("current use" or "use-value" assessment), usually below market value. The game values a plot at what it cost.

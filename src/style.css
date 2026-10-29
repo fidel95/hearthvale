@@ -487,6 +487,32 @@ button {
   animation-duration: 1.6s;
 }
 
+.popup-goods {
+  font-size: 18px;
+  color: #f3dcb0;
+  -webkit-text-stroke: 1px #6b4a1f;
+  text-shadow: 0 2px 0 #6b4a1f;
+  translate: -40px 8px;
+  animation-name: float-up-goods;
+}
+
+@keyframes float-up-goods {
+  to {
+    translate: -40px -40px;
+    opacity: 0;
+  }
+}
+
+/* An out-of-stock shop: a grey bubble that doesn't bob. */
+.bubble-stock .bubble-face,
+.bubble-stock .bubble-face::after {
+  background: #d8d0c2;
+}
+
+.bubble-stock .bubble-face {
+  animation: none;
+}
+
 @keyframes float-up {
   to {
     translate: 0 -50px;

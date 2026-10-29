@@ -1,6 +1,7 @@
 import type { CitySave } from './City'
 import { LOT_SIZE } from './grid'
 import { START_LOTS, START_LOT_VALUE } from './land'
+import type { Shipment } from './Docks'
 import type { PlayerSave } from './Player'
 import type { TaxesSave } from './Taxes'
 
@@ -19,6 +20,7 @@ export interface SaveData {
   clock: { playedMs: number }
   taxes: TaxesSave
   player?: PlayerSave // missing in saves from before Stage 5
+  shipments?: Shipment[] // missing in saves from before Stage 8
 }
 
 export function readSave(): SaveData | null {

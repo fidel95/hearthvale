@@ -4,7 +4,16 @@
 
 import type { Utility } from './utilityRules'
 
-export type Category = 'home' | 'business' | 'farm' | 'decoration' | 'utility' | 'community' | 'road'
+export type Category =
+  | 'home'
+  | 'business'
+  | 'farm'
+  | 'decoration'
+  | 'utility'
+  | 'community'
+  | 'road'
+  | 'storage'
+  | 'port'
 
 export type PlaceholderShape =
   | 'house'
@@ -19,6 +28,9 @@ export type PlaceholderShape =
   | 'park'
   | 'school'
   | 'firestation'
+  | 'barn'
+  | 'warehouse'
+  | 'dock'
 
 export interface BuildingType {
   id: string
@@ -39,6 +51,10 @@ export interface BuildingType {
   upkeep?: number
   // Community buildings: homes and shops within `radius` tiles earn `bonus` more (communityRules.ts).
   amenity?: { bonus: number; radius: number }
+  // Shops: goods used up by each sale (they can't sell without them).
+  goodsPerSale?: number
+  // Room for this many more goods in the town's storage.
+  storage?: number
   // Must be built on the shore, next to the sea (docks).
   onShore?: boolean
   // Depreciation period in years, when it differs from its category's (taxRules.ts).
@@ -114,6 +130,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     cost: 300,
     unlockLevel: 2,
     income: { coins: 40, seconds: 45 },
+    goodsPerSale: 4,
     needs: { water: 2, power: 3, trash: 2 },
     placeholder: { shape: 'shop', color: '#f6e7c8', accent: '#d9822b', height: 1 },
   },
@@ -125,6 +142,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     cost: 500,
     unlockLevel: 5,
     income: { coins: 75, seconds: 90 },
+    goodsPerSale: 7,
     needs: { water: 2, power: 4, trash: 3 },
     placeholder: { shape: 'shop', color: '#e3e3e3', accent: '#3a8f5c', height: 1.2 },
   },
@@ -219,6 +237,43 @@ export const BUILDING_TYPES: BuildingType[] = [
     upkeep: 5, // no fuel: cheap to run
     recoveryYears: 5, // solar energy property gets a short 5-year period
     placeholder: { shape: 'solar', color: '#2c3e66', accent: '#c9ccd2', height: 0.5 },
+  },
+  // ---- Storage and trade
+  {
+    id: 'barn',
+    name: 'Barn',
+    category: 'storage',
+    size: { x: 2, z: 2 },
+    cost: 150,
+    unlockLevel: 2,
+    storage: 150,
+    recoveryYears: 20, // farm buildings
+    placeholder: { shape: 'barn', color: '#b5432f', accent: '#f2ead8', height: 1.1 },
+  },
+  {
+    id: 'warehouse',
+    name: 'Warehouse',
+    category: 'storage',
+    size: { x: 3, z: 2 },
+    cost: 500,
+    unlockLevel: 5,
+    storage: 400,
+    needs: { power: 1 },
+    placeholder: { shape: 'warehouse', color: '#9aa3ad', accent: '#5b6570', height: 1 },
+  },
+  {
+    // Built on the shore. Order shipments of goods here; a cargo ship brings them (Docks.ts).
+    id: 'dock',
+    name: 'Dock',
+    category: 'port',
+    size: { x: 3, z: 2 },
+    cost: 800,
+    unlockLevel: 4,
+    onShore: true,
+    storage: 100,
+    upkeep: 10,
+    needs: { power: 1, trash: 1 },
+    placeholder: { shape: 'dock', color: '#8a6a4a', accent: '#d9a441', height: 0.6 },
   },
   // ---- Roads and community buildings
   {

@@ -3,6 +3,7 @@ import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
 import { duration } from '../ui/dom'
 import type { City, PlacedBuilding } from './City'
 import type { CityView } from './CityView'
+import type { Docks } from './Docks'
 import { cropState } from './crops'
 import { footprintCenter } from './grid'
 import type { Services } from './Services'
@@ -19,7 +20,7 @@ const POPUP_MS = 1000 // keep in sync with the .popup animation length in style.
 const FARM_LABEL_HEIGHT = 0.75
 
 // What a bubble is asking you to do. Each kind has its own look in style.css.
-type BubbleKind = 'coins' | 'plant' | 'harvest' | 'withered'
+type BubbleKind = 'coins' | 'plant' | 'harvest' | 'withered' | 'stock' | 'cargo'
 
 interface Bubble {
   object: CSS2DObject
@@ -31,6 +32,7 @@ export class IncomeView {
   private city: City
   private cityView: CityView
   private services: Services
+  private docks: Docks
   private onTap: (building: PlacedBuilding) => void
   private bubbles = new Map<number, Bubble>()
   private info: CSS2DObject
@@ -43,8 +45,10 @@ export class IncomeView {
     city: City,
     cityView: CityView,
     services: Services,
+    docks: Docks,
     onTap: (building: PlacedBuilding) => void,
   ) {
+    this.docks = docks
     this.scene = scene
     this.city = city
     this.cityView = cityView
@@ -62,9 +66,15 @@ export class IncomeView {
     city.onChange((event) => {
       switch (event.kind) {
         case 'collected':
-        case 'harvested':
           this.removeBubble(event.building.id)
           this.popup(event.building, `+${event.amount} 🪙`)
+          this.hideInfoUntil = Date.now() + POPUP_MS
+          break
+        case 'harvested':
+          // Goods into storage, and coins for anything sold at the market.
+          this.removeBubble(event.building.id)
+          if (event.goods > 0) this.popup(event.building, `+${event.goods} 📦`, 'goods')
+          if (event.amount > 0) this.popup(event.building, `+${event.amount} 🪙`)
           this.hideInfoUntil = Date.now() + POPUP_MS
           break
         case 'planted':
@@ -110,7 +120,8 @@ export class IncomeView {
 
   // Which bubble a building should show right now, if any.
   private bubbleFor(b: PlacedBuilding, now: number): { kind: BubbleKind; icon: string } | null {
-    if (this.city.isReady(b, now)) return { kind: 'coins', icon: '🪙' }
+    if (this.city.isReady(b, now)) return this.city.hasStock(b) ? { kind: 'coins', icon: '🪙' } : { kind: 'stock', icon: '📦' }
+    if (b.type.category === 'port') return this.docks.state(b, now).stage === 'arrived' ? { kind: 'cargo', icon: '🚢' } : null
     if (b.type.category !== 'farm') return null
     const state = cropState(b.crop, now)
     switch (state.stage) {
@@ -158,14 +169,22 @@ export class IncomeView {
           return [`${b.type.name} · ${state.crop.name}`, 'Withered · tap to clear']
       }
     }
+    if (b.type.category === 'port') {
+      const state = this.docks.state(b, now)
+      if (state.stage === 'idle') return [b.type.name, 'Tap to order goods by sea']
+      if (state.stage === 'sailing') return [b.type.name, `🚢 arriving in ${duration(state.shipment.arrivesAt - now)} with 📦 ${state.shipment.units}`]
+      return [b.type.name, `Ship's in! Tap to unload 📦 ${state.shipment.units}`]
+    }
     const { amenity, supplies, upkeep } = b.type
     if (amenity) return [b.type.name, `+${Math.round(amenity.bonus * 100)}% for homes & shops within ${amenity.radius} tiles · 🪙 ${upkeep}/month`]
     if (supplies) return [b.type.name, `Supplies ${UTILITY_INFO[supplies.utility].icon} ${supplies.amount} · 🪙 ${upkeep}/month`]
     if (!b.type.income) return [b.type.name, '']
+    const uses = b.type.goodsPerSale
+    if (uses && this.city.isReady(b, now) && !this.city.hasStock(b)) return [b.type.name, `Out of stock: needs 📦 ${uses} to sell`]
     const status = this.city.isReady(b, now)
       ? `Ready! Click to collect 🪙 ${this.city.payout(b)}`
       : `🪙 ${this.city.payout(b)} in ${duration(b.readyAt - now)}`
-    return [b.type.name, status + this.shortNote(b)]
+    return [b.type.name, status + (uses ? ` · uses 📦 ${uses}` : '') + this.shortNote(b)]
   }
 
   // " · 📍 +15%" for a good location, " · ⚠️ short on 💧🔌" when utilities cut income.
@@ -190,7 +209,7 @@ export class IncomeView {
     face.className = 'bubble-face'
     face.textContent = icon
     el.append(face)
-    el.title = { coins: 'Collect', plant: 'Plant a crop', harvest: 'Harvest', withered: 'Clear the withered crop' }[kind]
+    el.title = { coins: 'Collect', plant: 'Plant a crop', harvest: 'Harvest', withered: 'Clear the withered crop', stock: 'Out of stock', cargo: 'Unload' }[kind]
     el.addEventListener('click', () => this.onTap(building))
 
     const object = new CSS2DObject(el)
@@ -208,7 +227,7 @@ export class IncomeView {
   // A short message that floats up from a building and fades out.
   // variant 'note' is the smaller dark one, for sales tax, seed costs and the like;
   // 'xp' is the blue one beside the coins.
-  popup(building: PlacedBuilding, text: string, variant: 'coins' | 'note' | 'xp' = 'coins') {
+  popup(building: PlacedBuilding, text: string, variant: 'coins' | 'note' | 'xp' | 'goods' = 'coins') {
     const el = document.createElement('div')
     el.className = `popup popup-${variant}`
     el.textContent = text

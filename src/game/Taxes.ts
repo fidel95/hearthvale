@@ -38,6 +38,7 @@ export interface YearLedger {
   farmIncome: number // crop sales
   farmExpenses: number // seeds, deducted when bought (the cash method most farmers use)
   operatingExpenses: number // running costs like utility upkeep
+  costOfGoodsSold: number // what the goods your shops sold had cost you
   otherIncome: number
   salesTaxCollected: number
   salesTaxRemitted: number
@@ -55,6 +56,7 @@ export interface TaxReturn {
   otherIncome: number
   farmExpenses: number
   operatingExpenses: number
+  costOfGoodsSold: number
   propertyTax: number
   depreciation: number
   standardDeduction: number
@@ -75,7 +77,14 @@ export type TaxEvent =
   | { kind: 'penalty'; amount: number }
   | { kind: 'changed' }
 
+// Goods in storage, as an accountant sees them: how many, and what they cost.
+export interface Inventory {
+  units: number
+  cost: number
+}
+
 export interface TaxesSave {
+  inventory?: Inventory // missing in saves from before Stage 8
   ledger: YearLedger
   salesTaxHeld: number
   lastReturn: TaxReturn | null
@@ -90,6 +99,7 @@ function emptyLedger(year: number): YearLedger {
     farmIncome: 0,
     farmExpenses: 0,
     operatingExpenses: 0,
+    costOfGoodsSold: 0,
     otherIncome: 0,
     salesTaxCollected: 0,
     salesTaxRemitted: 0,
@@ -103,6 +113,10 @@ export class Taxes {
   ledger: YearLedger
   salesTaxHeld = 0 // customers' money we're holding until the end of the quarter
   lastReturn: TaxReturn | null = null
+  // Goods are an asset, not an expense: buying them isn't deductible. Their
+  // cost is deducted only when they're sold (cost of goods sold). Goods from
+  // your own farms cost nothing here; their seeds were already deducted.
+  inventory: Inventory
 
   private city: City
   private clock: GameClock
@@ -113,6 +127,7 @@ export class Taxes {
     this.city = city
     this.clock = clock
     this.ledger = emptyLedger(clock.year)
+    this.inventory = { units: city.goods, cost: 0 }
 
     city.onChange((event) => {
       switch (event.kind) {
@@ -132,6 +147,7 @@ export class Taxes {
           break
         case 'collected':
           this.recordIncome(event.building, event.amount)
+          if (event.goodsUsed > 0) this.sellFromInventory(event.goodsUsed)
           break
         // Running a business's utilities is an "ordinary and necessary"
         // business expense (IRC §162), so it's deducted from income.
@@ -147,7 +163,15 @@ export class Taxes {
         // Farming is a business too (Schedule F in the US). Crops are sold
         // wholesale to the market, and sales for resale carry no sales tax.
         case 'harvested':
+          // Only what was sold at the market is income now; goods put into
+          // storage become income when a shop sells them.
           this.ledger.farmIncome += event.amount
+          this.inventory.units += event.goods
+          this.emit({ kind: 'changed' })
+          break
+        case 'goodsIn':
+          this.inventory.units += event.units
+          this.inventory.cost += event.cost
           this.emit({ kind: 'changed' })
           break
         case 'planted':
@@ -181,7 +205,8 @@ export class Taxes {
   estimate(): TaxReturn {
     const l = this.ledger
     const grossIncome = l.rentIncome + l.salesIncome + l.farmIncome + l.otherIncome
-    const deductions = l.farmExpenses + l.operatingExpenses + l.propertyTax + l.depreciation + STANDARD_DEDUCTION
+    const deductions =
+      l.farmExpenses + l.operatingExpenses + l.costOfGoodsSold + l.propertyTax + l.depreciation + STANDARD_DEDUCTION
     const taxableIncome = Math.max(0, grossIncome - deductions)
     const { tax, slices, marginalRate } = incomeTax(taxableIncome)
     return {
@@ -193,6 +218,7 @@ export class Taxes {
       otherIncome: l.otherIncome,
       farmExpenses: l.farmExpenses,
       operatingExpenses: l.operatingExpenses,
+      costOfGoodsSold: l.costOfGoodsSold,
       propertyTax: l.propertyTax,
       depreciation: l.depreciation,
       standardDeduction: STANDARD_DEDUCTION,
@@ -236,6 +262,7 @@ export class Taxes {
       ledger: { ...this.ledger },
       salesTaxHeld: this.salesTaxHeld,
       lastReturn: this.lastReturn,
+      inventory: { ...this.inventory },
       assets: [...this.assets.entries()],
     }
   }
@@ -252,11 +279,23 @@ export class Taxes {
       farmIncome: last.farmIncome ?? 0,
       farmExpenses: last.farmExpenses ?? 0,
       operatingExpenses: last.operatingExpenses ?? 0,
+      costOfGoodsSold: last.costOfGoodsSold ?? 0,
     }
+    this.inventory = save.inventory ?? { units: this.city.goods, cost: 0 }
     for (const [id, asset] of save.assets) {
       if (this.city.get(id)) this.assets.set(id, asset)
     }
     this.emit({ kind: 'changed' })
+  }
+
+  // Shops sold some goods: move their share of the inventory's cost to cost of
+  // goods sold, at the average cost per unit (the "average cost method").
+  private sellFromInventory(units: number) {
+    const inv = this.inventory
+    const cost = inv.units > 0 ? (inv.cost * Math.min(units, inv.units)) / inv.units : 0
+    inv.units = Math.max(0, inv.units - units)
+    inv.cost -= cost
+    this.ledger.costOfGoodsSold += cost
   }
 
   private recordIncome(building: PlacedBuilding, amount: number) {

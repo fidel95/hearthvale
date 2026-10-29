@@ -181,6 +181,32 @@ function createPlaceholder(type: BuildingType): THREE.Group {
       add(new THREE.BoxGeometry(0.25, height * 0.5, 0.25), color, -w * 0.32, height * 0.8, -d * 0.2)
       break
     }
+    case 'barn': {
+      // A red barn: walls, a steep two-sided roof (a 4-sided cone stretched long) and white trim.
+      add(new THREE.BoxGeometry(w * 0.8, height * 0.6, d * 0.85), color, 0, 0, 0)
+      const roof = new THREE.ConeGeometry(Math.SQRT1_2, 1, 4).rotateY(Math.PI / 4)
+      roof.scale(w * 0.9, height * 0.5, d * 0.95)
+      add(roof, '#7a3a2a', 0, height * 0.6, 0)
+      add(new THREE.BoxGeometry(0.5, height * 0.4, 0.02), accent, 0, 0, d * 0.425 + 0.01)
+      break
+    }
+    case 'warehouse': {
+      // A long grey shed with roller doors.
+      add(new THREE.BoxGeometry(w * 0.9, height * 0.75, d * 0.8), color, 0, 0, 0)
+      add(new THREE.BoxGeometry(w * 0.95, 0.06, d * 0.85), accent, 0, height * 0.75, 0)
+      for (const x of [-0.8, 0, 0.8]) add(new THREE.BoxGeometry(0.55, height * 0.5, 0.02), accent, x, 0, d * 0.4 + 0.01)
+      break
+    }
+    case 'dock': {
+      // A wooden deck on posts, crates, and a yellow crane for unloading ships.
+      add(new THREE.BoxGeometry(w * 0.95, 0.1, d * 0.95), color, 0, 0.1, 0)
+      for (const [x, z] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) add(new THREE.BoxGeometry(0.1, 0.12, 0.1), '#5a4632', x * w * 0.43, 0, z * d * 0.43)
+      add(new THREE.BoxGeometry(0.3, 0.25, 0.3), '#b88a5a', -w * 0.3, 0.2, -d * 0.2)
+      add(new THREE.BoxGeometry(0.3, 0.25, 0.3), '#3f7fe0', -w * 0.3 + 0.35, 0.2, -d * 0.2)
+      add(new THREE.BoxGeometry(0.12, height * 1.6, 0.12), accent, w * 0.3, 0.2, 0)
+      add(new THREE.BoxGeometry(0.08, 0.08, d * 0.9), accent, w * 0.3, 0.2 + height * 1.6, d * 0.25)
+      break
+    }
     case 'tree': {
       add(new THREE.CylinderGeometry(0.07, 0.09, height * 0.4, 6), color, 0, 0, 0)
       add(new THREE.IcosahedronGeometry(0.38, 0), accent, 0, height * 0.35, 0)

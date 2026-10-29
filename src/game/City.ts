@@ -23,6 +23,10 @@ import { isWater } from './terrain'
 // dumping this data (toSave / load).
 
 const STARTING_COINS = 600
+// A new town has some goods in stock so its first shop can open right away.
+const STARTING_GOODS = 40
+// The town square stores this many goods; barns, warehouses and docks add more.
+export const BASE_STORAGE = 100
 
 export interface PlacedBuilding {
   id: number
@@ -46,6 +50,7 @@ export interface OwnedLot {
 // type's id, not the whole type, so catalog changes apply to old saves.
 export interface CitySave {
   coins: number
+  goods?: number // missing in saves from before Stage 8
   nextId: number
   buildings: { id: number; typeId: string; tile: Tile; readyAt: number; crop?: PlantedCrop | null }[]
   lots: { x: number; z: number; price: number }[]
@@ -56,9 +61,14 @@ export type CityEvent =
   | { kind: 'added'; building: PlacedBuilding; paid: number }
   | { kind: 'removed'; building: PlacedBuilding }
   | { kind: 'moved'; building: PlacedBuilding }
-  | { kind: 'collected'; building: PlacedBuilding; amount: number }
+  // goodsUsed: what a shop sold out of storage to earn it.
+  | { kind: 'collected'; building: PlacedBuilding; amount: number; goodsUsed: number }
   | { kind: 'planted'; building: PlacedBuilding; crop: CropType; cost: number }
-  | { kind: 'harvested'; building: PlacedBuilding; crop: CropType; amount: number }
+  // goods went into storage; amount is coins from selling the rest at the market.
+  | { kind: 'harvested'; building: PlacedBuilding; crop: CropType; goods: number; amount: number }
+  // Goods bought and delivered (a shipment), and what they cost.
+  | { kind: 'goodsIn'; units: number; cost: number }
+  | { kind: 'goods'; goods: number }
   | { kind: 'cleared'; building: PlacedBuilding; crop: CropType } // a withered crop was cleared away
   | { kind: 'award'; amount: number; reason: string } // prize coins, e.g. a level-up reward
   | { kind: 'expense'; amount: number; reason: string } // a running cost, e.g. utility upkeep
@@ -74,6 +84,7 @@ export class City {
   private nextId = 1
   private listeners: ((event: CityEvent) => void)[] = []
   private _coins = STARTING_COINS
+  private _goods = STARTING_GOODS
   private land = new Map<string, OwnedLot>(
     START_LOTS.map((lot) => [lotKey(lot), { lot, price: START_LOT_VALUE }]),
   )
@@ -209,16 +220,52 @@ export class City {
     return building.type.income !== undefined && now >= building.readyAt
   }
 
-  // Collect a building's income if it's ready. Returns the coins earned (0 if not ready).
+  // ---- Goods
+
+  get goods() {
+    return this._goods
+  }
+
+  get storageCapacity(): number {
+    let capacity = BASE_STORAGE
+    for (const b of this.buildings.values()) capacity += b.type.storage ?? 0
+    return capacity
+  }
+
+  // Shops need goods to sell; everything else always has "stock".
+  hasStock(building: PlacedBuilding): boolean {
+    return this._goods >= (building.type.goodsPerSale ?? 0)
+  }
+
+  // Goods bought and delivered. Only what fits in storage is taken (and paid
+  // for, proportionally, in the cost recorded). Returns the units taken.
+  addGoods(units: number, cost: number): number {
+    const taken = Math.min(units, Math.max(0, this.storageCapacity - this._goods))
+    if (taken <= 0) return 0
+    this.emit({ kind: 'goodsIn', units: taken, cost: (cost * taken) / units })
+    this.adjustGoods(taken)
+    return taken
+  }
+
+  private adjustGoods(delta: number) {
+    if (delta === 0) return
+    this._goods += delta
+    this.emit({ kind: 'goods', goods: this._goods })
+  }
+
+  // Collect a building's income if it's ready (and, for a shop, if there are
+  // goods to sell). Returns the coins earned (0 if not ready or out of stock).
   collect(id: number, now: number): number {
     const building = this.buildings.get(id)
-    if (!building || !building.type.income || !this.isReady(building, now)) return 0
+    if (!building || !building.type.income || !this.isReady(building, now) || !this.hasStock(building)) return 0
 
     const amount = this.payout(building)
+    const goodsUsed = building.type.goodsPerSale ?? 0
     // The next timer starts when you collect, not when it became ready,
     // so leaving money uncollected doesn't stack up extra payouts.
     building.readyAt = now + building.type.income.seconds * 1000
-    this.emit({ kind: 'collected', building, amount })
+    this.emit({ kind: 'collected', building, amount, goodsUsed })
+    this.adjustGoods(-goodsUsed)
     this.adjustCoins(amount)
     return amount
   }
@@ -247,7 +294,10 @@ export class City {
     return true
   }
 
-  // Harvest a ripe crop and sell it. Returns the coins earned (0 if not ripe).
+  // Harvest a ripe crop. If the town has shops, the harvest goes into storage
+  // as goods for them to sell, and whatever doesn't fit is sold at the market.
+  // With no shops it's all sold. Returns the coins earned (0 if not ripe, or
+  // if it all went into storage).
   harvest(id: number, now: number): number {
     const plot = this.buildings.get(id)
     if (!plot) return 0
@@ -255,8 +305,13 @@ export class City {
     if (state.stage !== 'ripe') return 0
 
     plot.crop = null
-    const amount = this.harvestValue(plot, state.crop)
-    this.emit({ kind: 'harvested', building: plot, crop: state.crop, amount })
+    const goods = Math.round(state.crop.goods * this.incomeMultiplier(plot)) // less without enough water
+    const hasShops = [...this.buildings.values()].some((b) => b.type.goodsPerSale)
+    const room = hasShops ? Math.max(0, this.storageCapacity - this._goods) : 0
+    const stored = Math.min(goods, room)
+    const amount = goods > 0 ? Math.round((this.harvestValue(plot, state.crop) * (goods - stored)) / goods) : 0
+    this.emit({ kind: 'harvested', building: plot, crop: state.crop, goods: stored, amount })
+    this.adjustGoods(stored)
     this.adjustCoins(amount)
     return amount
   }
@@ -300,6 +355,7 @@ export class City {
   toSave(): CitySave {
     return {
       coins: this._coins,
+      goods: this._goods,
       nextId: this.nextId,
       buildings: [...this.buildings.values()].map((b) => ({
         id: b.id,
@@ -335,6 +391,8 @@ export class City {
     }
     this.nextId = Math.max(this.nextId, save.nextId)
     this._coins = save.coins
+    this._goods = save.goods ?? STARTING_GOODS
+    this.emit({ kind: 'goods', goods: this._goods })
     this.emit({ kind: 'coins', coins: this._coins })
   }
 

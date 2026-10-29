@@ -354,6 +354,42 @@ the `*.test.ts` files, and [TAXES.md](TAXES.md)
 
 ---
 
+## Stage 8: the coast, goods and docks
+
+**Files:** `terrain.ts`, `LandView.ts` (sea, beach), `ShipView.ts`, `Docks.ts`,
+`ui/DockPanel.ts`, `City.ts` (goods), `Taxes.ts` (inventory), `supply.test.ts`
+
+- **Procedural terrain.** The coast is `46 + 2·sin(x/5) + sin(x/2.3 + 1)`.
+  Two waves of different lengths look natural, and because it's a formula, not
+  random, every world and every test sees the same coast.
+- **Animating vertices.** The sea is strips of quads whose vertices move up and
+  down each frame. With `flatShading`, lighting comes from each triangle's
+  shape on the GPU, so there are no normals to recompute. Boats sample the
+  same wave formula so they ride the swell.
+- **Position as a function of time.** A cargo ship's position is computed from
+  `orderedAt` and `arrivesAt` and the clock, not moved a little each frame.
+  It's in the right place after a reload, or after an hour away, for free.
+  Same idea as crops and energy, now for something that moves.
+- **Inventory is an asset.** Buying goods isn't an expense; selling them is.
+  The average cost method turns "which goods did we sell?" into one division.
+  The tests check a concrete case: 80 goods costing 240, sell 4, deduct 12.
+- **Design that keeps old play working.** Harvests only go into storage once
+  you have a shop; until then they're sold like before, so a new town (and
+  every older test) still earns from farming.
+- **A circular import that isn't.** City imports `edgeTiles` from
+  `communityRules.ts`, which only imports *types* from buildings and grid.
+  Type-only imports disappear when compiled, so there's no runtime cycle.
+
+**Try it:**
+
+1. Add a Fish Market: a shop that only needs goods from fishing boats. What
+   new state would a fishing trip need? (Look at how `Docks` stores a shipment.)
+2. Make the container ship's price change with the season, using `GameClock.month`.
+3. Switch inventory to FIFO: keep a list of batches `{ units, costPerUnit }`
+   and sell from the oldest. Which test changes?
+
+---
+
 ## Coming next
 
-- **Stage 8:** a supply chain, with cost of goods sold as a real deduction.
+- **Stage 9:** quests and goals.

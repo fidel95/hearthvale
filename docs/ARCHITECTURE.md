@@ -65,6 +65,8 @@ inside `switch (event.kind)`.
 | City | `award` | prize coins are given (a level-up reward) | Taxes (other income) |
 | City | `expense` | a running cost is paid (utility upkeep) | Taxes (operating expense) |
 | City | `land` | a lot is bought, or a save loaded | LandView (ground and signs) |
+| City | `goods` | the goods in storage change | Hud (goods line) |
+| City | `goodsIn` | bought goods are unloaded | Taxes (inventory and its cost), Player (energy, XP) |
 | City | `coins` | the coin balance changes | Hud (counter, catalog), TaxPanel, LandView (sign affordability) |
 | Services | `changed` | the utility report changed | Hud (utility line), TownPanel |
 | Services | `shortage` | utilities just started falling short | Game → Hud warning toast |
@@ -210,6 +212,29 @@ removed, and gives City two hooks:
 
 - `incomeMultiplier(b)` = utility share × (1 + bonus): what it earns,
 - `valueMultiplier(b)` = 1 + bonus: what it's worth, for property tax.
+
+## The coast, goods and docks
+
+- **Terrain.** `terrain.ts` defines the sea with a formula (`coastZ(x)`, two
+  sine waves), not stored data, so every world has the same coast. City
+  refuses to build on water; walkers won't walk on it; an all-sea lot isn't for
+  sale; a building marked `onShore` (the Dock) needs two sea tiles along its
+  edges. LandView draws grass up to the shore, a beach and the sea (strips with
+  vertices that rise and fall each frame; `flatShading` means no normals to
+  recompute).
+- **Goods.** City keeps a goods count (like coins) and a storage capacity
+  (100 + each building's `storage`). `collect` on a shop with `goodsPerSale`
+  needs that many goods and uses them. `harvest` puts goods into storage if the
+  town has a shop, selling the rest at the market.
+- **Inventory accounting.** Taxes keeps `inventory = { units, cost }`. Goods in
+  (`goodsIn` from a shipment, or a harvest at no cost) add to it; each sale
+  moves its share of the cost to `costOfGoodsSold` at the average cost per
+  unit.
+- **Docks.** `Docks` holds one shipment per dock: `orderedAt`, `arrivesAt`,
+  units and cost, saved with the game. It's real-time and stored as
+  timestamps, like crops. `ShipView` positions each cargo ship from those two
+  timestamps alone, so a ship is in the right place even right after loading.
+  Unloading calls `City.addGoods`, which takes what fits; the rest stays aboard.
 
 ## People
 

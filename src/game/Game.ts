@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import { CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js'
 import { CropPicker } from '../ui/CropPicker'
+import { DockPanel } from '../ui/DockPanel'
 import { Hud } from '../ui/Hud'
 import { LandPanel } from '../ui/LandPanel'
 import { LevelUpPanel } from '../ui/LevelUpPanel'
@@ -13,6 +14,7 @@ import { CameraController } from './CameraController'
 import { City } from './City'
 import { CityView } from './CityView'
 import { CROPS_BY_ID } from './crops'
+import { Docks } from './Docks'
 import { GameClock, MONTH_NAMES } from './GameClock'
 import { IncomeView } from './IncomeView'
 import { LandView } from './LandView'
@@ -48,6 +50,7 @@ export class Game {
   private city = new City()
   private player = new Player(this.city)
   private services = new Services(this.city)
+  private docks = new Docks(this.city)
   private clock: GameClock
   private taxes: Taxes
 
@@ -90,13 +93,13 @@ export class Game {
     // or it misses the 'added' events.
     const landView = new LandView(this.scene, this.city)
     this.landView = landView
-    this.shipView = new ShipView(this.scene)
+    this.shipView = new ShipView(this.scene, this.city, this.docks)
     this.cityView = new CityView(this.scene, this.city)
     this.peopleView = new PeopleView(this.scene, this.city)
     this.roadView = new RoadView(this.scene, this.city)
     this.taxes = new Taxes(this.city, this.clock)
-    const builder = new Builder(this.scene, this.city, this.player, this.cityView, this.controls, this.renderer.domElement)
-    this.incomeView = new IncomeView(this.scene, this.city, this.cityView, this.services, (b) => builder.tap(b))
+    const builder = new Builder(this.scene, this.city, this.player, this.docks, this.cityView, this.controls, this.renderer.domElement)
+    this.incomeView = new IncomeView(this.scene, this.city, this.cityView, this.services, this.docks, (b) => builder.tap(b))
     builder.onHoverBuilding = (b) => this.incomeView.setHovered(b)
 
     const taxPanel = new TaxPanel(container, this.city, this.taxes, this.clock)
@@ -117,12 +120,15 @@ export class Game {
     })
     const landPanel = new LandPanel(container, this.city, this.player, (message) => this.hud.toast(message))
     landView.onLotClick = (lot) => landPanel.open(lot)
+    const dockPanel = new DockPanel(container, this.city, this.docks, (message) => this.hud.toast(message))
+    builder.onDockRequest = (dock) => dockPanel.open(dock)
 
     this.saver = new AutoSaver(() => ({
       city: this.city.toSave(),
       clock: { playedMs: this.clock.playedMs },
       taxes: this.taxes.toSave(),
       player: this.player.toSave(),
+      shipments: this.docks.toSave(),
     }))
     const leftAt = this.loadOrSeed()
     this.setUpWelcomeBack(container, builder, leftAt)
@@ -157,7 +163,7 @@ export class Game {
     this.roadView.update()
     const seconds = frameTime / 1000
     this.landView.update(seconds)
-    this.shipView.update(Math.min(dt, 100) / 1000, seconds)
+    this.shipView.update(Math.min(dt, 100) / 1000, seconds, now)
     // Capped, so a tab coming back from the background doesn't teleport everyone.
     this.peopleView.update(Math.min(dt, 100) / 1000)
     this.incomeView.update(now)
@@ -176,6 +182,7 @@ export class Game {
       this.city.load(save.city)
       this.taxes.load(save.taxes)
       if (save.player) this.player.load(save.player)
+      if (save.shipments) this.docks.load(save.shipments)
       return save.savedAt
     }
     // A small starting town so a new game isn't an empty field.
@@ -205,7 +212,7 @@ export class Game {
     })
     const welcome = (since: number) => {
       const now = Date.now()
-      if (now - since >= WELCOME_BACK_AFTER_MS) panel.show(awaySummary(this.city, this.player, since, now))
+      if (now - since >= WELCOME_BACK_AFTER_MS) panel.show(awaySummary(this.city, this.player, this.docks, since, now))
     }
     if (leftAt !== null) welcome(leftAt)
     let hiddenAt: number | null = null

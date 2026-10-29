@@ -1,5 +1,6 @@
 import type { City } from './City'
 import { CROPS_BY_ID, cropState } from './crops'
+import type { Docks } from './Docks'
 import type { Player } from './Player'
 
 // What happened while the player was away. Nothing is simulated here: income
@@ -17,13 +18,14 @@ export interface AwaySummary {
   ripeCrops: number
   ripeValue: number
   witheredCrops: number // crops that withered while you were away
+  shipsWaiting: number // shipments that arrived and wait to be unloaded
   energyGained: number
 }
 
 // Shorter absences aren't worth a window.
 export const WELCOME_BACK_AFTER_MS = 5 * 60_000
 
-export function awaySummary(city: City, player: Player, leftAt: number, now: number): AwaySummary {
+export function awaySummary(city: City, player: Player, docks: Docks, leftAt: number, now: number): AwaySummary {
   const summary: AwaySummary = {
     awayMs: now - leftAt,
     readyBuildings: 0,
@@ -31,6 +33,7 @@ export function awaySummary(city: City, player: Player, leftAt: number, now: num
     ripeCrops: 0,
     ripeValue: 0,
     witheredCrops: 0,
+    shipsWaiting: 0,
     energyGained: player.energy(now) - player.energy(leftAt),
   }
   for (const b of city.all()) {
@@ -38,6 +41,7 @@ export function awaySummary(city: City, player: Player, leftAt: number, now: num
       summary.readyBuildings++
       summary.readyCoins += city.payout(b)
     }
+    if (b.type.category === 'port' && docks.state(b, now).stage === 'arrived') summary.shipsWaiting++
     const state = cropState(b.crop, now)
     if (state.stage === 'ripe') {
       summary.ripeCrops++
