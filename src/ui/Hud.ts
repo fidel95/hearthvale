@@ -2,12 +2,13 @@ import { BUILDING_TYPES } from '../game/buildings'
 import type { Builder, Mode } from '../game/Builder'
 import type { City } from '../game/City'
 import { MONTH_NAMES, type GameClock } from '../game/GameClock'
-import { el } from './dom'
+import type { Player } from '../game/Player'
+import { duration, el } from './dom'
 
-// The HTML overlay on top of the canvas: coins and calendar (top left),
+// The HTML overlay on top of the canvas: coins, level, energy and calendar (top left),
 // hints and messages (top middle), New town (top right), the build catalog
 // and tool buttons (bottom). It changes the game only through Builder and
-// callbacks, and reads from City and GameClock.
+// callbacks, and reads from City, Player and GameClock.
 
 function hintFor(mode: Mode): string {
   switch (mode.kind) {
@@ -29,19 +30,26 @@ export interface HudCallbacks {
 
 export class Hud {
   private coins = el('div', 'coins')
+  private level = el('div', 'level-label')
+  private xpBar = el('div', 'xp-fill')
+  private energy = el('div', 'energy')
   private date = el('div', 'date-label')
   private monthBar = el('div', 'month-bar-fill')
   private toasts = el('div', 'toasts')
   private shownMonth = -1
+  private player: Player
 
-  constructor(container: HTMLElement, builder: Builder, city: City, callbacks: HudCallbacks) {
+  constructor(container: HTMLElement, builder: Builder, city: City, player: Player, callbacks: HudCallbacks) {
+    this.player = player
     const hud = el('div', 'hud')
 
-    // ---- Top left: coins and the calendar
+    // ---- Top left: coins, level and XP, energy, and the calendar
     const status = el('div', 'status')
     const monthBar = el('div', 'month-bar')
     monthBar.append(this.monthBar)
-    status.append(this.coins, this.date, monthBar)
+    const xpBar = el('div', 'xp-bar')
+    xpBar.append(this.xpBar)
+    status.append(this.coins, this.level, xpBar, this.energy, this.date, monthBar)
 
     // ---- Top middle: what the current tool does, with a way out on touch screens (no Esc key)
     const hint = el('div', 'hint')
@@ -61,21 +69,31 @@ export class Hud {
     // ---- Bottom: catalog and tools
     const catalog = el('div', 'catalog')
     catalog.hidden = true
-    const catalogItems: [HTMLButtonElement, number][] = []
-    for (const type of BUILDING_TYPES) {
+    // Every building is listed; ones above your level show what level unlocks them.
+    const catalogItems = BUILDING_TYPES.map((type) => {
       const item = el('button', 'catalog-item')
+      const lock = el('span', 'catalog-meta catalog-lock', `🔒 Unlocks at level ${type.unlockLevel}`)
       item.append(
         el('span', 'catalog-name', type.name),
         el('span', 'catalog-meta', `${type.size.x}×${type.size.z} · 🪙 ${type.cost}`),
       )
       if (type.income) item.append(el('span', 'catalog-meta', `Earns 🪙 ${type.income.coins} / ${type.income.seconds}s`))
       if (type.category === 'farm') item.append(el('span', 'catalog-meta', 'Plant crops to sell'))
+      item.append(lock)
       item.addEventListener('click', () => {
         catalog.hidden = true
         builder.setMode({ kind: 'build', type })
       })
       catalog.append(item)
-      catalogItems.push([item, type.cost])
+      return { item, lock, type }
+    })
+    const refreshCatalog = () => {
+      for (const { item, lock, type } of catalogItems) {
+        const unlocked = player.isUnlocked(type)
+        item.classList.toggle('locked', !unlocked)
+        lock.hidden = unlocked
+        item.disabled = !unlocked || city.coins < type.cost
+      }
     }
 
     const tools = {
@@ -114,7 +132,7 @@ export class Hud {
     const showCoins = () => {
       this.coins.textContent = `🪙 ${city.coins.toLocaleString()}`
       this.coins.classList.toggle('in-debt', city.coins < 0)
-      for (const [item, cost] of catalogItems) item.disabled = city.coins < cost
+      refreshCatalog()
     }
     city.onChange((event) => {
       if (event.kind !== 'coins') return
@@ -125,12 +143,30 @@ export class Hud {
     })
     showCoins()
 
+    const showLevel = () => {
+      this.level.textContent = `⭐ Level ${player.level} · ${player.xp.toLocaleString()} XP`
+      this.xpBar.style.width = `${player.levelProgress * 100}%`
+    }
+    // Any change (XP, a level-up, loading a save) can change the level and what's unlocked.
+    player.onChange(() => {
+      showLevel()
+      refreshCatalog()
+    })
+    showLevel()
+
     hud.append(status, top, newTown, bottom)
     container.append(hud)
   }
 
   // Called every frame; only touches the DOM when something visible changed.
-  update(clock: GameClock) {
+  update(clock: GameClock, now: number) {
+    // Energy refills with time, so it's checked every frame rather than on events.
+    const energy = this.player.energy(now)
+    const next = this.player.nextEnergyAt(now)
+    const text = `⚡ ${energy}/${this.player.maxEnergy}${next ? ` · +1 in ${duration(next - now)}` : ''}`
+    if (this.energy.textContent !== text) this.energy.textContent = text
+    this.energy.classList.toggle('empty', energy === 0)
+
     if (clock.monthIndex !== this.shownMonth) {
       this.shownMonth = clock.monthIndex
       this.date.textContent = `Year ${clock.year} · ${MONTH_NAMES[clock.month]}`

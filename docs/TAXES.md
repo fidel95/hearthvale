@@ -176,7 +176,7 @@ dollar amounts divided by 10 (1 coin ≈ $10):
 | Standard deduction | $14,600 | 1,460 |
 
 ```
-Gross income     = rent + shop sales + crop sales            (not the sales tax)
+Gross income     = rent + shop sales + crop sales + prizes   (not the sales tax)
 Taxable income   = gross − seeds − property tax − depreciation − standard deduction   (never below 0)
 Income tax       = sum over brackets of (income in bracket × rate)
 ```
@@ -190,7 +190,18 @@ less." False: only the coins *above* the threshold get the higher rate.
 `taxRules.test.ts` proves it: going from 4,715 to 4,716 taxable coins costs
 exactly 0.22 more.
 
-## 6. Paying late
+## 6. Prizes (level-up rewards)
+
+**Real rule:** prizes and awards are taxable income (IRC §74), whether it's a
+contest prize, a game-show win or a raffle. They go on the return as "other
+income".
+
+**In the game:** the coins you get for reaching a level are prize money. They
+appear on the return as "Prizes (level-up rewards)" and are part of gross
+income, so they're taxed at your marginal rate like everything else. Reaching
+level 10 pays 250 coins; at a 12% marginal rate, 30 of those go to income tax.
+
+## 7. Paying late
 
 **Real rule:** the IRS failure-to-pay penalty is 0.5% of the unpaid tax per
 month, up to 25%, plus interest.

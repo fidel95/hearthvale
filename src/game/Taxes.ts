@@ -129,6 +129,11 @@ export class Taxes {
         case 'collected':
           this.recordIncome(event.building, event.amount)
           break
+        // Prizes and awards are taxable income in the US (IRC §74), even in coins.
+        case 'award':
+          this.ledger.otherIncome += event.amount
+          this.emit({ kind: 'changed' })
+          break
         // Farming is a business too (Schedule F in the US). Crops are sold
         // wholesale to the market, and sales for resale carry no sales tax.
         case 'harvested':

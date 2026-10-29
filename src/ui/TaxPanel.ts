@@ -42,7 +42,7 @@ function returnRows(r: TaxReturn): Row[] {
     ['Sales from shops', coins(r.salesIncome)],
     ['Crop sales from farms', coins(r.farmIncome)],
   ]
-  if (r.otherIncome > 0) rows.push(['Other income', coins(r.otherIncome)])
+  if (r.otherIncome > 0) rows.push(['Prizes (level-up rewards)', coins(r.otherIncome)])
   rows.push(
     ['Gross income', coins(r.grossIncome), 'total'],
     ['− Seeds (farm expenses)', coins(r.farmExpenses), 'minus'],
@@ -262,6 +262,10 @@ export class TaxPanel {
       [
         'Farms',
         "Crop sales are farm income (Schedule F in the US). Seeds are a farm expense, deducted in the year you buy them (the cash method most farmers use). Crops are sold wholesale, so there's no sales tax on them. A crop that withers gives no extra deduction: its seeds were already deducted.",
+      ],
+      [
+        'Prizes',
+        'Level-up rewards are prize money, and prizes and awards are taxable income in the US (IRC §74), so they count toward your gross income.',
       ],
       [
         'Paying late',

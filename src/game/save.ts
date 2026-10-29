@@ -1,4 +1,5 @@
 import type { CitySave } from './City'
+import type { PlayerSave } from './Player'
 import type { TaxesSave } from './Taxes'
 
 // Saving to the browser's localStorage. Everything stays on this device;
@@ -15,6 +16,7 @@ export interface SaveData {
   city: CitySave
   clock: { playedMs: number }
   taxes: TaxesSave
+  player?: PlayerSave // missing in saves from before Stage 5
 }
 
 export function readSave(): SaveData | null {

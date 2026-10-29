@@ -1,12 +1,13 @@
 import * as THREE from 'three'
 import type { BuildingType } from './buildings'
 import type { CameraController } from './CameraController'
-import { duration } from '../ui/dom'
+import { duration, outOfEnergyMessage } from '../ui/dom'
 import type { City, PlacedBuilding } from './City'
 import type { CityView } from './CityView'
 import { cropState } from './crops'
 import { footprintCenter, worldToTile, type Tile } from './grid'
 import { createBuildingObject } from './models'
+import type { Player } from './Player'
 
 // What a click on the map currently does.
 export type Mode =
@@ -36,6 +37,7 @@ export class Builder {
 
   private scene: THREE.Scene
   private city: City
+  private player: Player
   private cityView: CityView
   private controls: CameraController
   private hoverTile: Tile | null = null
@@ -44,9 +46,17 @@ export class Builder {
   // One shared see-through material for the ghost; we just recolor it.
   private ghostMaterial = new THREE.MeshLambertMaterial({ transparent: true, opacity: 0.6 })
 
-  constructor(scene: THREE.Scene, city: City, cityView: CityView, controls: CameraController, canvas: HTMLCanvasElement) {
+  constructor(
+    scene: THREE.Scene,
+    city: City,
+    player: Player,
+    cityView: CityView,
+    controls: CameraController,
+    canvas: HTMLCanvasElement,
+  ) {
     this.scene = scene
     this.city = city
+    this.player = player
     this.cityView = cityView
     this.controls = controls
 
@@ -93,13 +103,21 @@ export class Builder {
   // What tapping a building does when no tool is selected (also used by the
   // bubbles over buildings): collect income, or tend a farm plot depending on
   // what's growing on it.
+  // Collecting, harvesting and clearing use energy (planting does too, in the
+  // crop picker); the Player takes it when the City reports the action.
   tap(building: PlacedBuilding) {
     const now = Date.now()
+    const outOfEnergy = () => {
+      if (this.player.hasEnergy(now)) return false
+      this.onNotice?.(outOfEnergyMessage(this.player, now))
+      return true
+    }
     if (building.type.category !== 'farm') {
-      this.city.collect(building.id, now)
+      if (this.city.isReady(building, now) && !outOfEnergy()) this.city.collect(building.id, now)
       return
     }
     const state = cropState(building.crop, now)
+    if ((state.stage === 'ripe' || state.stage === 'withered') && outOfEnergy()) return
     switch (state.stage) {
       case 'empty':
         this.onPlantRequest?.(building)
@@ -144,7 +162,8 @@ export class Builder {
       }
       case 'build':
         // Stay in build mode so you can place several in a row.
-        if (!this.city.canAfford(mode.type)) this.onNotice?.(`Not enough coins for a ${mode.type.name}`)
+        if (!this.player.isUnlocked(mode.type)) this.onNotice?.(`${mode.type.name} unlocks at level ${mode.type.unlockLevel}`)
+        else if (!this.city.canAfford(mode.type)) this.onNotice?.(`Not enough coins for a ${mode.type.name}`)
         else if (!this.city.place(mode.type, anchorFor(mode.type, tile))) this.onNotice?.("It doesn't fit there")
         break
       case 'move':

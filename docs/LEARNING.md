@@ -201,7 +201,48 @@ the `*.test.ts` files, and [TAXES.md](TAXES.md)
 
 ---
 
+## Stage 5: XP, levels and energy
+
+**Files:** `progression.ts`, `Player.ts`, `ui/LevelUpPanel.ts`, `ui/Hud.ts`,
+`Builder.tap`, `ui/CropPicker.ts`
+
+- **Derive, don't store (again).** The save holds total XP, not the level;
+  `levelForXp` computes it. Energy is a value plus a timestamp, and the
+  current amount is computed. Same lesson as crops: fewer stored numbers,
+  fewer ways to disagree.
+- **Curves as formulas.** XP per level grows by 10 each level, so the total is
+  `5·k·(k+1)`. A formula covers every level forever; a hand-written table
+  would end and need editing. Tests pin the first values so changes are deliberate.
+- **Check first, spend after.** Input code asks `hasEnergy()` before acting;
+  Player spends energy when City *reports* the action. That way a tap that
+  turns out to do nothing costs nothing, and energy logic lives in one place.
+- **Partial progress.** When you spend energy mid-refill, the regen clock
+  keeps the time you'd already waited. Getting that wrong (resetting the
+  clock on every spend) is a classic bug, and there's a test for it.
+- **Injecting the clock.** `new Player(city, () => time)` lets tests control
+  time exactly; the game passes nothing and gets `Date.now`.
+- **A loop that can't miss levels.** One big action can cross two levels.
+  `addXp` loops over every level crossed, so each one's reward is paid.
+- **A bug from editing by search-and-replace.** The HUD's level display was
+  first inserted *inside* the coin listener because the search text appeared
+  there too, so every coin change added another listener. The browser test
+  showed the label missing at start. Lesson: after automated edits, read the
+  result, and test what the screen shows.
+- **The tax side.** Level rewards are prizes, and prizes are taxable income
+  (IRC §74). City emits an `award` event for them so Taxes can tell a prize
+  from a plain coin adjustment.
+
+**Try it:**
+
+1. Change `ENERGY_REGEN_MS` to 30 seconds and play a few minutes. Does the
+   game feel better or worse? Why do you think the genre limits energy at all?
+2. Add XP for planting (1 per planting). Which test needs updating?
+3. Give level 5 a special reward: a free decoration placed next to your
+   biggest building.
+
+---
+
 ## Coming next
 
-- **Stage 5:** energy, XP and levels.
+- **Stage 6:** offline catch-up ("while you were away…") and save migrations.
 - **Stage 8:** a supply chain, with cost of goods sold as a real deduction.

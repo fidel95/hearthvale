@@ -10,6 +10,8 @@ export interface CropType {
   seedCost: number // paid when planting
   growSeconds: number // planting → ripe
   sellPrice: number // coins for the harvest
+  xp: number // experience for harvesting it
+  unlockLevel: number // the player level that makes it available (progression.ts)
   // How long it stays ripe before it withers and the harvest is lost.
   freshSeconds: number
   // How to draw it (see createCropObject in models.ts).
@@ -30,6 +32,8 @@ export const CROP_TYPES: CropType[] = [
     seedCost: 10,
     growSeconds: 1 * MINUTE,
     sellPrice: 40,
+    xp: 1,
+    unlockLevel: 1,
     freshSeconds: 3 * MINUTE,
     look: { shape: 'bush', leaf: '#3f8f3a', fruit: '#e0383e', height: 0.2, perTile: 2 },
   },
@@ -40,6 +44,8 @@ export const CROP_TYPES: CropType[] = [
     seedCost: 15,
     growSeconds: 5 * MINUTE,
     sellPrice: 120,
+    xp: 2,
+    unlockLevel: 2,
     freshSeconds: 15 * MINUTE,
     look: { shape: 'stalk', leaf: '#7fb34a', fruit: '#e8c75a', height: 0.4, perTile: 2 },
   },
@@ -50,6 +56,8 @@ export const CROP_TYPES: CropType[] = [
     seedCost: 30,
     growSeconds: 20 * MINUTE,
     sellPrice: 360,
+    xp: 4,
+    unlockLevel: 4,
     freshSeconds: 1 * HOUR,
     look: { shape: 'vine', leaf: '#4f9a3c', fruit: '#e9822f', height: 0.25, perTile: 1 },
   },
@@ -60,6 +68,8 @@ export const CROP_TYPES: CropType[] = [
     seedCost: 40,
     growSeconds: 1 * HOUR,
     sellPrice: 750,
+    xp: 7,
+    unlockLevel: 7,
     freshSeconds: 3 * HOUR,
     look: { shape: 'cob', leaf: '#4f9a3c', fruit: '#f2d23c', height: 0.6, perTile: 2 },
   },
@@ -70,6 +80,8 @@ export const CROP_TYPES: CropType[] = [
     seedCost: 60,
     growSeconds: 4 * HOUR,
     sellPrice: 2000,
+    xp: 12,
+    unlockLevel: 9,
     freshSeconds: 8 * HOUR,
     look: { shape: 'flower', leaf: '#4f9a3c', fruit: '#f5c518', height: 0.55, perTile: 2 },
   },
@@ -80,6 +92,8 @@ export const CROP_TYPES: CropType[] = [
     seedCost: 80,
     growSeconds: 8 * HOUR,
     sellPrice: 3000,
+    xp: 16,
+    unlockLevel: 10,
     freshSeconds: 16 * HOUR,
     look: { shape: 'bush', leaf: '#5d9e45', fruit: '#c79a5b', height: 0.18, perTile: 2 },
   },

@@ -1,3 +1,5 @@
+import type { Player } from '../game/Player'
+
 // Tiny helpers for building UI with plain DOM calls. Setting textContent
 // (never innerHTML) means text is always shown as text, never run as HTML.
 
@@ -29,4 +31,10 @@ export function duration(ms: number): string {
 // A length of time in words, for catalogs: "5 min", "8 h".
 export function timeSpan(seconds: number): string {
   return seconds < 3600 ? `${Math.round(seconds / 60)} min` : `${Math.round(seconds / 3600)} h`
+}
+
+// Shown when a tap needs energy and there's none left.
+export function outOfEnergyMessage(player: Player, now: number): string {
+  const next = player.nextEnergyAt(now)
+  return `Out of energy ⚡ Next one in ${duration((next ?? now) - now)}`
 }

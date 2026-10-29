@@ -12,6 +12,7 @@ export interface BuildingType {
   category: Category
   size: { x: number; z: number } // footprint in tiles
   cost: number
+  unlockLevel: number // the player level that makes it available (progression.ts)
   // Coins this building pays out every `seconds`. Homes collect rent, businesses earn sales.
   income?: { coins: number; seconds: number }
   // How to draw it when there's no model (or the model fails to load).
@@ -31,6 +32,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     category: 'home',
     size: { x: 2, z: 2 },
     cost: 100,
+    unlockLevel: 1,
     income: { coins: 15, seconds: 30 },
     model: suburban('building-type-g'),
     placeholder: { shape: 'house', color: '#f2d7b0', accent: '#c4553f', height: 0.9 },
@@ -41,6 +43,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     category: 'home',
     size: { x: 2, z: 2 },
     cost: 250,
+    unlockLevel: 3,
     income: { coins: 35, seconds: 60 },
     model: suburban('building-type-k'),
     placeholder: { shape: 'house', color: '#c9d8e8', accent: '#4a5d7a', height: 1.6 },
@@ -51,6 +54,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     category: 'home',
     size: { x: 2, z: 2 },
     cost: 400,
+    unlockLevel: 6,
     income: { coins: 50, seconds: 90 },
     model: suburban('building-type-a'),
     placeholder: { shape: 'house', color: '#f4f4f4', accent: '#3fae6b', height: 1.2 },
@@ -61,6 +65,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     category: 'home',
     size: { x: 2, z: 2 },
     cost: 600,
+    unlockLevel: 8,
     income: { coins: 80, seconds: 120 },
     model: suburban('building-type-p'),
     placeholder: { shape: 'house', color: '#f4f4f4', accent: '#4b5060', height: 1.2 },
@@ -71,6 +76,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     category: 'business',
     size: { x: 2, z: 2 },
     cost: 300,
+    unlockLevel: 2,
     income: { coins: 40, seconds: 45 },
     placeholder: { shape: 'shop', color: '#f6e7c8', accent: '#d9822b', height: 1 },
   },
@@ -80,6 +86,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     category: 'business',
     size: { x: 3, z: 2 },
     cost: 500,
+    unlockLevel: 5,
     income: { coins: 75, seconds: 90 },
     placeholder: { shape: 'shop', color: '#e3e3e3', accent: '#3a8f5c', height: 1.2 },
   },
@@ -90,6 +97,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     category: 'farm',
     size: { x: 2, z: 2 },
     cost: 50,
+    unlockLevel: 1,
     placeholder: { shape: 'field', color: '#8a5a36', accent: '#6e4529', height: 0.06 },
   },
   {
@@ -98,6 +106,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     category: 'decoration',
     size: { x: 1, z: 1 },
     cost: 20,
+    unlockLevel: 1,
     model: suburban('tree-large'),
     placeholder: { shape: 'tree', color: '#7a5233', accent: '#3f8f3a', height: 1 },
   },
@@ -107,6 +116,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     category: 'decoration',
     size: { x: 1, z: 1 },
     cost: 15,
+    unlockLevel: 1,
     model: suburban('tree-small'),
     placeholder: { shape: 'tree', color: '#7a5233', accent: '#2f7a4f', height: 1 },
   },
@@ -116,6 +126,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     category: 'decoration',
     size: { x: 1, z: 1 },
     cost: 30,
+    unlockLevel: 2,
     model: suburban('planter'),
     placeholder: { shape: 'tree', color: '#5b5f6b', accent: '#3f8f3a', height: 0.5 },
   },

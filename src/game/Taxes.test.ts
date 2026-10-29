@@ -175,4 +175,11 @@ describe('Taxes', () => {
     taxes.load({ ...taxes.toSave(), lastReturn: oldReturn as never })
     expect(taxes.lastReturn).toMatchObject({ farmIncome: 0, farmExpenses: 0 })
   })
+
+  it('counts prize money (level-up rewards) as taxable income', () => {
+    const { city, taxes } = setup()
+    city.awardCoins(50, 'Level 2 reward')
+    expect(taxes.estimate().otherIncome).toBe(50)
+    expect(taxes.estimate().grossIncome).toBe(50)
+  })
 })

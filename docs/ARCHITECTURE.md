@@ -15,17 +15,17 @@ fixed directions:
                          │ calls methods (place, move, collect, …)
                          ▼
           ┌──────────── state ────────────┐
-          │ City  crops  GameClock  Taxes │   the rules and the data
+          │ City crops Player Clock Taxes │   the rules and the data
           └──────────────┬────────────────┘
                          │ emits events (added, coins, taxDay, …)
                          ▼
           ┌──────────── views ────────────┐
           │ CityView  IncomeView  Hud      │   draw what the state says
-          │ TaxPanel  CropPicker           │
+          │ TaxPanel CropPicker LevelUp    │
           └───────────────────────────────┘
 ```
 
-- **State** (`City`, `GameClock`, `Taxes`) knows the rules and holds the data.
+- **State** (`City`, `Player`, `GameClock`, `Taxes`) knows the rules and holds the data.
   It never touches three.js or the DOM, so it can be unit tested in plain Node
   (`*.test.ts`) and saved as plain JSON.
 - **Views** listen for state events and update the screen. They never change
@@ -57,7 +57,11 @@ inside `switch (event.kind)`.
 | City | `planted` | seeds go into a farm plot | IncomeView (seed cost pop-up), Taxes (farm expense) |
 | City | `harvested` | a ripe crop is harvested | IncomeView (pop-up), Taxes (farm income) |
 | City | `cleared` | a withered crop is cleared | IncomeView (pop-up) |
+| City | `award` | prize coins are given (a level-up reward) | Taxes (other income) |
 | City | `coins` | the coin balance changes | Hud (counter, catalog), TaxPanel |
+| Player | `xp` | XP is earned | Hud (level and bar), Game → IncomeView "+2 ⭐" pop-up |
+| Player | `levelUp` | a new level is reached | Game → LevelUpPanel, Hud (unlocks catalog items) |
+| Player | `energy` | energy is spent, refilled or loaded | Hud, autosave |
 | Taxes | `salesTax` | sales tax is collected on a sale | Game → IncomeView pop-up |
 | Taxes | `remitted` | quarterly sales tax is sent | Game → Hud toast |
 | Taxes | `taxDay` | the yearly return is filed | Game → TaxPanel report |
@@ -80,7 +84,8 @@ first and loads the save last.
    changes (sprout → young → grown → ripe → withered).
 4. `incomeView.update(now)` adds, changes or removes bubbles (coins, plant,
    harvest, withered) and refreshes the info card countdown.
-5. `hud.update(clock)` refreshes the date and month progress bar.
+5. `hud.update(clock, now)` refreshes energy (it refills with time, so it's
+   checked every frame), the date and the month progress bar.
 6. Draw the 3D scene, then the HTML labels on top.
 
 Nothing in the game "ticks down". Timers are stored as **timestamps**
@@ -91,7 +96,7 @@ tab being in the background, and makes offline progress automatic.
 
 | | Real time (`Date.now()`) | Play time (`GameClock`) |
 |---|---|---|
-| Used for | Income timers (`readyAt`), crops (`plantedAt`) | The calendar: months, quarters, Tax Day |
+| Used for | Income timers (`readyAt`), crops (`plantedAt`), energy (`energyAt`) | The calendar: months, quarters, Tax Day |
 | Runs while the game is closed? | Yes, so rent is waiting and crops grow (or wither) while you're away | No |
 | Why | Matches the genre: come back later and collect | Otherwise a week away would mean 800 years of tax bills |
 
@@ -142,6 +147,29 @@ of a few shapes each; rather than hundreds of meshes, every shape of the same
 color is merged into one geometry (`mergeGeometries`), so a whole plot is 2–4
 draw calls.
 
+## XP, levels and energy
+
+`Player` watches City the same way `Taxes` does, so neither City nor the input
+code knows these rules exist:
+
+- `added` with `paid > 0` → XP for building (free and loaded buildings give none),
+- `collected` / `harvested` → XP, and 1 energy,
+- `planted` (paid) / `cleared` → 1 energy.
+
+Energy is checked *before* an action, by the code that handles the tap
+(`Builder.tap`, `CropPicker`), and spent *after* it, when City reports that
+it happened. So a tap that does nothing (a building that isn't ready) never
+costs energy.
+
+Energy is stored as a value and the time it was true (`energy`, `energyAt`),
+the same trick as crops: `Player.energy(now)` adds one point per full regen
+period since then. When spending, the clock only moves forward by the whole
+periods already counted, so partial progress toward the next point is kept.
+
+Levels come from XP with a formula (`levelForXp`), never stored. Each new
+level calls `City.awardCoins`, which emits `award` so Taxes can record the
+prize as income.
+
 ## Saving
 
 `save.ts` stores one JSON document in `localStorage` under `hearthvale.save`:
@@ -155,7 +183,8 @@ draw calls.
     { "id": 2, "typeId": "farm-plot", "tile": { "x": 12, "z": 9 }, "readyAt": 0, "crop": { "cropId": "wheat", "plantedAt": 1761700000000 } }
   ] },
   "clock": { "playedMs": 812345 },
-  "taxes": { "ledger": { … }, "salesTaxHeld": 3, "lastReturn": { … }, "assets": [[1, { "basis": 100, "depreciated": 4.2, "placedMonth": 0 }]] }
+  "taxes": { "ledger": { … }, "salesTaxHeld": 3, "lastReturn": { … }, "assets": [[1, { "basis": 100, "depreciated": 4.2, "placedMonth": 0 }]] },
+  "player": { "xp": 52, "energy": 9, "energyAt": 1761700000000 }
 }
 ```
 
@@ -168,6 +197,7 @@ draw calls.
 - **Additive changes don't need a version bump.** Stage 4 added `crop` to
   buildings and farm lines to the tax books; the loaders fill in defaults
   when they're missing (`crop: null`, `farmIncome: 0`), so older saves load as is.
+  Stage 5 added `player`; a save without it starts at level 1 with full energy.
 - **When:** `AutoSaver` saves one second after any change, batching bursts into
   one write, and immediately when the tab is hidden or closed (`pagehide`,
   `visibilitychange`).

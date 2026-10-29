@@ -2,6 +2,7 @@ import * as THREE from 'three'
 import { CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js'
 import { CropPicker } from '../ui/CropPicker'
 import { Hud } from '../ui/Hud'
+import { LevelUpPanel } from '../ui/LevelUpPanel'
 import { TaxPanel } from '../ui/TaxPanel'
 import { Builder } from './Builder'
 import { BUILDINGS_BY_ID } from './buildings'
@@ -12,6 +13,7 @@ import { CROPS_BY_ID } from './crops'
 import { GameClock, MONTH_NAMES } from './GameClock'
 import { GRID_SIZE } from './grid'
 import { IncomeView } from './IncomeView'
+import { Player } from './Player'
 import { AutoSaver, clearSave, readSave } from './save'
 import { Taxes } from './Taxes'
 
@@ -30,8 +32,9 @@ export class Game {
   private camera: THREE.OrthographicCamera
   private controls: CameraController
 
-  // Game state: the town, the calendar and the tax books.
+  // Game state: the town, the player's progress, the calendar and the tax books.
   private city = new City()
+  private player = new Player(this.city)
   private clock: GameClock
   private taxes: Taxes
 
@@ -71,28 +74,31 @@ export class Game {
     // or it misses the 'added' events.
     this.cityView = new CityView(this.scene, this.city)
     this.taxes = new Taxes(this.city, this.clock)
-    const builder = new Builder(this.scene, this.city, this.cityView, this.controls, this.renderer.domElement)
+    const builder = new Builder(this.scene, this.city, this.player, this.cityView, this.controls, this.renderer.domElement)
     this.incomeView = new IncomeView(this.scene, this.city, this.cityView, (b) => builder.tap(b))
     builder.onHoverBuilding = (b) => this.incomeView.setHovered(b)
 
     const taxPanel = new TaxPanel(container, this.city, this.taxes, this.clock)
-    this.hud = new Hud(container, builder, this.city, {
+    this.hud = new Hud(container, builder, this.city, this.player, {
       onOpenTaxes: () => taxPanel.open(),
       onNewTown: () => this.newTown(),
     })
     this.showTaxEvents(taxPanel)
-    const cropPicker = new CropPicker(container, this.city, (message) => this.hud.toast(message))
+    const cropPicker = new CropPicker(container, this.city, this.player, (message) => this.hud.toast(message))
     builder.onPlantRequest = (plot) => cropPicker.open(plot)
+    this.showPlayerEvents(new LevelUpPanel(container))
 
     this.saver = new AutoSaver(() => ({
       city: this.city.toSave(),
       clock: { playedMs: this.clock.playedMs },
       taxes: this.taxes.toSave(),
+      player: this.player.toSave(),
     }))
     this.loadOrSeed()
     // Save shortly after anything changes.
     this.city.onChange(() => this.saver.requestSave())
     this.taxes.onChange(() => this.saver.requestSave())
+    this.player.onChange(() => this.saver.requestSave())
 
     window.addEventListener('resize', () => this.resize())
     this.resize()
@@ -113,7 +119,7 @@ export class Game {
     const now = Date.now()
     this.cityView.update(now)
     this.incomeView.update(now)
-    this.hud.update(this.clock)
+    this.hud.update(this.clock, now)
     this.renderer.render(this.scene, this.camera)
     this.labelRenderer.render(this.scene, this.camera)
   }
@@ -126,6 +132,7 @@ export class Game {
       this.clock.playedMs = save.clock.playedMs
       this.city.load(save.city)
       this.taxes.load(save.taxes)
+      if (save.player) this.player.load(save.player)
       return
     }
     // A small starting town so a new game isn't an empty field.
@@ -147,6 +154,13 @@ export class Game {
     this.saver.disable()
     clearSave()
     location.reload()
+  }
+
+  private showPlayerEvents(levelUpPanel: LevelUpPanel) {
+    this.player.onChange((event) => {
+      if (event.kind === 'xp' && event.building) this.incomeView.popup(event.building, `+${event.amount} ⭐`, 'xp')
+      if (event.kind === 'levelUp') levelUpPanel.show(event)
+    })
   }
 
   // Turn tax events into pop-ups, messages and the Tax Day report.

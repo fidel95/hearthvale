@@ -30,13 +30,15 @@ export interface CitySave {
 }
 
 export type CityEvent =
-  | { kind: 'added'; building: PlacedBuilding }
+  // paid is what the player spent: 0 for free buildings and ones loaded from a save.
+  | { kind: 'added'; building: PlacedBuilding; paid: number }
   | { kind: 'removed'; building: PlacedBuilding }
   | { kind: 'moved'; building: PlacedBuilding }
   | { kind: 'collected'; building: PlacedBuilding; amount: number }
   | { kind: 'planted'; building: PlacedBuilding; crop: CropType; cost: number }
   | { kind: 'harvested'; building: PlacedBuilding; crop: CropType; amount: number }
   | { kind: 'cleared'; building: PlacedBuilding; crop: CropType } // a withered crop was cleared away
+  | { kind: 'award'; amount: number; reason: string } // prize coins, e.g. a level-up reward
   | { kind: 'coins'; coins: number }
 
 export class City {
@@ -94,8 +96,9 @@ export class City {
     const building = { id: this.nextId++, type, tile, readyAt, crop: null }
     this.buildings.set(building.id, building)
     this.mark(building, building.id)
-    this.emit({ kind: 'added', building })
-    if (!free) this.adjustCoins(-type.cost)
+    const paid = free ? 0 : type.cost
+    this.emit({ kind: 'added', building, paid })
+    this.adjustCoins(-paid)
     return building
   }
 
@@ -175,6 +178,14 @@ export class City {
     return true
   }
 
+  // Prize money, like a level-up reward. It's income (Taxes counts it), so
+  // it gets its own event rather than a bare adjustCoins.
+  awardCoins(amount: number, reason: string) {
+    if (amount <= 0) return
+    this.emit({ kind: 'award', amount, reason })
+    this.adjustCoins(amount)
+  }
+
   // Add (or, with a negative delta, take away) coins. Unlike building, taxes
   // may push coins below zero: that's debt, and it accrues late penalties.
   adjustCoins(delta: number) {
@@ -212,7 +223,7 @@ export class City {
       const building = { id: saved.id, type, tile: saved.tile, readyAt: saved.readyAt, crop }
       this.buildings.set(building.id, building)
       this.mark(building, building.id)
-      this.emit({ kind: 'added', building })
+      this.emit({ kind: 'added', building, paid: 0 })
       this.nextId = Math.max(this.nextId, building.id + 1)
     }
     this.nextId = Math.max(this.nextId, save.nextId)

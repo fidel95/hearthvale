@@ -2,7 +2,7 @@
 
 A cozy isometric city-builder in the style of the 2010s social city games:
 place homes and shops, collect rent and sales on timers, plant and harvest
-crops, grow your town, and deal with taxes modeled on the real thing. It runs entirely in the browser.
+crops, level up to unlock more, and deal with taxes modeled on the real thing. It runs entirely in the browser.
 There are no accounts or servers, and progress is saved on your device.
 
 It's also a learning project. The code is written to be read: comments explain
@@ -50,6 +50,8 @@ to make each in-game month last one second, so you can watch a whole tax year in
 | Cancel a tool | Esc, right-click or **Done** | **Done** |
 
 - **Build:** pick a building. A green preview means it fits and you can afford it; red means it doesn't. Place as many as you like, then press Done.
+- **Levels and XP:** building, collecting and harvesting earn XP (⭐). Each level pays a coin reward, refills your energy, raises its maximum and unlocks new buildings and crops. Locked items are shown with the level that unlocks them.
+- **Energy (⚡):** collecting, harvesting, planting and clearing use 1 energy each; building and moving don't. It refills by 1 every 2 minutes, in real time, even while the game is closed.
 - **Farming:** build a Farm Plot, then tap it (🌱) to choose seeds. Crops grow through sprout, young and grown stages, then ripen (the crop's bubble appears): tap to harvest and sell. Wait too long and it withers (🥀): the harvest is lost and you tap to clear the plot. Quick crops earn the most per minute; slow ones can be left overnight. Tick "Plant all empty plots" to sow every empty plot at once.
 - **Move:** tap a building to pick it up, then tap where it should go.
 - **Demolish:** tap a building to remove it. You get no refund and no tax deduction; that's the real US rule, explained in docs/TAXES.md.
@@ -63,7 +65,7 @@ to make each in-game month last one second, so you can watch a whole tax year in
 
 ### Taxes in one paragraph
 
-Homes earn rent, shops earn sales and farms earn crop sales. Shops also
+Homes earn rent, shops earn sales and farms earn crop sales. Level-up rewards are prize money, which is taxable too. Shops also
 collect 7% sales tax from customers, which you hold for the state and hand
 over each quarter. Crops are sold wholesale, so they carry no sales tax, and
 the seeds you buy are a deductible farm expense. Every
@@ -84,6 +86,8 @@ src/
     grid.ts               tile ↔ world coordinate math
     buildings.ts          the building catalog (pure data)
     crops.ts              the crop catalog and crop stages (empty → growing → ripe → withered)
+    progression.ts        XP, level and energy rules (pure functions)
+    Player.ts             the player's XP, level and energy over time
     City.ts               town state: coins, buildings, occupancy, income timers
     GameClock.ts          the in-game calendar (play time, not wall time)
     taxRules.ts           tax rates, brackets and formulas (pure functions)
@@ -99,6 +103,7 @@ src/
     Hud.ts                coins, calendar, toolbar, catalog, hints, toasts
     TaxPanel.ts           the Taxes window and Tax Day report
     CropPicker.ts         the seed window for farm plots
+    LevelUpPanel.ts       the level-up window
     dom.ts                small DOM helpers
 public/models/            3D models served as-is (Kenney City Kit, CC0)
 assets-src/               raw downloaded asset packs (git-ignored)
@@ -115,8 +120,8 @@ docs/                     the docs linked above
 | 3 | ✅ | Coins, costs, income timers, collect bubbles |
 | 3.5 | ✅ | Local saving, game calendar, tax system, unit tests, touch support |
 | 4 | ✅ | Farms: plant, grow, harvest, wither; farm income and seed expenses on the tax return |
-| 5 | ⏳ | Energy, XP and levels, unlocks |
-| 6 | | Offline catch-up polish, save migrations |
+| 5 | ✅ | Energy, XP and levels, unlocks; level rewards taxed as prizes |
+| 6 | ⏳ | Offline catch-up polish, save migrations |
 | 7 | | Roads, population and community buildings |
 | 8 | | Supply chain: farm goods stock shops (cost of goods becomes deductible) |
 | 9 | | Quests and goals |

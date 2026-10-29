@@ -185,8 +185,9 @@ export class IncomeView {
   }
 
   // A short message that floats up from a building and fades out.
-  // variant 'note' is the smaller dark one, for sales tax, seed costs and the like.
-  popup(building: PlacedBuilding, text: string, variant: 'coins' | 'note' = 'coins') {
+  // variant 'note' is the smaller dark one, for sales tax, seed costs and the like;
+  // 'xp' is the blue one beside the coins.
+  popup(building: PlacedBuilding, text: string, variant: 'coins' | 'note' | 'xp' = 'coins') {
     const el = document.createElement('div')
     el.className = `popup popup-${variant}`
     el.textContent = text
