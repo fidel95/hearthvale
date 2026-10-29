@@ -234,7 +234,10 @@ docs/                     the docs linked above
 | 9.6 | ✅ | Data model: turning buildings, population capacity, settings, tutorial, save format version 3 |
 | 10 | ✅ | Decorations that boost nearby income (capped at +10%); 5 new homes from the model pack, 4 new shops, a Library and Town Hall, 6 new decorations |
 | 11 | ✅ | Simulated neighbors: generated towns to visit, daily helps, gifts, requests, friendship; gifts vs. pay for help on taxes |
-| 12 | ⏳ | Polish (animation, sound, citizens) and deploy |
+| 11.5 | ✅ | Design spec: shops need roads, production states, coins never negative (debt instead), land needs materials, city rating, 3 landmarks, quests as data, sound and music, help, save export / import and damaged-save backup, keyboard camera and accessibility, debug tools ([FEATURES.md](docs/FEATURES.md)) |
+| 11.6 | ✅ | Systems refactor: Economy, ProductionSystem, PlacementSystem, UnlockSystem, GameState, SaveSystem; panels show the rules' answers instead of re-checking them |
+| 11.7 | ✅ | Test plan: placement, economy, production, quests, saves and offline suites (215 tests); fixed quest tasks un-completing and damaged saves crashing ([TESTING.md](docs/TESTING.md)) |
+| 12 | ⏳ | Polish and deploy: installable and fully offline (service worker), animation polish, performance on phones, publish online |
 
 ## Credits
 
