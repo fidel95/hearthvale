@@ -375,7 +375,7 @@ export class Taxes {
   private remitSalesTax(quarter: number) {
     const amount = this.salesTaxHeld
     if (amount <= 0) return
-    this.city.adjustCoins(-amount)
+    this.city.bill(amount)
     this.ledger.salesTaxRemitted += amount
     this.salesTaxHeld = 0
     this.emit({ kind: 'remitted', amount, quarter })
@@ -383,18 +383,18 @@ export class Taxes {
 
   private fileReturn() {
     const taxReturn = this.estimate()
-    this.city.adjustCoins(-taxReturn.amountDue)
+    this.city.bill(taxReturn.amountDue)
     this.lastReturn = taxReturn
     this.ledger = emptyLedger(taxReturn.year + 1)
     this.emit({ kind: 'taxDay', taxReturn })
   }
 
-  // Coins only go negative from unpaid taxes, so a negative balance is tax debt.
+  // Unpaid bills are debt (City.debt); each month it's unpaid adds a penalty.
   private chargeLatePenalty() {
-    const debt = -this.city.coins
+    const debt = this.city.debt
     if (debt <= 0) return
     const penalty = Math.max(1, Math.round(debt * LATE_PENALTY_PER_MONTH))
-    this.city.adjustCoins(-penalty)
+    this.city.bill(penalty)
     this.ledger.penalties += penalty
     this.emit({ kind: 'penalty', amount: penalty })
   }

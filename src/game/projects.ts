@@ -1,7 +1,9 @@
 import type { City, PlacedBuilding } from './City'
 import { canUpgrade, levelFactor, upgradeCost } from './construction'
+import type { Lot } from './grid'
 import type { Inventory } from './Inventory'
 import type { Materials } from './items'
+import { expansionLevel, expansionMaterials } from './land'
 import type { Player } from './Player'
 
 // Finishing construction and upgrading both need things from more than one
@@ -40,5 +42,18 @@ export function upgradeBuilding(
   if (!inventory.hasAll(cost.materials)) return { ok: false, reason: 'materials', missing: inventory.missing(cost.materials) }
   const materialsCost = inventory.use(cost.materials)!
   city.upgrade(b.id, cost.coins, materialsCost)
+  return { ok: true }
+}
+
+// Buying land: the level, the coins and the materials, all checked first.
+export function buyLand(city: City, inventory: Inventory, player: Player, lot: Lot): ProjectResult {
+  if (!city.canBuyLot(lot)) return { ok: false, reason: 'not-ready' }
+  const n = city.expansions + 1
+  if (player.level < expansionLevel(n)) return { ok: false, reason: 'level' }
+  if (city.coins < city.nextLotPrice) return { ok: false, reason: 'coins' }
+  const materials = expansionMaterials(n)
+  if (!inventory.hasAll(materials)) return { ok: false, reason: 'materials', missing: inventory.missing(materials) }
+  const cost = inventory.use(materials)!
+  city.buyLot(lot, cost)
   return { ok: true }
 }

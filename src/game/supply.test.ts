@@ -5,12 +5,16 @@ import { CROPS_BY_ID } from './crops'
 import { Docks, SHIPMENT_OPTIONS } from './Docks'
 import { GameClock } from './GameClock'
 import { Taxes } from './Taxes'
+import { productionState } from './production'
 import { coastZ } from './terrain'
 
 const at = (x: number, z: number) => ({ x: 20 + x, z: 20 + z })
 const b = (id: string) => BUILDINGS_BY_ID.get(id)!
 const strawberries = CROPS_BY_ID.get('strawberries')! // 6 goods, or 40 coins wholesale
 const small = SHIPMENT_OPTIONS[0] // 40 goods for 240, 60 s
+
+// Shops need a road beside them: put one on the tile east of a 2×2 shop at at(0, 0).
+const road = (city: City) => city.place(b('road'), at(2, 0), { free: true })
 
 function town() {
   const city = new City()
@@ -23,6 +27,7 @@ describe('goods and shops', () => {
   it('shops sell from their shelves, which are restocked from town storage', () => {
     const { city } = town()
     const bakery = city.place(b('bakery'), at(0, 0), { now: 0, free: true })! // 4 goods a sale, shelves hold 40
+    road(city)
     expect(city.hasStock(bakery)).toBe(false) // a new shop starts empty
     expect(city.collect(bakery.id, 45_000)).toBe(0)
     expect(city.restock(bakery.id)).toBe(40) // all 40 starting goods
@@ -78,6 +83,7 @@ describe('inventory and cost of goods sold', () => {
   it('deducts what goods cost only when they are sold, at the average cost', () => {
     const { city, taxes } = town()
     const bakery = city.place(b('bakery'), at(0, 0), { now: 0, free: true })!
+    road(city)
     // 40 free starting goods, plus 40 bought for 240: 80 goods costing 240, 3 a unit on average.
     city.addGoods(40, 240)
     expect(taxes.inventory).toEqual({ units: 80, cost: 240 })
@@ -152,3 +158,32 @@ describe('Docks', () => {
     expect(city.coins).toBe(coins)
   })
 })
+
+describe('road access', () => {
+  it("blocks a shop with no road beside it, until one's built", () => {
+    const { city } = town()
+    const bakery = city.place(b('bakery'), at(0, 0), { now: 0, free: true })!
+    city.restock(bakery.id)
+    expect(productionState(city, bakery, 45_000)).toEqual({ state: 'blocked', reason: 'road' })
+    expect(city.collect(bakery.id, 45_000)).toBe(0)
+    road(city)
+    expect(productionState(city, bakery, 45_000)).toEqual({ state: 'ready' })
+    expect(city.collect(bakery.id, 45_000)).toBe(40)
+  })
+
+  it('knows which buildings removing a road would cut off', () => {
+    const { city } = town()
+    const bakery = city.place(b('bakery'), at(0, 0), { free: true })!
+    const only = road(city)!
+    expect(city.cutOffBy(only)).toEqual([bakery])
+    city.place(b('road'), at(0, 2), { free: true }) // a second road along its south side
+    expect(city.cutOffBy(only)).toEqual([])
+  })
+
+  it("homes don't need a road (they just earn more beside one)", () => {
+    const { city } = town()
+    const home = city.place(b('cottage'), at(0, 0), { now: 0, free: true })!
+    expect(city.collect(home.id, 30_000)).toBe(15)
+  })
+})
+

@@ -28,7 +28,7 @@ export interface SaveData {
   version: number
   savedAt: number // Date.now() when written
   player: PlayerSave & { level: number } // level is worked out from XP; saved for readability
-  resources: { coins: number; goods: number }
+  resources: { coins: number; goods: number; debt?: number }
   // Worked out from the buildings on load; saved so the file reads on its own.
   population: { current: number; capacity: number }
   land: { parcels: CitySave['lots'] }
@@ -49,6 +49,7 @@ export function citySave(save: SaveData): CitySave {
   return {
     coins: save.resources.coins,
     goods: save.resources.goods,
+    debt: save.resources.debt,
     nextId: save.buildings.nextId,
     buildings: save.buildings.list,
     lots: save.land.parcels,

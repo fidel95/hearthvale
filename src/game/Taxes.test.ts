@@ -48,6 +48,7 @@ describe('Taxes', () => {
   it('adds sales tax on top of shop sales and holds it until the quarter ends', () => {
     const { city, taxes, events, runMonths } = setup()
     const shop = city.place(bakery, at(0, 0), { now: 0, free: true })!
+    city.place(BUILDINGS_BY_ID.get('road')!, at(2, 0), { free: true }) // shops need a road
     city.restock(shop.id)
     const before = city.coins
     city.collect(shop.id, 45_000)
@@ -109,11 +110,28 @@ describe('Taxes', () => {
 
   it('charges a 0.5% late penalty each month you are in tax debt', () => {
     const { city, taxes, events, runMonths } = setup()
-    city.adjustCoins(-1000 - city.coins) // 1,000 coins of tax debt
+    city.adjustCoins(-city.coins)
+    city.bill(1000) // 1,000 coins of tax debt: coins stay at 0, the rest is owed
+    expect(city.coins).toBe(0)
+    expect(city.debt).toBe(1000)
     runMonths(1)
     expect(events).toContainEqual({ kind: 'penalty', amount: 5 })
-    expect(city.coins).toBe(-1005)
+    expect(city.coins).toBe(0) // never negative
+    expect(city.debt).toBe(1005)
     expect(taxes.ledger.penalties).toBe(5)
+  })
+
+  it('pays debt from income before it reaches the coin balance', () => {
+    const { city } = setup()
+    city.adjustCoins(-city.coins)
+    city.bill(30)
+    const home = city.place(cottage, at(0, 0), { now: 0, free: true })!
+    city.collect(home.id, 30_000) // 15 coins of rent, all to the debt
+    expect(city.debt).toBe(15)
+    expect(city.coins).toBe(0)
+    city.collect(home.id, 60_000) // 15 more clears it
+    expect(city.debt).toBe(0)
+    expect(() => city.adjustCoins(-1)).toThrow() // spending more than you have is a bug
   })
 
   it('round-trips through a save', () => {

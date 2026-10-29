@@ -122,7 +122,7 @@ export class TaxPanel {
           ? `Your top bracket was ${percent(r.marginalRate)}, but your income tax was only ${percent(r.effectiveRate)} of your gross income. That gap is how marginal brackets work: each rate only applies to the slice of income inside its bracket.`
           : 'Your deductions covered all of your income, so there was no income tax this year. Property tax is still due: it depends on what your buildings are worth, not on what you earned.',
       ),
-      ...(this.city.coins < 0 ? [this.debtWarning()] : []),
+      ...(this.city.debt > 0 ? [this.debtWarning()] : []),
     )
     this.taxDay.show(`📬 Tax Day: Year ${r.year}`, button('Got it', () => this.taxDay.close()))
   }
@@ -138,7 +138,7 @@ export class TaxPanel {
     const totalPropertyTax = properties.reduce((sum, p) => sum + p.annualTax, 0) + land.annualTax
 
     const parts: HTMLElement[] = []
-    if (this.city.coins < 0) parts.push(this.debtWarning())
+    if (this.city.debt > 0) parts.push(this.debtWarning())
 
     parts.push(
       section(
@@ -222,7 +222,7 @@ export class TaxPanel {
     return el(
       'p',
       'warning',
-      `You owe ${coins(-this.city.coins)} in back taxes. A ${percent(LATE_PENALTY_PER_MONTH)} late penalty is added every month until it's paid. Collect rent to pay it off. You can't build while in debt.`,
+      `You owe ${coins(this.city.debt)} in unpaid bills. A ${percent(LATE_PENALTY_PER_MONTH)} late penalty is added every month until it's paid. Income pays it off first, before it reaches your coins.`,
     )
   }
 

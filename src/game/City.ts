@@ -78,6 +78,7 @@ export interface OwnedLot {
 export interface CitySave {
   coins: number
   goods?: number // missing in saves from before Stage 8
+  debt?: number // saved separately since the coins-never-negative rule
   nextId: number
   buildings: BuildingSave[]
   lots: { x: number; z: number; price: number }[]
@@ -100,6 +101,7 @@ export type CityEvent =
   | { kind: 'award'; amount: number; reason: string } // prize coins, e.g. a level-up reward
   | { kind: 'expense'; amount: number; reason: string } // a running cost, e.g. utility upkeep
   | { kind: 'coins'; coins: number }
+  | { kind: 'debt'; debt: number }
   // The land changed: a lot was bought (bought is set), or a save was loaded.
   | { kind: 'land'; bought?: OwnedLot }
   // Construction finished; materialsCost is what the materials used had cost.
@@ -122,6 +124,10 @@ export class City {
   private listeners: ((event: CityEvent) => void)[] = []
   private _coins = STARTING_COINS
   private _goods = STARTING_GOODS
+  // What the town owes and couldn't pay (taxes, bills). Coins never go below
+  // zero: a bill bigger than the coins on hand leaves the rest owed, and
+  // income pays it down before it reaches the coin balance.
+  private _debt = 0
   private land = new Map<string, OwnedLot>(
     START_LOTS.map((lot) => [lotKey(lot), { lot, price: START_LOT_VALUE }]),
   )
@@ -137,6 +143,27 @@ export class City {
   // place / collect / adjustCoins to change them.
   get coins() {
     return this._coins
+  }
+
+  get debt() {
+    return this._debt
+  }
+
+  // A bill the town must pay (taxes, running costs, penalties): from coins as
+  // far as they go, the rest becomes debt. Returns what was owed beyond the coins.
+  bill(amount: number): number {
+    if (amount <= 0) return 0
+    const paid = Math.min(this._coins, amount)
+    const owed = amount - paid
+    if (paid > 0) {
+      this._coins -= paid
+      this.emit({ kind: 'coins', coins: this._coins })
+    }
+    if (owed > 0) {
+      this._debt += owed
+      this.emit({ kind: 'debt', debt: this._debt })
+    }
+    return owed
   }
 
   onChange(listener: (event: CityEvent) => void) {
@@ -160,6 +187,24 @@ export class City {
   }
 
   isRoad = (tile: Tile): boolean => this.buildingAt(tile)?.type.category === 'road'
+
+  // The road rule: a road on any tile touching one side of the footprint.
+  // (ignoring: pretend this road tile is gone, to check what removing it would cut off.)
+  hasRoadAccess(b: PlacedBuilding, ignoring?: Tile): boolean {
+    return edgeTiles(b).some((t) => this.isRoad(t) && !(ignoring && t.x === ignoring.x && t.z === ignoring.z))
+  }
+
+  // Buildings that need a road and would lose their only one if this road tile went.
+  cutOffBy(road: PlacedBuilding): PlacedBuilding[] {
+    return [...this.buildings.values()].filter(
+      (b) => b.type.requiresRoad && this.hasRoadAccess(b) && !this.hasRoadAccess(b, road.tile),
+    )
+  }
+
+  // Working: built, and connected if it needs a road.
+  isOperating(b: PlacedBuilding): boolean {
+    return this.isBuilt(b) && (!b.type.requiresRoad || this.hasRoadAccess(b))
+  }
 
   buildingAt(tile: Tile): PlacedBuilding | undefined {
     if (!inBounds(tile)) return undefined
@@ -199,10 +244,12 @@ export class City {
     return footprintTiles(corner, LOT_FOOTPRINT).some((t) => !isWater(t))
   }
 
-  buyLot(lot: Lot): boolean {
+  // materialsCost: what the materials used to clear it had cost, added to the
+  // land's value (clearing land is part of its cost, and land isn't depreciated).
+  buyLot(lot: Lot, materialsCost = 0): boolean {
     const price = this.nextLotPrice
     if (!this.canBuyLot(lot) || this._coins < price) return false
-    const owned = { lot, price }
+    const owned = { lot, price: price + materialsCost }
     this.land.set(lotKey(lot), owned)
     this.emit({ kind: 'land', bought: owned })
     this.adjustCoins(-price)
@@ -397,6 +444,7 @@ export class City {
   collect(id: number, now: number): number {
     const building = this.buildings.get(id)
     if (!building || !building.type.income || !this.isReady(building, now) || !this.hasStock(building)) return 0
+    if (!this.isOperating(building)) return 0 // e.g. a shop with no road
 
     const amount = this.payout(building)
     const goodsUsed = building.type.goodsPerSale ?? 0
@@ -471,24 +519,34 @@ export class City {
 
   // Prize money, like a level-up reward. It's income (Taxes counts it), so
   // it gets its own event rather than a bare adjustCoins.
-  awardCoins(amount: number, reason: string) {
+  awardCoins(amount: number, reason: string, options: { payDebt?: boolean } = {}) {
     if (amount <= 0) return
     this.emit({ kind: 'award', amount, reason })
-    this.adjustCoins(amount)
+    this.adjustCoins(amount, options)
   }
 
   // A running cost, like utility upkeep. It's a deductible expense (Taxes
-  // counts it), so it gets its own event. Like taxes, it can cause debt.
+  // counts it), so it gets its own event. Like taxes, it can leave debt.
   payExpense(amount: number, reason: string) {
     if (amount <= 0) return
     this.emit({ kind: 'expense', amount, reason })
-    this.adjustCoins(-amount)
+    this.bill(amount)
   }
 
-  // Add (or, with a negative delta, take away) coins. Unlike building, taxes
-  // may push coins below zero: that's debt, and it accrues late penalties.
-  adjustCoins(delta: number) {
+  // Add or spend coins. Income pays any debt first. Spending can never take
+  // coins below zero: every purchase checks it can afford it first, so trying
+  // to is a bug, and throws. (Bills that may exceed the coins use bill().)
+  // payDebt: false keeps a grant out of the debt collector's hands (safetyNet.ts).
+  adjustCoins(delta: number, { payDebt = true } = {}) {
     if (delta === 0) return
+    if (delta < 0 && this._coins + delta < 0) throw new Error(`Spending ${-delta} coins with only ${this._coins}`)
+    if (delta > 0 && payDebt && this._debt > 0) {
+      const toDebt = Math.min(this._debt, delta)
+      this._debt -= toDebt
+      delta -= toDebt
+      this.emit({ kind: 'debt', debt: this._debt })
+      if (delta === 0) return
+    }
     this._coins += delta
     this.emit({ kind: 'coins', coins: this._coins })
   }
@@ -497,6 +555,7 @@ export class City {
     return {
       coins: this._coins,
       goods: this._goods,
+      debt: this._debt,
       nextId: this.nextId,
       buildings: [
         ...[...this.buildings.values()].map((b) => this.saveBuilding(b, false)),
@@ -543,7 +602,10 @@ export class City {
       this.emit({ kind: 'added', building, paid: 0 })
     }
     this.nextId = Math.max(this.nextId, save.nextId)
-    this._coins = save.coins
+    // Older saves kept debt as negative coins.
+    this._coins = Math.max(0, save.coins)
+    this._debt = save.debt ?? Math.max(0, -save.coins)
+    this.emit({ kind: 'debt', debt: this._debt })
     this._goods = save.goods ?? STARTING_GOODS
     this.emit({ kind: 'goods', goods: this._goods })
     this.emit({ kind: 'coins', coins: this._coins })

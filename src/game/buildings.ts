@@ -73,6 +73,9 @@ export interface BuildingType {
   build?: { seconds: number; materials?: Materials }
   // Room for this many more goods in the town's storage.
   storage?: number
+  // Needs a road touching one side of its footprint to work (shops: customers
+  // have to get there). See City.hasRoadAccess.
+  requiresRoad?: boolean
   // Must be built on the shore, next to the sea (docks).
   onShore?: boolean
   // Depreciation period in years, when it differs from its category's (taxRules.ts).
@@ -220,6 +223,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     size: { x: 2, z: 2 },
     cost: 300,
     unlockLevel: 2,
+    requiresRoad: true,
     income: { coins: 40, seconds: 45 },
     goodsPerSale: 4,
     stockCapacity: 40,
@@ -233,6 +237,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     size: { x: 3, z: 2 },
     cost: 500,
     unlockLevel: 8,
+    requiresRoad: true,
     build: { seconds: 120, materials: { lumber: 4, glass: 2 } },
     income: { coins: 75, seconds: 90 },
     goodsPerSale: 7,
@@ -246,6 +251,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     size: { x: 2, z: 2 },
     cost: 380,
     unlockLevel: 4,
+    requiresRoad: true,
     build: { seconds: 60, materials: { bricks: 2, lumber: 2 } },
     income: { coins: 52, seconds: 60 },
     goodsPerSale: 5,
@@ -260,6 +266,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     size: { x: 2, z: 2 },
     cost: 450,
     unlockLevel: 6,
+    requiresRoad: true,
     build: { seconds: 90, materials: { lumber: 3, glass: 2 } },
     income: { coins: 62, seconds: 75 },
     goodsPerSale: 6,
@@ -274,6 +281,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     size: { x: 3, z: 2 },
     cost: 700,
     unlockLevel: 10,
+    requiresRoad: true,
     build: { seconds: 180, materials: { bricks: 6, glass: 3, steel: 1 } },
     income: { coins: 110, seconds: 120 },
     goodsPerSale: 10,
@@ -288,6 +296,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     size: { x: 3, z: 3 },
     cost: 1100,
     unlockLevel: 12,
+    requiresRoad: true,
     build: { seconds: 300, materials: { steel: 6, glass: 6, bricks: 6 } },
     income: { coins: 160, seconds: 150 },
     goodsPerSale: 14,

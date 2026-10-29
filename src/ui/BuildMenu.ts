@@ -50,6 +50,7 @@ function details(type: BuildingType): string[] {
   if (type.populationCapacity) lines.push(`Room for 👥 ${type.populationCapacity} more residents in town`)
   if (type.category === 'road') lines.push(`Drag to draw. Homes and shops beside a road earn +${ROAD_BONUS * 100}%`)
   if (type.onShore) lines.push('Must be built on the shore. Order shipments of goods here')
+  if (type.requiresRoad) lines.push('🛣️ Needs a road touching one of its sides to open')
   const needs = UTILITIES.filter((u) => type.needs?.[u]).map((u) => `${UTILITY_INFO[u].icon} ${type.needs![u]}`)
   if (needs.length) lines.push(`Uses ${needs.join(' ')}`)
   if (type.upkeep) lines.push(`Costs 🪙 ${type.upkeep} a month to run`)

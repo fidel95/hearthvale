@@ -203,6 +203,12 @@ button {
   font-size: 14px;
 }
 
+.hint-info {
+  font-size: 13px;
+  font-weight: 600;
+  color: #ffe3a8;
+}
+
 .hint-done {
   border: none;
   border-radius: 999px;
@@ -1519,4 +1525,14 @@ button {
   width: 52px;
   border-radius: 20px;
   font-size: 17px;
+}
+
+/* A shop cut off from the roads: a warning-striped bubble that doesn't bob. */
+.bubble-noroad .bubble-face,
+.bubble-noroad .bubble-face::after {
+  background: #ffe08a;
+}
+
+.bubble-noroad .bubble-face {
+  animation: none;
 }

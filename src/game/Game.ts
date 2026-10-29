@@ -214,7 +214,7 @@ export class Game {
       const names = event.utilities.map((u) => `${UTILITY_INFO[u].icon} ${UTILITY_INFO[u].name.toLowerCase()}`)
       this.hud.toast(`Not enough ${names.join(', ')}: income drops. Tap Town to see what to build.`, 'warn')
     })
-    const landPanel = new LandPanel(container, this.city, this.player, (message) => this.hud.toast(message))
+    const landPanel = new LandPanel(container, this.city, this.player, this.inventory, (message) => this.hud.toast(message))
     this.landPanel = landPanel
     landView.onLotClick = (lot) => landPanel.open(lot)
     this.showQuestEvents()
@@ -226,7 +226,7 @@ export class Game {
       const report = this.services.report
       return {
         player: { ...this.player.toSave(), level: this.player.level },
-        resources: { coins: city.coins, goods: city.goods ?? 0 },
+        resources: { coins: city.coins, goods: city.goods ?? 0, debt: city.debt ?? 0 },
         population: { current: report.population, capacity: report.capacity },
         land: { parcels: city.lots },
         buildings: { nextId: city.nextId, list: city.buildings },
@@ -349,8 +349,13 @@ export class Game {
   private setUpSelection(container: HTMLElement, builder: Builder) {
     const confirmRemove = new Modal(container)
     const remove = (b: PlacedBuilding) => {
+      // Removing a road can cut shops off: say which, before it happens.
+      const cut = b.type.category === 'road' ? this.city.cutOffBy(b) : []
       confirmRemove.body.replaceChildren(
         el('p', '', `Tear down this ${b.type.name}? You get nothing back for it.`),
+        ...(cut.length
+          ? [el('p', 'warning', `🚧 This road is the only one beside: ${cut.map((c) => c.type.name).join(', ')}. ${cut.length === 1 ? 'It' : 'They'} will stop selling until reconnected.`)]
+          : []),
         el('p', 'muted', "No tax deduction either: in the US, a demolished building's leftover cost is added to the land's value instead (IRC §280B)."),
       )
       confirmRemove.show(
@@ -515,7 +520,7 @@ export class Game {
         button(`Accept 🪙 ${GRANT}`, () => {
           modal.close()
           this.lastGrantAt = Date.now()
-          this.city.awardCoins(GRANT, 'County grant')
+          this.city.awardCoins(GRANT, 'County grant', { payDebt: false })
         }),
       )
     }

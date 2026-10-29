@@ -1,4 +1,5 @@
 import type { Lot, Tile } from './grid'
+import type { Materials } from './items'
 
 // The rules for owning and buying land. Like buildings.ts and taxRules.ts,
 // it's plain data and pure functions; City applies them.
@@ -36,4 +37,9 @@ export function expansionPrice(n: number): number {
 // comfortably until then, and buying land is that level's new mechanic.
 export function expansionLevel(n: number): number {
   return 7 + n
+}
+
+// Clearing and fencing new land takes materials too, more for each lot.
+export function expansionMaterials(n: number): Materials {
+  return { lumber: 2 + 2 * n, bricks: 2 * n }
 }

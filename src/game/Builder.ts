@@ -8,6 +8,7 @@ import type { CityView } from './CityView'
 import { cropState } from './crops'
 import type { Docks } from './Docks'
 import { footprintCenter, worldToTile, type Tile } from './grid'
+import { edgeTiles } from './communityRules'
 import { createBuildingObject } from './models'
 import type { Player } from './Player'
 
@@ -55,6 +56,8 @@ export class Builder {
   private city: City
   private player: Player
   private docks: Docks
+  // Whether the spot under the pointer works, in words (not just green or red).
+  onPlacementInfo?: (text: string | null) => void
   // Settings: when false, a tap buys and places right away, without the ✓ step.
   confirmPurchases = true
   // Asked before placing a home: is there room for its residents? (Game wires it to Services.)
@@ -208,6 +211,7 @@ export class Builder {
   // plant, unload)? If not, a tap selects it instead.
   hasQuickAction(b: PlacedBuilding, now: number): boolean {
     if (b.construction) return this.city.constructionDone(b, now)
+    if (b.type.requiresRoad && !this.city.hasRoadAccess(b)) return false
     if (b.type.goodsPerSale && this.city.isReady(b, now) && !this.city.hasStock(b)) return this.city.goods > 0
     if (b.type.category === 'farm') return cropState(b.crop, now).stage !== 'growing'
     if (b.type.category === 'port') return this.docks.state(b, now).stage !== 'sailing'
@@ -229,6 +233,10 @@ export class Builder {
     if (building.construction) {
       if (this.city.constructionDone(building, now)) this.onFinishRequest?.(building)
       else this.onNotice?.(`🚧 ${building.type.name} will be ready to finish in ${duration(building.construction.endsAt - now)}`)
+      return
+    }
+    if (building.type.requiresRoad && !this.city.hasRoadAccess(building)) {
+      this.onNotice?.(`${building.type.name} has no road access. Build a road touching one of its sides.`)
       return
     }
     if (building.type.category === 'port') {
@@ -427,7 +435,13 @@ export class Builder {
       const ignoreId = this.mode.kind === 'move' ? this.mode.carrying.id : undefined
       // Moving and restoring are free; building new needs the coins.
       const affordable = this.mode.kind !== 'build' || this.city.canAfford(type)
-      const color = affordable && this.city.canPlace(type, anchor, ignoreId, this.rotation) ? COLORS.ok : COLORS.blocked
+      const fits = this.city.canPlace(type, anchor, ignoreId, this.rotation)
+      const color = affordable && fits ? COLORS.ok : COLORS.blocked
+      // Say it in words too: color alone isn't enough for everyone.
+      const needsRoad = type.requiresRoad && !edgeTiles({ type, tile: anchor, rotation: this.rotation }).some(this.city.isRoad)
+      this.onPlacementInfo?.(
+        !affordable ? '✗ Not enough coins' : !fits ? "✗ Doesn't fit here" : needsRoad ? '⚠ Fits, but needs a road beside it to open' : '✓ Fits here',
+      )
       this.showFootprint(anchor, size, color)
       this.ghostMaterial.color.set(color)
       this.ghost!.position.copy(footprintCenter(anchor, size))
@@ -443,6 +457,7 @@ export class Builder {
       return
     }
 
+    this.onPlacementInfo?.(null)
     // Not placing anything: highlight the tile under the pointer.
     this.showFootprint(tile, { x: 1, z: 1 }, COLORS.hover)
   }

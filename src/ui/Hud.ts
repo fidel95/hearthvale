@@ -103,9 +103,14 @@ export class Hud {
     // touch screens, which have no Esc key) and short messages.
     const hint = el('div', 'hint')
     const hintText = el('span', '')
+    const placeInfo = el('span', 'hint-info')
     const done = el('button', 'hint-done', 'Done')
     done.addEventListener('click', () => builder.setMode({ kind: 'select' }))
-    hint.append(hintText, done)
+    hint.append(hintText, placeInfo, done)
+    builder.onPlacementInfo = (text) => {
+      placeInfo.textContent = text ?? ''
+      placeInfo.hidden = !text
+    }
     hint.hidden = true
     const messages = el('div', 'hud-top')
     messages.append(hint, this.toasts)
@@ -139,7 +144,9 @@ export class Hud {
     // ---- Keeping the numbers current
     const showCoins = () => {
       this.coins.value.textContent = city.coins.toLocaleString()
-      this.coins.button.classList.toggle('bad', city.coins < 0)
+      // Unpaid bills show beside the coins, in words as well as red.
+      this.coins.extra.textContent = city.debt > 0 ? ` owe ${Math.ceil(city.debt).toLocaleString()}` : ''
+      this.coins.button.classList.toggle('bad', city.debt > 0)
     }
     const showGoods = () => {
       this.goods.value.textContent = city.goods.toLocaleString()
@@ -159,6 +166,7 @@ export class Hud {
       this.xpBar.style.width = `${player.levelProgress * 100}%`
     }
     city.onChange((e) => {
+      if (e.kind === 'debt') showCoins()
       if (e.kind === 'coins') {
         showCoins()
         this.coins.button.classList.remove('bump')

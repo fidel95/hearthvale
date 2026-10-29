@@ -6,7 +6,8 @@ import { GameClock, MONTH_MS } from './GameClock'
 import { Inventory } from './Inventory'
 import { Player } from './Player'
 import { xpForLevel } from './progression'
-import { finishConstruction, upgradeBuilding } from './projects'
+import { expansionLevel, expansionMaterials } from './land'
+import { buyLand, finishConstruction, upgradeBuilding } from './projects'
 import { Taxes } from './Taxes'
 
 const at = (x: number, z: number) => ({ x: 20 + x, z: 20 + z })
@@ -166,3 +167,29 @@ describe('turning buildings', () => {
     expect(home.lastCollectedAt).toBe(30_000)
   })
 })
+
+describe('land and level rewards', () => {
+  it('needs the level, coins and materials to buy land', () => {
+    const { city, inventory, player } = town()
+    city.adjustCoins(10_000)
+    const lot = { x: 4, z: 2 }
+    expect(buyLand(city, inventory, player, lot)).toEqual({ ok: false, reason: 'level' })
+    player.grantXp(xpForLevel(expansionLevel(1)))
+    expect(buyLand(city, inventory, player, lot)).toMatchObject({ ok: false, reason: 'materials' })
+    inventory.buy(expansionMaterials(1))
+    expect(buyLand(city, inventory, player, lot)).toEqual({ ok: true })
+    expect(city.ownsLot(lot)).toBe(true)
+  })
+
+  it('pays each level-up reward only once, even after reloading', () => {
+    const { city, player } = town()
+    player.grantXp(xpForLevel(3))
+    const saved = player.toSave()
+    const coins = city.coins
+    const again = new Player(city, () => 0)
+    again.load({ ...saved, rewardedLevel: undefined }) // an older save without the field
+    again.grantXp(1)
+    expect(city.coins).toBe(coins) // levels 2 and 3 aren't paid again
+  })
+})
+

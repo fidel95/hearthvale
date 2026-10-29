@@ -21,6 +21,7 @@ export interface PlayerSave {
   xp: number
   energy: number
   energyAt: number
+  rewardedLevel?: number // the highest level whose reward was paid (older saves lack it)
 }
 
 export type PlayerEvent =
@@ -31,6 +32,9 @@ export type PlayerEvent =
 
 export class Player {
   private _xp = 0
+  // The highest level whose reward has been paid, so no level pays twice
+  // (whatever happens to XP or saves).
+  private rewardedLevel = 1
   // Energy is stored like crops are: a value and the time it was true. The
   // current energy is worked out from those (see energy()), so it refills
   // while the game is closed with nothing ticking.
@@ -166,6 +170,8 @@ export class Player {
   }
 
   private levelUp(level: number, now: number) {
+    if (level <= this.rewardedLevel) return
+    this.rewardedLevel = level
     // A new level refills energy to the new, higher maximum.
     this.storedEnergy = maxEnergy(level)
     this.energyAt = now
@@ -176,13 +182,15 @@ export class Player {
   }
 
   toSave(): PlayerSave {
-    return { xp: this._xp, energy: this.storedEnergy, energyAt: this.energyAt }
+    return { xp: this._xp, energy: this.storedEnergy, energyAt: this.energyAt, rewardedLevel: this.rewardedLevel }
   }
 
   load(save: PlayerSave) {
     this._xp = save.xp
     this.storedEnergy = save.energy
     this.energyAt = save.energyAt
+    // Older saves: every level reached so far was already rewarded.
+    this.rewardedLevel = save.rewardedLevel ?? levelForXp(save.xp)
     this.emit({ kind: 'energy' })
   }
 

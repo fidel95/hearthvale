@@ -5,6 +5,7 @@ import { sizeOf, type City, type PlacedBuilding } from './City'
 import type { CityView } from './CityView'
 import type { Docks } from './Docks'
 import { cropState } from './crops'
+import { BLOCKED_TEXT } from './production'
 import { footprintCenter } from './grid'
 import type { Services } from './Services'
 import { UTILITY_INFO, shortIcons } from './utilityRules'
@@ -20,7 +21,7 @@ const POPUP_MS = 1000 // keep in sync with the .popup animation length in style.
 const FARM_LABEL_HEIGHT = 0.75
 
 // What a bubble is asking you to do. Each kind has its own look in style.css.
-type BubbleKind = 'coins' | 'plant' | 'harvest' | 'withered' | 'stock' | 'cargo' | 'build'
+type BubbleKind = 'coins' | 'plant' | 'harvest' | 'withered' | 'stock' | 'cargo' | 'build' | 'noroad'
 
 interface Bubble {
   object: CSS2DObject
@@ -132,6 +133,7 @@ export class IncomeView {
   // Which bubble a building should show right now, if any.
   private bubbleFor(b: PlacedBuilding, now: number): { kind: BubbleKind; icon: string } | null {
     if (b.construction) return this.city.constructionDone(b, now) ? { kind: 'build', icon: '🔨' } : null
+    if (b.type.requiresRoad && !this.city.hasRoadAccess(b)) return { kind: 'noroad', icon: '🚧' }
     if (this.city.isReady(b, now)) return this.city.hasStock(b) ? { kind: 'coins', icon: '🪙' } : { kind: 'stock', icon: '📦' }
     if (b.type.category === 'port') return this.docks.state(b, now).stage === 'arrived' ? { kind: 'cargo', icon: '🚢' } : null
     if (b.type.category !== 'farm') return null
@@ -176,6 +178,7 @@ export class IncomeView {
   }
 
   private describeBuilt(b: PlacedBuilding, now: number): [string, string] {
+    if (b.type.requiresRoad && !this.city.hasRoadAccess(b)) return [b.type.name, `🚧 ${BLOCKED_TEXT.road}`]
     if (b.type.category === 'farm') {
       const state = cropState(b.crop, now)
       switch (state.stage) {
@@ -234,7 +237,7 @@ export class IncomeView {
     face.className = 'bubble-face'
     face.textContent = icon
     el.append(face)
-    el.title = { coins: 'Collect', plant: 'Plant a crop', harvest: 'Harvest', withered: 'Clear the withered crop', stock: 'Restock', cargo: 'Unload', build: 'Finish building' }[kind]
+    el.title = { coins: 'Collect', plant: 'Plant a crop', harvest: 'Harvest', withered: 'Clear the withered crop', stock: 'Restock', cargo: 'Unload', build: 'Finish building', noroad: 'Needs a road' }[kind]
     el.addEventListener('click', () => this.onTap(building))
 
     const object = new CSS2DObject(el)
