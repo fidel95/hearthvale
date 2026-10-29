@@ -2,6 +2,7 @@ import type { City, PlacedBuilding } from './City'
 import type { GameClock } from './GameClock'
 import {
   LATE_PENALTY_PER_MONTH,
+  PROPERTY_TAX_RATE,
   STANDARD_DEDUCTION,
   annualPropertyTax,
   assessedValue,
@@ -196,6 +197,18 @@ export class Taxes {
     }
   }
 
+  // The land we own: how many lots, their total value (what they cost) and the
+  // yearly property tax on it. Land is taxed but never depreciated.
+  land(): { lots: number; value: number; annualTax: number } {
+    let lots = 0
+    let value = 0
+    for (const owned of this.city.ownedLots()) {
+      lots++
+      value += owned.price
+    }
+    return { lots, value, annualTax: value * PROPERTY_TAX_RATE }
+  }
+
   // Every building we own with its assessed value and yearly property tax.
   properties(): { building: PlacedBuilding; value: number; annualTax: number }[] {
     return [...this.city.all()].map((building) => ({
@@ -255,6 +268,7 @@ export class Taxes {
   // Property tax and depreciation build up a month at a time, so a building
   // owned for half the year counts for half the year.
   private accrue(monthIndex: number) {
+    this.ledger.propertyTax += this.land().annualTax / 12
     for (const building of this.city.all()) {
       let asset = this.assets.get(building.id)
       if (!asset) {

@@ -1,4 +1,6 @@
 import type { CitySave } from './City'
+import { LOT_SIZE } from './grid'
+import { START_LOTS, START_LOT_VALUE } from './land'
 import type { PlayerSave } from './Player'
 import type { TaxesSave } from './Taxes'
 
@@ -6,8 +8,8 @@ import type { TaxesSave } from './Taxes'
 // nothing is sent anywhere. See docs/ARCHITECTURE.md, "Saving".
 
 const STORAGE_KEY = 'hearthvale.save'
-// Bump this when the save format changes, and teach readSave to upgrade old versions.
-const SAVE_VERSION = 1
+// Bump this when the save format changes, and add a step to upgradeSave.
+export const SAVE_VERSION = 2
 const AUTOSAVE_DELAY_MS = 1000
 
 export interface SaveData {
@@ -25,15 +27,40 @@ export function readSave(): SaveData | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return null
-    const data = JSON.parse(raw) as SaveData
-    if (data.version !== SAVE_VERSION) {
-      console.warn(`Save is version ${data.version}, expected ${SAVE_VERSION}; starting fresh`)
-      return null
-    }
-    return data
+    return upgradeSave(JSON.parse(raw))
   } catch (err) {
     console.warn("Couldn't read the save; starting fresh", err)
     return null
+  }
+}
+
+// Bring a save from any older version up to the current one, one version at a
+// time, so each step only has to know about the version right before it.
+// Returns null for saves it can't understand (corrupt, or from a newer game).
+export function upgradeSave(data: { version: number } & Record<string, unknown>): SaveData | null {
+  if (data.version === 1) data = upgradeV1(data)
+  if (data.version !== SAVE_VERSION) {
+    console.warn(`Save is version ${data.version}, expected ${SAVE_VERSION}; starting fresh`)
+    return null
+  }
+  return data as unknown as SaveData
+}
+
+// Version 1 (Stages 0–5) had a fixed 20×20 map. Version 2's world is 60×60
+// with the starting land in the middle, so every building moves 20 tiles
+// along each axis to land on the same spot of the same land, and the town
+// owns the starting lots.
+function upgradeV1(data: Record<string, unknown>): { version: number } & Record<string, unknown> {
+  const offset = START_LOTS[0].x * LOT_SIZE // the lowest starting lot's first tile: 20
+  const city = data.city as Omit<CitySave, 'lots'>
+  return {
+    ...data,
+    version: 2,
+    city: {
+      ...city,
+      buildings: city.buildings.map((b) => ({ ...b, tile: { x: b.tile.x + offset, z: b.tile.z + offset } })),
+      lots: START_LOTS.map((lot) => ({ ...lot, price: START_LOT_VALUE })),
+    },
   }
 }
 

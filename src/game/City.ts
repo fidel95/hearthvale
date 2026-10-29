@@ -1,6 +1,7 @@
 import { BUILDINGS_BY_ID, RENAMED_BUILDING_IDS, type BuildingType } from './buildings'
 import { CROPS_BY_ID, cropState, type CropType, type PlantedCrop } from './crops'
-import { GRID_SIZE, footprintTiles, inBounds, type Tile } from './grid'
+import { GRID_SIZE, footprintTiles, inBounds, lotInWorld, lotKey, lotNeighbors, lotOf, type Lot, type Tile } from './grid'
+import { START_LOTS, START_LOT_VALUE, expansionPrice } from './land'
 
 // The city's state: coins, which buildings exist and which tiles they cover.
 // No three.js in here. CityView watches for changes and draws them, which
@@ -21,12 +22,19 @@ export interface PlacedBuilding {
   crop: PlantedCrop | null
 }
 
+// A lot of land the town owns, and what it cost (its value for property tax).
+export interface OwnedLot {
+  lot: Lot
+  price: number
+}
+
 // The plain-JSON form of a City, for the save file. Buildings store their
 // type's id, not the whole type, so catalog changes apply to old saves.
 export interface CitySave {
   coins: number
   nextId: number
   buildings: { id: number; typeId: string; tile: Tile; readyAt: number; crop?: PlantedCrop | null }[]
+  lots: { x: number; z: number; price: number }[]
 }
 
 export type CityEvent =
@@ -40,6 +48,8 @@ export type CityEvent =
   | { kind: 'cleared'; building: PlacedBuilding; crop: CropType } // a withered crop was cleared away
   | { kind: 'award'; amount: number; reason: string } // prize coins, e.g. a level-up reward
   | { kind: 'coins'; coins: number }
+  // The land changed: a lot was bought (bought is set), or a save was loaded.
+  | { kind: 'land'; bought?: OwnedLot }
 
 export class City {
   private buildings = new Map<number, PlacedBuilding>()
@@ -49,6 +59,9 @@ export class City {
   private nextId = 1
   private listeners: ((event: CityEvent) => void)[] = []
   private _coins = STARTING_COINS
+  private land = new Map<string, OwnedLot>(
+    START_LOTS.map((lot) => [lotKey(lot), { lot, price: START_LOT_VALUE }]),
+  )
 
   // A getter with no setter: other code can read coins but must go through
   // place / collect / adjustCoins to change them.
@@ -74,6 +87,47 @@ export class City {
     return id === null ? undefined : this.buildings.get(id)
   }
 
+  // ---- Land
+
+  ownedLots(): Iterable<OwnedLot> {
+    return this.land.values()
+  }
+
+  ownsLot(lot: Lot): boolean {
+    return this.land.has(lotKey(lot))
+  }
+
+  ownsTile(tile: Tile): boolean {
+    return this.ownsLot(lotOf(tile))
+  }
+
+  // How many lots have been bought beyond the starting ones.
+  get expansions(): number {
+    return this.land.size - START_LOTS.length
+  }
+
+  // The price of the next lot, whichever one it is.
+  get nextLotPrice(): number {
+    return expansionPrice(this.expansions + 1)
+  }
+
+  // A lot can be bought if it's in the world, not owned yet, and next to land you own.
+  canBuyLot(lot: Lot): boolean {
+    return lotInWorld(lot) && !this.ownsLot(lot) && lotNeighbors(lot).some((n) => this.ownsLot(n))
+  }
+
+  buyLot(lot: Lot): boolean {
+    const price = this.nextLotPrice
+    if (!this.canBuyLot(lot) || this._coins < price) return false
+    const owned = { lot, price }
+    this.land.set(lotKey(lot), owned)
+    this.emit({ kind: 'land', bought: owned })
+    this.adjustCoins(-price)
+    return true
+  }
+
+  // ---- Buildings
+
   canAfford(type: BuildingType): boolean {
     return this._coins >= type.cost
   }
@@ -81,7 +135,7 @@ export class City {
   // ignoreId lets a building being moved overlap its own current spot.
   canPlace(type: BuildingType, tile: Tile, ignoreId?: number): boolean {
     return footprintTiles(tile, type.size).every((t) => {
-      if (!inBounds(t)) return false
+      if (!inBounds(t) || !this.ownsTile(t)) return false
       const id = this.occupied[t.z * GRID_SIZE + t.x]
       return id === null || id === ignoreId
     })
@@ -205,6 +259,7 @@ export class City {
         readyAt: b.readyAt,
         crop: b.crop,
       })),
+      lots: [...this.land.values()].map(({ lot, price }) => ({ x: lot.x, z: lot.z, price })),
     }
   }
 
@@ -212,6 +267,9 @@ export class City {
   // type no longer exists, or that would overlap, are skipped with a warning
   // rather than breaking the whole save.
   load(save: CitySave) {
+    // Land first: buildings can only be placed on land the town owns.
+    this.land = new Map(save.lots.map(({ x, z, price }) => [lotKey({ x, z }), { lot: { x, z }, price }]))
+    this.emit({ kind: 'land' })
     for (const saved of save.buildings) {
       const type = BUILDINGS_BY_ID.get(RENAMED_BUILDING_IDS[saved.typeId] ?? saved.typeId)
       if (!type || !this.canPlace(type, saved.tile)) {

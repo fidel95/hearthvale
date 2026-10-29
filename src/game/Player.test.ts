@@ -5,6 +5,9 @@ import { CROPS_BY_ID } from './crops'
 import { Player, type PlayerEvent } from './Player'
 import { ENERGY_REGEN_MS } from './progression'
 
+// Tests use tiles relative to the starting land, which begins at tile 20 on both axes.
+const at = (x: number, z: number) => ({ x: 20 + x, z: 20 + z })
+
 const cottage = BUILDINGS_BY_ID.get('cottage')! // costs 100, pays 15 every 30 s
 const plotType = BUILDINGS_BY_ID.get('farm-plot')!
 const strawberries = CROPS_BY_ID.get('strawberries')! // 1 XP, grows 60 s
@@ -22,18 +25,18 @@ function setup() {
 describe('Player XP', () => {
   it('earns XP for paid buildings but not free ones', () => {
     const { city, player } = setup()
-    city.place(cottage, { x: 0, z: 0 })
+    city.place(cottage, at(0, 0))
     expect(player.xp).toBe(5)
-    city.place(cottage, { x: 4, z: 4 }, { free: true })
+    city.place(cottage, at(4, 4), { free: true })
     expect(player.xp).toBe(5)
   })
 
   it('earns XP for collecting and harvesting', () => {
     const { city, player, now } = setup()
-    const home = city.place(cottage, { x: 0, z: 0 }, { now: now(), free: true })!
+    const home = city.place(cottage, at(0, 0), { now: now(), free: true })!
     city.collect(home.id, now() + 30_000)
     expect(player.xp).toBe(1)
-    const plot = city.place(plotType, { x: 5, z: 5 }, { free: true })!
+    const plot = city.place(plotType, at(5, 5), { free: true })!
     city.plant(plot.id, strawberries, { now: now() })
     city.harvest(plot.id, now() + 60_000)
     expect(player.xp).toBe(2)
@@ -44,8 +47,8 @@ describe('Player XP', () => {
     const coinsBefore = city.coins
     const awards: number[] = []
     city.onChange((e) => e.kind === 'award' && awards.push(e.amount))
-    city.place(cottage, { x: 0, z: 0 }) // 5 XP
-    city.place(cottage, { x: 4, z: 0 }) // 10 XP: level 2
+    city.place(cottage, at(0, 0)) // 5 XP
+    city.place(cottage, at(4, 0)) // 10 XP: level 2
     expect(player.level).toBe(2)
     expect(awards).toEqual([50])
     expect(city.coins).toBe(coinsBefore - 200 + 50)
@@ -60,7 +63,7 @@ describe('Player XP', () => {
     city.adjustCoins(10_000)
     const levels: number[] = []
     player.onChange((e) => e.kind === 'levelUp' && levels.push(e.level))
-    city.place(BUILDINGS_BY_ID.get('modern-house')!, { x: 0, z: 0 }) // 30 XP: level 1 → 3
+    city.place(BUILDINGS_BY_ID.get('modern-house')!, at(0, 0)) // 30 XP: level 1 → 3
     expect(levels).toEqual([2, 3])
   })
 
@@ -73,18 +76,18 @@ describe('Player XP', () => {
 
 describe('Player energy', () => {
   // Collect from a cottage repeatedly, each time it's ready, to spend energy.
-  function spender(city: City, at: () => number) {
-    const home = city.place(cottage, { x: 10, z: 10 }, { now: 0, free: true })!
+  function spender(city: City, clock: () => number) {
+    const home = city.place(cottage, at(10, 10), { now: 0, free: true })!
     return () => {
       home.readyAt = 0 // ready now
-      return city.collect(home.id, at())
+      return city.collect(home.id, clock())
     }
   }
 
   it('starts full and uses 1 per collect, harvest, planting or clearing', () => {
     const { city, player, now } = setup()
     expect(player.energy(now())).toBe(15)
-    const plot = city.place(plotType, { x: 0, z: 0 }, { free: true })!
+    const plot = city.place(plotType, at(0, 0), { free: true })!
     city.plant(plot.id, strawberries, { now: now() }) // −1
     city.harvest(plot.id, now() + 60_000) // −1
     city.plant(plot.id, strawberries, { now: now() }) // −1
@@ -94,7 +97,7 @@ describe('Player energy', () => {
 
   it("doesn't use energy for free starter crops", () => {
     const { city, player, now } = setup()
-    const plot = city.place(plotType, { x: 0, z: 0 }, { free: true })!
+    const plot = city.place(plotType, at(0, 0), { free: true })!
     city.plant(plot.id, strawberries, { now: now(), free: true })
     expect(player.energy(now())).toBe(15)
   })

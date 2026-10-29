@@ -157,7 +157,8 @@ export class TaxPanel {
 
     const nextQuarterEnd = MONTH_NAMES[Math.floor(this.clock.month / 3) * 3 + 2]
     const properties = this.taxes.properties().sort((a, b) => b.annualTax - a.annualTax)
-    const totalPropertyTax = properties.reduce((sum, p) => sum + p.annualTax, 0)
+    const land = this.taxes.land()
+    const totalPropertyTax = properties.reduce((sum, p) => sum + p.annualTax, 0) + land.annualTax
 
     const parts: HTMLElement[] = []
     if (this.city.coins < 0) parts.push(this.debtWarning())
@@ -201,6 +202,7 @@ export class TaxPanel {
             .slice(0, 6)
             .map((p): Row => [p.building.type.name, `${coins(p.value)} value · ${coins(p.annualTax)}/yr`, 'muted']),
           ...(properties.length > 6 ? [[`…and ${properties.length - 6} more`, '', 'muted'] as Row] : []),
+          [`Land (${land.lots} lots)`, `${coins(land.value)} value · ${coins(land.annualTax)}/yr`, 'muted'],
           ['Total per year', coins(totalPropertyTax), 'total'],
         ]),
       ),
@@ -245,7 +247,7 @@ export class TaxPanel {
       ],
       [
         'Deductions',
-        "Before brackets apply you subtract the standard deduction, the property tax you paid, depreciation and what you spent on seeds. Demolishing a building is not deductible: US law adds its leftover cost to the land's value instead.",
+        "Before brackets apply you subtract the standard deduction, the property tax you paid, depreciation, what you spent on seeds and the cost of running utilities. Demolishing a building is not deductible: US law adds its leftover cost to the land's value instead.",
       ],
       [
         'Depreciation',
@@ -253,7 +255,7 @@ export class TaxPanel {
       ],
       [
         'Property tax',
-        `${percent(PROPERTY_TAX_RATE)} of each building's assessed value per year. Assessors value income property by what it earns: (yearly income × ${percent(1 - OPERATING_EXPENSE_RATIO)} left after running costs) ÷ a ${percent(CAP_RATE)} cap rate. So a building is worth far more than you paid for it, just like real property appreciating.`,
+        `${percent(PROPERTY_TAX_RATE)} of each building's assessed value per year, and of what your land cost. Land is taxed but never depreciated: it doesn't wear out. Assessors value income property by what it earns: (yearly income × ${percent(1 - OPERATING_EXPENSE_RATIO)} left after running costs) ÷ a ${percent(CAP_RATE)} cap rate. So a building is worth far more than you paid for it, just like real property appreciating.`,
       ],
       [
         'Sales tax',

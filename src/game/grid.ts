@@ -1,6 +1,11 @@
 import * as THREE from 'three'
 
-export const GRID_SIZE = 20 // the map is GRID_SIZE x GRID_SIZE tiles, 1 world unit per tile
+// The whole world is GRID_SIZE x GRID_SIZE tiles, 1 world unit per tile.
+// It's divided into square lots of land; you start owning a few in the middle
+// and buy the rest as the town grows (land.ts).
+export const LOT_SIZE = 10
+export const LOTS_PER_SIDE = 6
+export const GRID_SIZE = LOT_SIZE * LOTS_PER_SIDE
 
 const HALF = GRID_SIZE / 2
 
@@ -42,3 +47,41 @@ export function footprintTiles(tile: Tile, size: { x: number; z: number }): Tile
 export function inBounds(tile: Tile): boolean {
   return tile.x >= 0 && tile.z >= 0 && tile.x < GRID_SIZE && tile.z < GRID_SIZE
 }
+
+// ---- Lots of land
+
+// A lot's position in the grid of lots (0 to LOTS_PER_SIDE - 1 on each axis).
+export interface Lot {
+  x: number
+  z: number
+}
+
+export function lotOf(tile: Tile): Lot {
+  return { x: Math.floor(tile.x / LOT_SIZE), z: Math.floor(tile.z / LOT_SIZE) }
+}
+
+// A string to use as a Map/Set key, since two {x, z} objects are never === each other.
+export function lotKey(lot: Lot): string {
+  return `${lot.x},${lot.z}`
+}
+
+export function lotInWorld(lot: Lot): boolean {
+  return lot.x >= 0 && lot.z >= 0 && lot.x < LOTS_PER_SIDE && lot.z < LOTS_PER_SIDE
+}
+
+// The four lots sharing an edge with this one.
+export function lotNeighbors(lot: Lot): Lot[] {
+  return [
+    { x: lot.x + 1, z: lot.z },
+    { x: lot.x - 1, z: lot.z },
+    { x: lot.x, z: lot.z + 1 },
+    { x: lot.x, z: lot.z - 1 },
+  ].filter(lotInWorld)
+}
+
+// The lot's lowest corner tile, e.g. for footprintCenter(lotCorner(lot), LOT_FOOTPRINT).
+export function lotCorner(lot: Lot): Tile {
+  return { x: lot.x * LOT_SIZE, z: lot.z * LOT_SIZE }
+}
+
+export const LOT_FOOTPRINT = { x: LOT_SIZE, z: LOT_SIZE }

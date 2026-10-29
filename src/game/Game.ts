@@ -2,6 +2,7 @@ import * as THREE from 'three'
 import { CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js'
 import { CropPicker } from '../ui/CropPicker'
 import { Hud } from '../ui/Hud'
+import { LandPanel } from '../ui/LandPanel'
 import { LevelUpPanel } from '../ui/LevelUpPanel'
 import { TaxPanel } from '../ui/TaxPanel'
 import { Builder } from './Builder'
@@ -11,14 +12,16 @@ import { City } from './City'
 import { CityView } from './CityView'
 import { CROPS_BY_ID } from './crops'
 import { GameClock, MONTH_NAMES } from './GameClock'
-import { GRID_SIZE } from './grid'
 import { IncomeView } from './IncomeView'
+import { LandView } from './LandView'
 import { Player } from './Player'
 import { AutoSaver, clearSave, readSave } from './save'
 import { Taxes } from './Taxes'
 
 // How many world units of the map fit vertically on screen at zoom 1.
 const VIEW_SIZE = 24
+// Where the sun sits relative to the point the camera looks at.
+const SUN_OFFSET = new THREE.Vector3(15, 25, 10)
 
 // Creates every piece of the game, wires them together and runs the frame loop.
 // The pieces don't know about each other beyond what's passed in here, so this
@@ -31,6 +34,7 @@ export class Game {
   private scene = new THREE.Scene()
   private camera: THREE.OrthographicCamera
   private controls: CameraController
+  private sun = new THREE.DirectionalLight('#fff4e0', 2)
 
   // Game state: the town, the player's progress, the calendar and the tax books.
   private city = new City()
@@ -64,7 +68,6 @@ export class Game {
     this.controls = new CameraController(this.camera, this.renderer.domElement)
 
     this.addLights()
-    this.addGround()
 
     // In development, ?speed=60 makes a game month last one second.
     const speed = import.meta.env.DEV ? Number(new URLSearchParams(location.search).get('speed')) || 1 : 1
@@ -72,6 +75,7 @@ export class Game {
 
     // Everything that listens to City must exist before the town is loaded,
     // or it misses the 'added' events.
+    const landView = new LandView(this.scene, this.city)
     this.cityView = new CityView(this.scene, this.city)
     this.taxes = new Taxes(this.city, this.clock)
     const builder = new Builder(this.scene, this.city, this.player, this.cityView, this.controls, this.renderer.domElement)
@@ -87,6 +91,8 @@ export class Game {
     const cropPicker = new CropPicker(container, this.city, this.player, (message) => this.hud.toast(message))
     builder.onPlantRequest = (plot) => cropPicker.open(plot)
     this.showPlayerEvents(new LevelUpPanel(container))
+    const landPanel = new LandPanel(container, this.city, this.player, (message) => this.hud.toast(message))
+    landView.onLotClick = (lot) => landPanel.open(lot)
 
     this.saver = new AutoSaver(() => ({
       city: this.city.toSave(),
@@ -115,6 +121,7 @@ export class Game {
     this.lastFrame = frameTime
 
     for (const month of this.clock.advance(dt)) this.taxes.endOfMonth(month)
+    this.followSun()
 
     const now = Date.now()
     this.cityView.update(now)
@@ -136,16 +143,17 @@ export class Game {
       return
     }
     // A small starting town so a new game isn't an empty field.
+    // (Tiles 20–39 are the starting land in the middle of the world.)
     const start: [string, number, number][] = [
-      ['cottage', 9, 9],
-      ['farm-plot', 12, 9],
-      ['oak-tree', 8, 12],
-      ['oak-tree', 11, 12],
-      ['oak-tree', 7, 8],
+      ['cottage', 29, 29],
+      ['farm-plot', 32, 29],
+      ['oak-tree', 28, 32],
+      ['oak-tree', 31, 32],
+      ['oak-tree', 27, 28],
     ]
     for (const [id, x, z] of start) this.city.place(BUILDINGS_BY_ID.get(id)!, { x, z }, { free: true })
     // Strawberries already 40 s in on the starting plot, so the first harvest comes quickly.
-    const plot = this.city.buildingAt({ x: 12, z: 9 })!
+    const plot = this.city.buildingAt({ x: 32, z: 29 })!
     this.city.plant(plot.id, CROPS_BY_ID.get('strawberries')!, { now: Date.now() - 40_000, free: true })
   }
 
@@ -203,26 +211,22 @@ export class Game {
   private addLights() {
     this.scene.add(new THREE.HemisphereLight('#ffffff', '#6b8e4e', 1.2))
 
-    const sun = new THREE.DirectionalLight('#fff4e0', 2)
-    sun.position.set(15, 25, 10)
+    // Shadows are drawn into a square texture covering the sun's "shadow
+    // camera" box. Covering the whole 60×60 world would make them blurry, so
+    // the box covers about what's on screen and follows the view (followSun).
+    const sun = this.sun
     sun.castShadow = true
     sun.shadow.mapSize.set(2048, 2048)
-    const s = GRID_SIZE / 2 + 2
+    const s = 24
     Object.assign(sun.shadow.camera, { left: -s, right: s, top: s, bottom: -s })
-    this.scene.add(sun)
+    this.scene.add(sun, sun.target)
+    this.followSun()
   }
 
-  private addGround() {
-    const ground = new THREE.Mesh(
-      new THREE.PlaneGeometry(GRID_SIZE, GRID_SIZE),
-      new THREE.MeshStandardMaterial({ color: '#7cc46a' }),
-    )
-    ground.rotation.x = -Math.PI / 2 // planes start vertical; lay it flat
-    ground.receiveShadow = true
-    this.scene.add(ground)
-
-    const grid = new THREE.GridHelper(GRID_SIZE, GRID_SIZE, '#5a9a4c', '#5a9a4c')
-    grid.position.y = 0.01 // just above the grass so it doesn't flicker
-    this.scene.add(grid)
+  // Keep the sun at the same angle to whatever the camera is looking at.
+  private followSun() {
+    const target = this.controls.target
+    this.sun.target.position.copy(target)
+    this.sun.position.copy(target).add(SUN_OFFSET)
   }
 }

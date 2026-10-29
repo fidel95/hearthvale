@@ -6,6 +6,9 @@ import { GameClock, MONTH_MS } from './GameClock'
 import { Taxes, type TaxEvent } from './Taxes'
 import { STANDARD_DEDUCTION, annualPropertyTax, incomeTax } from './taxRules'
 
+// Tests use tiles relative to the starting land, which begins at tile 20 on both axes.
+const at = (x: number, z: number) => ({ x: 20 + x, z: 20 + z })
+
 const cottage = BUILDINGS_BY_ID.get('cottage')!
 const bakery = BUILDINGS_BY_ID.get('bakery')! // business: 40 coins of sales
 const plotType = BUILDINGS_BY_ID.get('farm-plot')!
@@ -36,14 +39,14 @@ function advanceOneMonth(clock: GameClock): number[] {
 describe('Taxes', () => {
   it('records rent as income', () => {
     const { city, taxes } = setup()
-    const home = city.place(cottage, { x: 0, z: 0 }, { now: 0, free: true })!
+    const home = city.place(cottage, at(0, 0), { now: 0, free: true })!
     city.collect(home.id, 30_000)
     expect(taxes.ledger.rentIncome).toBe(15)
   })
 
   it('adds sales tax on top of shop sales and holds it until the quarter ends', () => {
     const { city, taxes, events, runMonths } = setup()
-    const shop = city.place(bakery, { x: 0, z: 0 }, { now: 0, free: true })!
+    const shop = city.place(bakery, at(0, 0), { now: 0, free: true })!
     const before = city.coins
     city.collect(shop.id, 45_000)
     expect(city.coins).toBe(before + 40 + 3) // the sale plus 7% the customer paid
@@ -61,15 +64,17 @@ describe('Taxes', () => {
 
   it('accrues a full year of property tax for a building owned all year', () => {
     const { city, taxes, runMonths } = setup()
-    city.place(cottage, { x: 0, z: 0 }, { free: true })
+    city.place(cottage, at(0, 0), { free: true })
     // Placed in January (month 0) → half a month (mid-month convention) + 11 full months.
+    // The starting land is taxed too: 10 a year.
     runMonths(11)
-    expect(taxes.ledger.propertyTax).toBeCloseTo((annualPropertyTax(cottage) / 12) * 10.5)
+    const land = (taxes.land().annualTax / 12) * 11
+    expect(taxes.ledger.propertyTax).toBeCloseTo((annualPropertyTax(cottage) / 12) * 10.5 + land)
   })
 
   it('files the return after December and pays income + property tax', () => {
     const { city, taxes, events, runMonths } = setup()
-    city.place(cottage, { x: 0, z: 0 }, { free: true })
+    city.place(cottage, at(0, 0), { free: true })
     city.adjustCoins(5000 - city.coins)
     // Pretend we earned 3,000 in rent this year.
     taxes.ledger.rentIncome = 3000
@@ -92,10 +97,10 @@ describe('Taxes', () => {
 
   it('gives no deduction for demolishing, and stops taxing the building', () => {
     const { city, taxes, runMonths } = setup()
-    const home = city.place(cottage, { x: 0, z: 0 }, { free: true })!
+    const home = city.place(cottage, at(0, 0), { free: true })!
     city.remove(home.id)
     runMonths(2)
-    expect(taxes.ledger.propertyTax).toBe(0)
+    expect(taxes.ledger.propertyTax).toBeCloseTo((taxes.land().annualTax / 12) * 2) // only the land
     expect(taxes.ledger.depreciation).toBe(0)
     expect(taxes.estimate().taxableIncome).toBe(0)
   })
@@ -111,7 +116,7 @@ describe('Taxes', () => {
 
   it('round-trips through a save', () => {
     const { city, clock, taxes, runMonths } = setup()
-    city.place(cottage, { x: 0, z: 0 }, { free: true })
+    city.place(cottage, at(0, 0), { free: true })
     runMonths(4)
     const save = JSON.parse(JSON.stringify({ city: city.toSave(), taxes: taxes.toSave(), played: clock.playedMs }))
 
@@ -126,7 +131,7 @@ describe('Taxes', () => {
 
   it('records crop sales as farm income and seeds as a deductible farm expense, with no sales tax', () => {
     const { city, taxes } = setup()
-    const plot = city.place(plotType, { x: 0, z: 0 }, { free: true })!
+    const plot = city.place(plotType, at(0, 0), { free: true })!
     const before = city.coins
     city.plant(plot.id, strawberries, { now: 0 })
     city.harvest(plot.id, 60_000)
@@ -141,7 +146,7 @@ describe('Taxes', () => {
   it('deducts seeds from taxable income', () => {
     const { city, taxes } = setup()
     city.adjustCoins(100_000)
-    const plots = [0, 2, 4, 6, 8].map((x) => city.place(plotType, { x, z: 0 }, { free: true })!)
+    const plots = [0, 2, 4, 6, 8].map((x) => city.place(plotType, at(x, 0), { free: true })!)
     // Plant and harvest enough to get above the standard deduction.
     for (let round = 0; round < 10; round++) {
       const now = round * 60_000
@@ -156,7 +161,7 @@ describe('Taxes', () => {
 
   it('gives no extra deduction for a withered crop (its seeds were already deducted)', () => {
     const { city, taxes } = setup()
-    const plot = city.place(plotType, { x: 0, z: 0 }, { free: true })!
+    const plot = city.place(plotType, at(0, 0), { free: true })!
     city.plant(plot.id, strawberries, { now: 0 })
     city.clearPlot(plot.id, 10 * 60_000)
     expect(taxes.estimate().farmExpenses).toBe(10)
@@ -164,7 +169,7 @@ describe('Taxes', () => {
 
   it('does not count free starter crops as an expense', () => {
     const { city, taxes } = setup()
-    const plot = city.place(plotType, { x: 0, z: 0 }, { free: true })!
+    const plot = city.place(plotType, at(0, 0), { free: true })!
     city.plant(plot.id, strawberries, { now: 0, free: true })
     expect(taxes.estimate().farmExpenses).toBe(0)
   })
@@ -181,5 +186,13 @@ describe('Taxes', () => {
     city.awardCoins(50, 'Level 2 reward')
     expect(taxes.estimate().otherIncome).toBe(50)
     expect(taxes.estimate().grossIncome).toBe(50)
+  })
+
+  it('charges property tax on land at 1% of its value a year, with no depreciation', () => {
+    const { taxes, runMonths } = setup()
+    expect(taxes.land()).toEqual({ lots: 4, value: 1000, annualTax: 10 }) // 4 starting lots at 250
+    runMonths(12)
+    expect(taxes.lastReturn!.propertyTax).toBeCloseTo(10)
+    expect(taxes.lastReturn!.depreciation).toBe(0)
   })
 })

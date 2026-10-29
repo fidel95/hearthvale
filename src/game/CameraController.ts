@@ -5,7 +5,7 @@ import { GRID_SIZE } from './grid'
 // Equal X, Y and Z = looking down diagonally from a corner = isometric.
 const OFFSET = new THREE.Vector3(20, 20, 20)
 
-const MIN_ZOOM = 0.6
+const MIN_ZOOM = 0.4 // far enough out to see the whole 60×60 world
 const MAX_ZOOM = 3
 // How far (in pixels) the pointer must move before a press counts as a drag.
 // Below this it's a click, so tiny hand jitters don't swallow clicks.
@@ -155,7 +155,7 @@ export class CameraController {
     this.camera.updateProjectionMatrix()
   }
 
-  // Keep the view over the map, then move the camera to match the target.
+  // Keep the view over the world, then move the camera to match the target.
   private apply() {
     const half = GRID_SIZE / 2
     this.target.x = THREE.MathUtils.clamp(this.target.x, -half, half)

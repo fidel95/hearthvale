@@ -1,0 +1,26 @@
+import type { Lot } from './grid'
+
+// The rules for owning and buying land. Like buildings.ts and taxRules.ts,
+// it's plain data and pure functions; City applies them.
+
+// The town starts on the four lots in the middle of the world (tiles 20–39).
+export const START_LOTS: Lot[] = [
+  { x: 2, z: 2 },
+  { x: 3, z: 2 },
+  { x: 2, z: 3 },
+  { x: 3, z: 3 },
+]
+
+// The starting land came with the town, but it still has a value for
+// property tax: what a lot like it would sell for.
+export const START_LOT_VALUE = 250
+
+// The nth expansion (1 = your first) costs more than the last, and needs a
+// higher level, so the town grows at the pace you do.
+export function expansionPrice(n: number): number {
+  return 500 * n
+}
+
+export function expansionLevel(n: number): number {
+  return n + 1
+}
