@@ -52,6 +52,7 @@ button {
   position: absolute;
   inset: 0;
   pointer-events: none;
+  z-index: 2; /* above the map labels (1), below windows (10) */
 }
 
 .status,
@@ -308,6 +309,10 @@ button {
   position: absolute;
   inset: 0;
   pointer-events: none;
+  /* Its own stacking context: label z-indexes (set per frame for depth, and
+     1000 for pop-ups) then only compete with each other, and windows (.overlay,
+     z-index 10) still cover them. */
+  z-index: 1;
 }
 
 /* The button is an invisible, motionless click target... */
@@ -359,6 +364,31 @@ button {
   scale: 1.1;
 }
 
+/* Bubble colors by what they ask for: gold coins, green "plant", white "harvest", grey "withered". */
+.bubble-plant .bubble-face,
+.bubble-plant .bubble-face::after {
+  background: #c9ecb4;
+}
+
+.bubble-plant .bubble-face {
+  scale: 0.8;
+  animation: none; /* an empty plot is an invitation, not an alert: no bobbing */
+}
+
+.bubble-harvest .bubble-face,
+.bubble-harvest .bubble-face::after {
+  background: #fff;
+}
+
+.bubble-harvest .bubble-face {
+  border-color: var(--good);
+}
+
+.bubble-withered .bubble-face,
+.bubble-withered .bubble-face::after {
+  background: #d8d0c2;
+}
+
 @keyframes bob {
   50% {
     translate: 0 -5px;
@@ -381,8 +411,8 @@ button {
   text-shadow: 0 2px 0 #6b4108, 0 0 8px rgba(0, 0, 0, 0.35);
 }
 
-/* Sales tax: smaller, grey, and starting lower so it doesn't cover the coins pop-up. */
-.popup-tax {
+/* Notes (sales tax, seed costs): smaller, dark, and starting lower so they don't cover the coins pop-up. */
+.popup-note {
   font-size: 13px;
   color: #fff;
   background: rgba(59, 47, 34, 0.85);
@@ -571,4 +601,29 @@ button {
 
 .explainer p {
   margin: 8px 0;
+}
+
+/* ---- Crop picker ---- */
+
+.crop-all {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 0 0;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.crop-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.crop-profit {
+  margin-top: 2px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--good);
 }

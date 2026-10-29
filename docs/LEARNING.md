@@ -150,9 +150,58 @@ the `*.test.ts` files, and [TAXES.md](TAXES.md)
 
 ---
 
+## Stage 4: farms
+
+**Files:** `crops.ts`, `City.ts` (`plant`, `harvest`, `clearPlot`),
+`Builder.tap`, `CityView.update`, `models.ts` (`createCropObject`),
+`ui/CropPicker.ts`, and the farm section of [TAXES.md](TAXES.md)
+
+- **A state machine you don't store.** A crop goes empty → growing → ripe →
+  withered, but the save only holds `{ cropId, plantedAt }`. `cropState()`
+  derives the stage from the clock. No timers, no "update every second", and
+  offline growth comes free. If a value can be computed from data you already
+  have, don't store it: stored copies drift out of sync.
+- **Discriminated unions again.** `CropState` only has `readyAt` when it's
+  `growing` and `witherAt` when it's `ripe`; TypeScript won't let you read a
+  field that doesn't exist in the current stage.
+- **Change detection.** Every frame, `CityView` asks each plot what it should
+  look like and compares a short key (`"wheat:young"`) with what it built last
+  time. Only when the key changes does it rebuild, a handful of times per
+  crop instead of 60 times a second. `IncomeView` does the same for bubbles.
+- **Draw calls.** A GPU draws each mesh with a separate "draw call", and
+  hundreds of tiny ones get slow, especially on phones. Merging every
+  same-colored shape of a plot with `mergeGeometries` turns ~60 meshes into
+  2–4. And since each plot's merged geometry is unique, it's `dispose()`d when
+  replaced, or the GPU memory would leak.
+- **Game design as numbers.** Quick crops earn the most per minute but need
+  you around; slow crops earn less per minute but survive a night away.
+  `crops.test.ts` checks that curve, so a typo in a price can't quietly make
+  one crop better at everything.
+- **Renaming without breaking saves.** The old `wheat-field` became
+  `farm-plot`. Saves store type ids, so `RENAMED_BUILDING_IDS` maps old ids to
+  new ones, and a test loads a pre-Stage-4 save to prove it.
+- **The tax side.** Seeds are a farm expense deducted when bought (the cash
+  method), harvests are farm income, and crops sold wholesale have no sales
+  tax. A withered crop gives no extra deduction, since its cost was already
+  deducted once.
+- **A stacking bug.** Pop-ups use `z-index: 1000` to beat other labels, which
+  also put them on top of the crop picker. Giving `.labels` its own stacking
+  context (`z-index: 1`) keeps label z-indexes competing only with each other.
+
+**Try it:**
+
+1. Add a crop: carrots, 10 minutes, a `bush` look with orange fruit. Run
+   `npm test`. Does it fit the speed-vs-profit curve? Adjust its price until
+   it does.
+2. Make withered crops cost something to clear (real farms pay to clear
+   ruined fields). Where does the cost go, and should it be deductible?
+   (It should: it's a farm expense.)
+3. Show a progress bar on growing plots' info cards using
+   `cropState(...).progress`.
+
+---
+
 ## Coming next
 
-- **Stage 4, farms:** crops with growth stages and spoilage, which are state
-  machines driven by timestamps. Farm income will be a new line on the return.
 - **Stage 5:** energy, XP and levels.
 - **Stage 8:** a supply chain, with cost of goods sold as a real deduction.

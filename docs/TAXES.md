@@ -16,9 +16,9 @@ window in [`src/ui/TaxPanel.ts`](../src/ui/TaxPanel.ts), and tests in
 ## Who you are, tax-wise
 
 You own every building in town. Homes are **rental properties** you rent out,
-and shops are **businesses** you run. That makes you, in US terms, a single
-filer with rental income (Schedule E) and business income (Schedule C). Each
-year you:
+shops are **businesses** you run, and farm plots make you a **farmer**. That
+makes you, in US terms, a single filer with rental income (Schedule E),
+business income (Schedule C) and farm income (Schedule F). Each year you:
 
 1. collect sales tax from customers and hand it to the state every quarter,
 2. pay property tax on what your buildings are worth,
@@ -111,6 +111,9 @@ placed in service you get half a month (the **mid-month convention**).
 | Decorations | Land improvements | 15 | Oak tree: 20 ÷ 15 = 1.33 per year |
 | Farm fields | Land | never | 0 |
 
+Plowing a plot counts as preparing land, which real rules also treat as part
+of the land's cost, so plots are never depreciated either.
+
 Each building tracks how much of its cost (its **basis**) has been depreciated,
 so it stops once the full cost has been deducted.
 
@@ -119,7 +122,38 @@ when you tear a building down. US law says no (IRC §280B): that leftover cost
 is added to the *land's* basis and only matters when the land is sold. The game
 follows the real rule, so demolishing gives no deduction.
 
-## 4. Income tax
+## 4. Farm income and expenses
+
+**Real rule:** farmers report crop sales and farm costs on Schedule F. Most
+small farms use the **cash method**: income counts when you're paid and
+expenses when you pay them, so seed is deducted in the year you buy it, not
+when the crop is sold. Selling crops to a market or wholesaler that resells
+them is a **sale for resale**, which carries no sales tax.
+
+**In the game:**
+
+| What happens | Tax effect |
+|---|---|
+| You buy seeds (planting) | Seed cost is a farm expense, deducted this year |
+| You harvest | Crop's sell price is farm income |
+| The harvest itself | No sales tax: crops are sold wholesale |
+| A crop withers | No extra deduction (see below) |
+| Free starter crops | No expense, because you paid nothing |
+
+**Withered crops:** it's tempting to deduct the lost harvest. Real rules say
+no: you can't deduct the value of a crop you grew and never sold, and the seed
+cost was already deducted when you bought it. Deducting it again would count
+the same cost twice. The game follows that: a withered crop costs you its
+seeds and the harvest you missed, and nothing else.
+
+```
+Strawberries, one harvest:
+Seeds (expense)        10 coins     ← deducted when planted
+Harvest (income)       40 coins     ← counted when harvested
+Taxable profit         30 coins
+```
+
+## 5. Income tax
 
 **Real rule:** federal income tax uses **marginal brackets**. Each rate applies
 only to the slice of income inside its bracket. Before brackets apply, you
@@ -142,8 +176,8 @@ dollar amounts divided by 10 (1 coin ≈ $10):
 | Standard deduction | $14,600 | 1,460 |
 
 ```
-Gross income     = rent + shop sales            (not the sales tax)
-Taxable income   = gross − property tax − depreciation − standard deduction   (never below 0)
+Gross income     = rent + shop sales + crop sales            (not the sales tax)
+Taxable income   = gross − seeds − property tax − depreciation − standard deduction   (never below 0)
 Income tax       = sum over brackets of (income in bracket × rate)
 ```
 
@@ -156,7 +190,7 @@ less." False: only the coins *above* the threshold get the higher rate.
 `taxRules.test.ts` proves it: going from 4,715 to 4,716 taxable coins costs
 exactly 0.22 more.
 
-## 5. Paying late
+## 6. Paying late
 
 **Real rule:** the IRS failure-to-pay penalty is 0.5% of the unpaid tax per
 month, up to 25%, plus interest.
@@ -207,16 +241,41 @@ Paid on Tax Day  480 + 488                 =   968
 Marginal rate 12%, effective rate 488.39 ÷ 6,400 = 7.63%
 ```
 
+### A farming town: the small town plus 4 strawberry plots
+
+The small town above, plus 4 farm plots of strawberries, replanted every
+minute of play, so each plot is harvested 12 times in the 12-minute year.
+
+```
+Rent and shop sales (as above)             = 1,720
+Crop sales   48 harvests × 40              = 1,920
+Gross income                               = 3,640
+− Seeds          48 × 10                   =   480
+− Property tax   129  +  4 × 0.50 (plots)  =   131
+− Depreciation   (as above; plots: none)   =    18.60
+− Standard deduction                       = 1,460
+Taxable income                             = 1,550.40
+Income tax   1,160 × 10%                   =   116.00
+           +   390.40 × 12%                =    46.85
+                                           =   162.85
+Paid on Tax Day  131 + 163                 =   294
+Marginal rate 12%, effective rate 162.85 ÷ 3,640 = 4.47%
+```
+
+(A plot is land with no income of its own, so it's valued at its cost: 50 × 1% = 0.50 a year.)
+
 ## What the game simplifies
 
 Real taxes have far more rules. These are left out on purpose, and some may
 come in later stages:
 
-- **Self-employment tax.** Real sole proprietors also pay 15.3% Social Security and Medicare tax on business profit (not on rental income).
+- **Self-employment tax.** Real sole proprietors and farmers also pay 15.3% Social Security and Medicare tax on business and farm profit (not on rental income).
 - **Estimated payments.** Real self-employed people pay income tax quarterly during the year and are penalized for underpaying; the game collects it all on Tax Day.
 - **State and local income tax.** Most states have one; the game only has the federal-style tax.
 - **Operating expenses.** The 40% expense ratio is only used to value property; you don't actually pay or deduct those costs. Stage 8 adds real costs (goods for shops), which become deductible as cost of goods sold.
 - **Passive activity loss rules**, which limit rental losses against other income, and **depreciation recapture** on sale. You can't sell buildings in the game.
 - **Interest on unpaid tax and the 25% penalty cap.** The game only charges the 0.5% monthly penalty.
+- **Farmland assessment.** Many states value farmland at what it earns farming ("current use" or "use-value" assessment), usually below market value. The game values a plot at what it cost.
+- **Prepaid farm supplies.** Real cash-method farmers can't deduct seed bought far ahead beyond a limit; in the game you always plant right away.
 - **Property reassessment.** Real assessed values are updated every few years and follow the market; game values are fixed by building type.
 - **Rounding.** The IRS lets you round to whole dollars on the return; the game rounds each payment to whole coins.

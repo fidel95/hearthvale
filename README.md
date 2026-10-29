@@ -1,8 +1,8 @@
 # Hearthvale
 
 A cozy isometric city-builder in the style of the 2010s social city games:
-place homes and shops, collect rent and sales on timers, grow your town, and
-deal with taxes modeled on the real thing. It runs entirely in the browser.
+place homes and shops, collect rent and sales on timers, plant and harvest
+crops, grow your town, and deal with taxes modeled on the real thing. It runs entirely in the browser.
 There are no accounts or servers, and progress is saved on your device.
 
 It's also a learning project. The code is written to be read: comments explain
@@ -45,10 +45,12 @@ to make each in-game month last one second, so you can watch a whole tax year in
 | Pan | Drag | Drag |
 | Zoom | Scroll wheel | Pinch |
 | Collect rent / sales | Click the 🪙 bubble or the building | Tap |
+| Plant, harvest, clear crops | Click the plot or its bubble | Tap |
 | Building info | Hover a building | Tap it |
 | Cancel a tool | Esc, right-click or **Done** | **Done** |
 
 - **Build:** pick a building. A green preview means it fits and you can afford it; red means it doesn't. Place as many as you like, then press Done.
+- **Farming:** build a Farm Plot, then tap it (🌱) to choose seeds. Crops grow through sprout, young and grown stages, then ripen (the crop's bubble appears): tap to harvest and sell. Wait too long and it withers (🥀): the harvest is lost and you tap to clear the plot. Quick crops earn the most per minute; slow ones can be left overnight. Tick "Plant all empty plots" to sow every empty plot at once.
 - **Move:** tap a building to pick it up, then tap where it should go.
 - **Demolish:** tap a building to remove it. You get no refund and no tax deduction; that's the real US rule, explained in docs/TAXES.md.
 - **Taxes:** your books for the year, an income tax estimate by bracket, the sales tax you're holding, property values and last year's return.
@@ -56,16 +58,18 @@ to make each in-game month last one second, so you can watch a whole tax year in
 
 ### Time
 
-- **Income timers use real time.** Rent keeps building while the game is closed and waits for you to collect it. A building pays one batch at a time; uncollected rent doesn't stack.
+- **Income timers and crops use real time.** Rent keeps building while the game is closed and waits for you to collect it. A building pays one batch at a time; uncollected rent doesn't stack. Crops keep growing while you're away too, and can wither, so plant slow crops before you leave.
 - **The calendar only runs while you play.** One month is one minute of play, so a year is 12 minutes. Taxes follow the calendar: sales tax is sent every quarter, and income and property tax are paid on Tax Day after December.
 
 ### Taxes in one paragraph
 
-Homes earn rent and shops earn sales. Shops also collect 7% sales tax from
-customers, which you hold for the state and hand over each quarter. Every
+Homes earn rent, shops earn sales and farms earn crop sales. Shops also
+collect 7% sales tax from customers, which you hold for the state and hand
+over each quarter. Crops are sold wholesale, so they carry no sales tax, and
+the seeds you buy are a deductible farm expense. Every
 building owes property tax on its assessed value. On Tax Day, your income
 minus deductions is taxed using the real US 2024 brackets, scaled ÷10.
-Deductions are the standard deduction, property tax and depreciation. If a bill pushes your coins below zero, you're in tax debt,
+Deductions are the standard deduction, seeds, property tax and depreciation. If a bill pushes your coins below zero, you're in tax debt,
 and a 0.5% penalty is added each month until you've paid it off.
 [docs/TAXES.md](docs/TAXES.md) has the details.
 
@@ -79,6 +83,7 @@ src/
     Game.ts               creates and wires everything; the frame loop
     grid.ts               tile ↔ world coordinate math
     buildings.ts          the building catalog (pure data)
+    crops.ts              the crop catalog and crop stages (empty → growing → ripe → withered)
     City.ts               town state: coins, buildings, occupancy, income timers
     GameClock.ts          the in-game calendar (play time, not wall time)
     taxRules.ts           tax rates, brackets and formulas (pure functions)
@@ -86,13 +91,14 @@ src/
     save.ts               localStorage save/load and autosave
     CameraController.ts   pan, zoom, pinch, click detection
     CityView.ts           keeps 3D objects in sync with City
-    models.ts             loads .glb models, or draws placeholder shapes
-    Builder.ts            build / move / demolish tools, ghost preview
+    models.ts             loads .glb models, draws placeholder shapes and crops
+    Builder.ts            build / move / demolish tools, ghost preview, what a tap does
     IncomeView.ts         HTML labels over buildings: bubbles, pop-ups, info card
     *.test.ts             unit tests
   ui/
     Hud.ts                coins, calendar, toolbar, catalog, hints, toasts
     TaxPanel.ts           the Taxes window and Tax Day report
+    CropPicker.ts         the seed window for farm plots
     dom.ts                small DOM helpers
 public/models/            3D models served as-is (Kenney City Kit, CC0)
 assets-src/               raw downloaded asset packs (git-ignored)
@@ -108,8 +114,8 @@ docs/                     the docs linked above
 | 2 | ✅ | Building catalog, place / move / demolish, 3D models |
 | 3 | ✅ | Coins, costs, income timers, collect bubbles |
 | 3.5 | ✅ | Local saving, game calendar, tax system, unit tests, touch support |
-| 4 | ⏳ | Farms: plant, grow, harvest, spoil |
-| 5 | | Energy, XP and levels, unlocks |
+| 4 | ✅ | Farms: plant, grow, harvest, wither; farm income and seed expenses on the tax return |
+| 5 | ⏳ | Energy, XP and levels, unlocks |
 | 6 | | Offline catch-up polish, save migrations |
 | 7 | | Roads, population and community buildings |
 | 8 | | Supply chain: farm goods stock shops (cost of goods becomes deductible) |

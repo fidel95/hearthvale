@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import { CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js'
+import { CropPicker } from '../ui/CropPicker'
 import { Hud } from '../ui/Hud'
 import { TaxPanel } from '../ui/TaxPanel'
 import { Builder } from './Builder'
@@ -7,6 +8,7 @@ import { BUILDINGS_BY_ID } from './buildings'
 import { CameraController } from './CameraController'
 import { City } from './City'
 import { CityView } from './CityView'
+import { CROPS_BY_ID } from './crops'
 import { GameClock, MONTH_NAMES } from './GameClock'
 import { GRID_SIZE } from './grid'
 import { IncomeView } from './IncomeView'
@@ -34,6 +36,7 @@ export class Game {
   private taxes: Taxes
 
   // Views and UI that react to the state.
+  private cityView: CityView
   private incomeView: IncomeView
   private hud: Hud
   private saver: AutoSaver
@@ -66,10 +69,10 @@ export class Game {
 
     // Everything that listens to City must exist before the town is loaded,
     // or it misses the 'added' events.
-    const cityView = new CityView(this.scene, this.city)
+    this.cityView = new CityView(this.scene, this.city)
     this.taxes = new Taxes(this.city, this.clock)
-    const builder = new Builder(this.scene, this.city, cityView, this.controls, this.renderer.domElement)
-    this.incomeView = new IncomeView(this.scene, this.city, cityView)
+    const builder = new Builder(this.scene, this.city, this.cityView, this.controls, this.renderer.domElement)
+    this.incomeView = new IncomeView(this.scene, this.city, this.cityView, (b) => builder.tap(b))
     builder.onHoverBuilding = (b) => this.incomeView.setHovered(b)
 
     const taxPanel = new TaxPanel(container, this.city, this.taxes, this.clock)
@@ -78,6 +81,8 @@ export class Game {
       onNewTown: () => this.newTown(),
     })
     this.showTaxEvents(taxPanel)
+    const cropPicker = new CropPicker(container, this.city, (message) => this.hud.toast(message))
+    builder.onPlantRequest = (plot) => cropPicker.open(plot)
 
     this.saver = new AutoSaver(() => ({
       city: this.city.toSave(),
@@ -106,6 +111,7 @@ export class Game {
     for (const month of this.clock.advance(dt)) this.taxes.endOfMonth(month)
 
     const now = Date.now()
+    this.cityView.update(now)
     this.incomeView.update(now)
     this.hud.update(this.clock)
     this.renderer.render(this.scene, this.camera)
@@ -125,12 +131,15 @@ export class Game {
     // A small starting town so a new game isn't an empty field.
     const start: [string, number, number][] = [
       ['cottage', 9, 9],
-      ['wheat-field', 12, 9],
+      ['farm-plot', 12, 9],
       ['oak-tree', 8, 12],
       ['oak-tree', 11, 12],
       ['oak-tree', 7, 8],
     ]
     for (const [id, x, z] of start) this.city.place(BUILDINGS_BY_ID.get(id)!, { x, z }, { free: true })
+    // Strawberries already 40 s in on the starting plot, so the first harvest comes quickly.
+    const plot = this.city.buildingAt({ x: 12, z: 9 })!
+    this.city.plant(plot.id, CROPS_BY_ID.get('strawberries')!, { now: Date.now() - 40_000, free: true })
   }
 
   private newTown() {
@@ -145,7 +154,7 @@ export class Game {
     this.taxes.onChange((event) => {
       switch (event.kind) {
         case 'salesTax':
-          this.incomeView.popup(event.building, `+${event.amount} sales tax (held)`, 'tax')
+          this.incomeView.popup(event.building, `+${event.amount} sales tax (held)`, 'note')
           break
         case 'remitted': {
           const lastMonth = MONTH_NAMES[event.quarter * 3 - 1]

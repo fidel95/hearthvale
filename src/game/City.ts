@@ -1,4 +1,5 @@
-import { BUILDINGS_BY_ID, type BuildingType } from './buildings'
+import { BUILDINGS_BY_ID, RENAMED_BUILDING_IDS, type BuildingType } from './buildings'
+import { CROPS_BY_ID, cropState, type CropType, type PlantedCrop } from './crops'
 import { GRID_SIZE, footprintTiles, inBounds, type Tile } from './grid'
 
 // The city's state: coins, which buildings exist and which tiles they cover.
@@ -16,6 +17,8 @@ export interface PlacedBuilding {
   // Real clock time (not "seconds since the game started") so timers keep
   // running while the game is closed: rent is waiting when you come back.
   readyAt: number
+  // Farm plots only: what's planted, or null when the plot is empty.
+  crop: PlantedCrop | null
 }
 
 // The plain-JSON form of a City, for the save file. Buildings store their
@@ -23,7 +26,7 @@ export interface PlacedBuilding {
 export interface CitySave {
   coins: number
   nextId: number
-  buildings: { id: number; typeId: string; tile: Tile; readyAt: number }[]
+  buildings: { id: number; typeId: string; tile: Tile; readyAt: number; crop?: PlantedCrop | null }[]
 }
 
 export type CityEvent =
@@ -31,6 +34,9 @@ export type CityEvent =
   | { kind: 'removed'; building: PlacedBuilding }
   | { kind: 'moved'; building: PlacedBuilding }
   | { kind: 'collected'; building: PlacedBuilding; amount: number }
+  | { kind: 'planted'; building: PlacedBuilding; crop: CropType; cost: number }
+  | { kind: 'harvested'; building: PlacedBuilding; crop: CropType; amount: number }
+  | { kind: 'cleared'; building: PlacedBuilding; crop: CropType } // a withered crop was cleared away
   | { kind: 'coins'; coins: number }
 
 export class City {
@@ -85,7 +91,7 @@ export class City {
     if (!free && !this.canAfford(type)) return null
 
     const readyAt = type.income ? now + type.income.seconds * 1000 : 0
-    const building = { id: this.nextId++, type, tile, readyAt }
+    const building = { id: this.nextId++, type, tile, readyAt, crop: null }
     this.buildings.set(building.id, building)
     this.mark(building, building.id)
     this.emit({ kind: 'added', building })
@@ -129,6 +135,46 @@ export class City {
     return coins
   }
 
+  // Plant a crop on an empty farm plot, paying for the seeds.
+  // free: true skips the cost, for the starting town.
+  plant(id: number, crop: CropType, { now = Date.now(), free = false } = {}): boolean {
+    const plot = this.buildings.get(id)
+    if (!plot || plot.type.category !== 'farm' || cropState(plot.crop, now).stage !== 'empty') return false
+    if (!free && this._coins < crop.seedCost) return false
+
+    plot.crop = { cropId: crop.id, plantedAt: now }
+    const cost = free ? 0 : crop.seedCost
+    this.emit({ kind: 'planted', building: plot, crop, cost })
+    this.adjustCoins(-cost)
+    return true
+  }
+
+  // Harvest a ripe crop and sell it. Returns the coins earned (0 if not ripe).
+  harvest(id: number, now: number): number {
+    const plot = this.buildings.get(id)
+    if (!plot) return 0
+    const state = cropState(plot.crop, now)
+    if (state.stage !== 'ripe') return 0
+
+    plot.crop = null
+    const amount = state.crop.sellPrice
+    this.emit({ kind: 'harvested', building: plot, crop: state.crop, amount })
+    this.adjustCoins(amount)
+    return amount
+  }
+
+  // Clear a withered crop so the plot can be planted again. The seeds are lost.
+  clearPlot(id: number, now: number): boolean {
+    const plot = this.buildings.get(id)
+    if (!plot) return false
+    const state = cropState(plot.crop, now)
+    if (state.stage !== 'withered') return false
+
+    plot.crop = null
+    this.emit({ kind: 'cleared', building: plot, crop: state.crop })
+    return true
+  }
+
   // Add (or, with a negative delta, take away) coins. Unlike building, taxes
   // may push coins below zero: that's debt, and it accrues late penalties.
   adjustCoins(delta: number) {
@@ -141,7 +187,13 @@ export class City {
     return {
       coins: this._coins,
       nextId: this.nextId,
-      buildings: [...this.buildings.values()].map((b) => ({ id: b.id, typeId: b.type.id, tile: b.tile, readyAt: b.readyAt })),
+      buildings: [...this.buildings.values()].map((b) => ({
+        id: b.id,
+        typeId: b.type.id,
+        tile: b.tile,
+        readyAt: b.readyAt,
+        crop: b.crop,
+      })),
     }
   }
 
@@ -150,12 +202,14 @@ export class City {
   // rather than breaking the whole save.
   load(save: CitySave) {
     for (const saved of save.buildings) {
-      const type = BUILDINGS_BY_ID.get(saved.typeId)
+      const type = BUILDINGS_BY_ID.get(RENAMED_BUILDING_IDS[saved.typeId] ?? saved.typeId)
       if (!type || !this.canPlace(type, saved.tile)) {
         console.warn('Skipping saved building that no longer fits:', saved)
         continue
       }
-      const building = { id: saved.id, type, tile: saved.tile, readyAt: saved.readyAt }
+      // Saves from before Stage 4 have no crop field; a crop that was removed from the catalog is dropped.
+      const crop = saved.crop && CROPS_BY_ID.has(saved.crop.cropId) ? saved.crop : null
+      const building = { id: saved.id, type, tile: saved.tile, readyAt: saved.readyAt, crop }
       this.buildings.set(building.id, building)
       this.mark(building, building.id)
       this.emit({ kind: 'added', building })

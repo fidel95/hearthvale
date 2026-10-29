@@ -40,10 +40,12 @@ function returnRows(r: TaxReturn): Row[] {
   const rows: Row[] = [
     ['Rent from homes', coins(r.rentIncome)],
     ['Sales from shops', coins(r.salesIncome)],
+    ['Crop sales from farms', coins(r.farmIncome)],
   ]
   if (r.otherIncome > 0) rows.push(['Other income', coins(r.otherIncome)])
   rows.push(
     ['Gross income', coins(r.grossIncome), 'total'],
+    ['− Seeds (farm expenses)', coins(r.farmExpenses), 'minus'],
     ['− Property tax', coins(r.propertyTax), 'minus'],
     ['− Depreciation', coins(r.depreciation), 'minus'],
     ['− Standard deduction', coins(r.standardDeduction), 'minus'],
@@ -243,7 +245,7 @@ export class TaxPanel {
       ],
       [
         'Deductions',
-        "Before brackets apply you subtract the standard deduction, the property tax you paid and depreciation. Demolishing a building is not deductible: US law adds its leftover cost to the land's value instead.",
+        "Before brackets apply you subtract the standard deduction, the property tax you paid, depreciation and what you spent on seeds. Demolishing a building is not deductible: US law adds its leftover cost to the land's value instead.",
       ],
       [
         'Depreciation',
@@ -256,6 +258,10 @@ export class TaxPanel {
       [
         'Sales tax',
         `${percent(SALES_TAX_RATE)} added to every sale at your shops. You collect it for the state and hand it over every quarter (end of March, June, September, December). Spending it is borrowing from the taxman.`,
+      ],
+      [
+        'Farms',
+        "Crop sales are farm income (Schedule F in the US). Seeds are a farm expense, deducted in the year you buy them (the cash method most farmers use). Crops are sold wholesale, so there's no sales tax on them. A crop that withers gives no extra deduction: its seeds were already deducted.",
       ],
       [
         'Paying late',

@@ -69,6 +69,7 @@ export class Hud {
         el('span', 'catalog-meta', `${type.size.x}×${type.size.z} · 🪙 ${type.cost}`),
       )
       if (type.income) item.append(el('span', 'catalog-meta', `Earns 🪙 ${type.income.coins} / ${type.income.seconds}s`))
+      if (type.category === 'farm') item.append(el('span', 'catalog-meta', 'Plant crops to sell'))
       item.addEventListener('click', () => {
         catalog.hidden = true
         builder.setMode({ kind: 'build', type })

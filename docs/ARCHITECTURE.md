@@ -15,13 +15,13 @@ fixed directions:
                          │ calls methods (place, move, collect, …)
                          ▼
           ┌──────────── state ────────────┐
-          │ City   GameClock   Taxes      │   the rules and the data
+          │ City  crops  GameClock  Taxes │   the rules and the data
           └──────────────┬────────────────┘
                          │ emits events (added, coins, taxDay, …)
                          ▼
           ┌──────────── views ────────────┐
           │ CityView  IncomeView  Hud      │   draw what the state says
-          │ TaxPanel                       │
+          │ TaxPanel  CropPicker           │
           └───────────────────────────────┘
 ```
 
@@ -54,6 +54,9 @@ inside `switch (event.kind)`.
 | City | `moved` | a building moves | CityView |
 | City | `removed` | a building is demolished | CityView, IncomeView, Taxes (stops taxing it) |
 | City | `collected` | income is collected | IncomeView (pop-up), Taxes (records income, adds sales tax) |
+| City | `planted` | seeds go into a farm plot | IncomeView (seed cost pop-up), Taxes (farm expense) |
+| City | `harvested` | a ripe crop is harvested | IncomeView (pop-up), Taxes (farm income) |
+| City | `cleared` | a withered crop is cleared | IncomeView (pop-up) |
 | City | `coins` | the coin balance changes | Hud (counter, catalog), TaxPanel |
 | Taxes | `salesTax` | sales tax is collected on a sale | Game → IncomeView pop-up |
 | Taxes | `remitted` | quarterly sales tax is sent | Game → Hud toast |
@@ -73,10 +76,12 @@ first and loads the save last.
 2. `clock.advance(dt)` moves the calendar forward. For each month that just
    ended, `taxes.endOfMonth(month)` runs: property tax and depreciation accrue,
    the quarter's sales tax is sent, and in December the return is filed.
-3. `incomeView.update(now)` adds or removes collect bubbles and refreshes the
-   info card countdown.
-4. `hud.update(clock)` refreshes the date and month progress bar.
-5. Draw the 3D scene, then the HTML labels on top.
+3. `cityView.update(now)` swaps a farm plot's crop model when its look
+   changes (sprout → young → grown → ripe → withered).
+4. `incomeView.update(now)` adds, changes or removes bubbles (coins, plant,
+   harvest, withered) and refreshes the info card countdown.
+5. `hud.update(clock)` refreshes the date and month progress bar.
+6. Draw the 3D scene, then the HTML labels on top.
 
 Nothing in the game "ticks down". Timers are stored as **timestamps**
 (`readyAt`) and compared with the current time. That's cheaper, survives the
@@ -86,8 +91,8 @@ tab being in the background, and makes offline progress automatic.
 
 | | Real time (`Date.now()`) | Play time (`GameClock`) |
 |---|---|---|
-| Used for | Income timers (`readyAt`) | The calendar: months, quarters, Tax Day |
-| Runs while the game is closed? | Yes, so rent is waiting when you return | No |
+| Used for | Income timers (`readyAt`), crops (`plantedAt`) | The calendar: months, quarters, Tax Day |
+| Runs while the game is closed? | Yes, so rent is waiting and crops grow (or wither) while you're away | No |
 | Why | Matches the genre: come back later and collect | Otherwise a week away would mean 800 years of tax bills |
 
 `GameClock` also caps each step at 250 ms, so a stalled browser can't skip
@@ -119,6 +124,24 @@ months in one frame, and has a development-only `speed` multiplier (`?speed=60`)
   - An element that is itself animating can lose clicks to the canvas below,
     so the bubble is a still button with an animated face inside.
 
+## Farming: a state machine with no stored state
+
+A plot's crop is stored as just `{ cropId, plantedAt }`. Its stage (empty,
+growing, ripe, withered) is never saved or updated; `cropState()` in
+`crops.ts` works it out from the timestamp and the crop's timings whenever
+something asks. That's why crops keep growing while the game is closed, and
+why there's nothing to keep in sync: the views ask for the state each frame
+and only rebuild things when the answer changes.
+
+Tapping a plot (`Builder.tap`, also used by bubbles) does whatever the stage
+calls for: open the `CropPicker` on an empty plot, say how long is left on a
+growing one, harvest a ripe one, clear a withered one.
+
+Crops are drawn by `createCropObject` in `models.ts`. A plot has 4–16 plants
+of a few shapes each; rather than hundreds of meshes, every shape of the same
+color is merged into one geometry (`mergeGeometries`), so a whole plot is 2–4
+draw calls.
+
 ## Saving
 
 `save.ts` stores one JSON document in `localStorage` under `hearthvale.save`:
@@ -127,7 +150,10 @@ months in one frame, and has a development-only `speed` multiplier (`?speed=60`)
 {
   "version": 1,
   "savedAt": 1761700000000,
-  "city":  { "coins": 271, "nextId": 7, "buildings": [{ "id": 1, "typeId": "cottage", "tile": { "x": 9, "z": 9 }, "readyAt": 1761700030000 }] },
+  "city":  { "coins": 271, "nextId": 7, "buildings": [
+    { "id": 1, "typeId": "cottage", "tile": { "x": 9, "z": 9 }, "readyAt": 1761700030000, "crop": null },
+    { "id": 2, "typeId": "farm-plot", "tile": { "x": 12, "z": 9 }, "readyAt": 0, "crop": { "cropId": "wheat", "plantedAt": 1761700000000 } }
+  ] },
   "clock": { "playedMs": 812345 },
   "taxes": { "ledger": { … }, "salesTaxHeld": 3, "lastReturn": { … }, "assets": [[1, { "basis": 100, "depreciated": 4.2, "placedMonth": 0 }]] }
 }
@@ -136,7 +162,12 @@ months in one frame, and has a development-only `speed` multiplier (`?speed=60`)
 - **What's saved:** only data. Buildings are saved by `typeId`, not by copying
   the type, so changing a building's stats in `buildings.ts` applies to old
   saves. If a type is removed, `City.load` skips those buildings with a
-  warning instead of failing.
+  warning instead of failing. A *renamed* type goes in `RENAMED_BUILDING_IDS`
+  (the Stage 4 `wheat-field` → `farm-plot` rename is the first), so old
+  saves keep their buildings.
+- **Additive changes don't need a version bump.** Stage 4 added `crop` to
+  buildings and farm lines to the tax books; the loaders fill in defaults
+  when they're missing (`crop: null`, `farmIncome: 0`), so older saves load as is.
 - **When:** `AutoSaver` saves one second after any change, batching bursts into
   one write, and immediately when the tab is hidden or closed (`pagehide`,
   `visibilitychange`).
@@ -148,12 +179,24 @@ months in one frame, and has a development-only `speed` multiplier (`?speed=60`)
   windows and strict browser settings can block storage, and the game still runs
   without it.
 
+## Layers on screen
+
+From bottom to top: the WebGL canvas, the map labels (`.labels`, z-index 1:
+bubbles, pop-ups, info card), the HUD (`.hud`, 2), and windows (`.overlay`,
+10: Taxes, Tax Day, crop picker). CSS2DRenderer sets each label's z-index
+every frame to sort them by depth; because `.labels` is its own stacking
+context, those numbers can't lift a label above the HUD or a window.
+
 ## Adding things
 
 - **A new building:** add an entry to `BUILDING_TYPES` in `buildings.ts`, with
   an optional `model: suburban('…')` from `public/models/suburban/`. The
   catalog, placement, income, property tax and depreciation all pick it up
   automatically.
+- **A new crop:** add an entry to `CROP_TYPES` in `crops.ts` with its timings,
+  prices and `look` (one of the plant shapes in `createCropObject`). The
+  picker, bubbles, growth stages and taxes pick it up. `crops.test.ts` checks
+  that it pays back its seeds and fits the speed-vs-profit curve.
 - **A new tax rule:** put the constant or formula in `taxRules.ts` with a
   comment naming its real-world source, apply it in `Taxes.ts`, test it in
   `Taxes.test.ts`, and explain it in `docs/TAXES.md` and the in-game explainer
@@ -166,7 +209,7 @@ months in one frame, and has a development-only `speed` multiplier (`?speed=60`)
 ## Testing
 
 - `npm test` runs the unit tests. They cover the rules: placement, occupancy,
-  costs, income timing, save round-trips, every tax and the bookkeeping across
-  months and years.
+  costs, income timing, crop stages, planting and harvesting, save round-trips
+  (including old saves), every tax and the bookkeeping across months and years.
 - Rendering and input are checked by playing the game. With `?speed=60` a full
   tax year takes 12 seconds.

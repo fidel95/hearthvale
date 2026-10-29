@@ -1,12 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import { BUILDINGS_BY_ID } from './buildings'
 import { City } from './City'
+import { CROPS_BY_ID } from './crops'
 import { GameClock, MONTH_MS } from './GameClock'
 import { Taxes, type TaxEvent } from './Taxes'
 import { STANDARD_DEDUCTION, annualPropertyTax, incomeTax } from './taxRules'
 
 const cottage = BUILDINGS_BY_ID.get('cottage')!
 const bakery = BUILDINGS_BY_ID.get('bakery')! // business: 40 coins of sales
+const plotType = BUILDINGS_BY_ID.get('farm-plot')!
+const strawberries = CROPS_BY_ID.get('strawberries')! // seeds 10, sells 40
 
 // A fresh town with a clock and tax books, plus a helper that runs whole months.
 function setup() {
@@ -119,5 +122,57 @@ describe('Taxes', () => {
     city2.load(save.city)
     taxes2.load(save.taxes)
     expect(taxes2.toSave()).toEqual(save.taxes)
+  })
+
+  it('records crop sales as farm income and seeds as a deductible farm expense, with no sales tax', () => {
+    const { city, taxes } = setup()
+    const plot = city.place(plotType, { x: 0, z: 0 }, { free: true })!
+    const before = city.coins
+    city.plant(plot.id, strawberries, { now: 0 })
+    city.harvest(plot.id, 60_000)
+    expect(city.coins).toBe(before - 10 + 40) // no sales tax added on top
+    expect(taxes.salesTaxHeld).toBe(0)
+    const r = taxes.estimate()
+    expect(r.farmIncome).toBe(40)
+    expect(r.farmExpenses).toBe(10)
+    expect(r.grossIncome).toBe(40)
+  })
+
+  it('deducts seeds from taxable income', () => {
+    const { city, taxes } = setup()
+    city.adjustCoins(100_000)
+    const plots = [0, 2, 4, 6, 8].map((x) => city.place(plotType, { x, z: 0 }, { free: true })!)
+    // Plant and harvest enough to get above the standard deduction.
+    for (let round = 0; round < 10; round++) {
+      const now = round * 60_000
+      for (const p of plots) city.plant(p.id, strawberries, { now })
+      for (const p of plots) city.harvest(p.id, now + 60_000)
+    }
+    const r = taxes.estimate()
+    expect(r.farmIncome).toBe(2000) // 50 harvests × 40
+    expect(r.farmExpenses).toBe(500) // 50 × 10 in seeds
+    expect(r.taxableIncome).toBeCloseTo(2000 - 500 - STANDARD_DEDUCTION)
+  })
+
+  it('gives no extra deduction for a withered crop (its seeds were already deducted)', () => {
+    const { city, taxes } = setup()
+    const plot = city.place(plotType, { x: 0, z: 0 }, { free: true })!
+    city.plant(plot.id, strawberries, { now: 0 })
+    city.clearPlot(plot.id, 10 * 60_000)
+    expect(taxes.estimate().farmExpenses).toBe(10)
+  })
+
+  it('does not count free starter crops as an expense', () => {
+    const { city, taxes } = setup()
+    const plot = city.place(plotType, { x: 0, z: 0 }, { free: true })!
+    city.plant(plot.id, strawberries, { now: 0, free: true })
+    expect(taxes.estimate().farmExpenses).toBe(0)
+  })
+
+  it('loads returns filed before farms existed', () => {
+    const { taxes } = setup()
+    const { farmIncome: _i, farmExpenses: _e, ...oldReturn } = taxes.estimate()
+    taxes.load({ ...taxes.toSave(), lastReturn: oldReturn as never })
+    expect(taxes.lastReturn).toMatchObject({ farmIncome: 0, farmExpenses: 0 })
   })
 })

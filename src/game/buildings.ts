@@ -84,12 +84,13 @@ export const BUILDING_TYPES: BuildingType[] = [
     placeholder: { shape: 'shop', color: '#e3e3e3', accent: '#3a8f5c', height: 1.2 },
   },
   {
-    id: 'wheat-field',
-    name: 'Wheat Field',
+    // A plowed plot to plant crops on (crops.ts). It earns nothing by itself.
+    id: 'farm-plot',
+    name: 'Farm Plot',
     category: 'farm',
     size: { x: 2, z: 2 },
     cost: 50,
-    placeholder: { shape: 'field', color: '#8a5a36', accent: '#e8c75a', height: 0.25 },
+    placeholder: { shape: 'field', color: '#8a5a36', accent: '#6e4529', height: 0.06 },
   },
   {
     id: 'oak-tree',
@@ -121,3 +122,9 @@ export const BUILDING_TYPES: BuildingType[] = [
 ]
 
 export const BUILDINGS_BY_ID = new Map(BUILDING_TYPES.map((b) => [b.id, b]))
+
+// Ids that were renamed, so old saves still load. Saves store a building's
+// type id, so renaming an id without this would silently drop those buildings.
+export const RENAMED_BUILDING_IDS: Record<string, string> = {
+  'wheat-field': 'farm-plot', // Stage 4: the fixed wheat field became a plot you plant
+}

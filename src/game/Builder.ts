@@ -1,8 +1,10 @@
 import * as THREE from 'three'
 import type { BuildingType } from './buildings'
 import type { CameraController } from './CameraController'
+import { duration } from '../ui/dom'
 import type { City, PlacedBuilding } from './City'
 import type { CityView } from './CityView'
+import { cropState } from './crops'
 import { footprintCenter, worldToTile, type Tile } from './grid'
 import { createBuildingObject } from './models'
 
@@ -29,6 +31,8 @@ export class Builder {
   onHoverBuilding?: (building: PlacedBuilding | null) => void
   // Short messages for the player, e.g. why a click did nothing.
   onNotice?: (message: string) => void
+  // An empty farm plot was tapped: show the seeds to choose from.
+  onPlantRequest?: (plot: PlacedBuilding) => void
 
   private scene: THREE.Scene
   private city: City
@@ -86,6 +90,32 @@ export class Builder {
     this.onModeChange?.(mode)
   }
 
+  // What tapping a building does when no tool is selected (also used by the
+  // bubbles over buildings): collect income, or tend a farm plot depending on
+  // what's growing on it.
+  tap(building: PlacedBuilding) {
+    const now = Date.now()
+    if (building.type.category !== 'farm') {
+      this.city.collect(building.id, now)
+      return
+    }
+    const state = cropState(building.crop, now)
+    switch (state.stage) {
+      case 'empty':
+        this.onPlantRequest?.(building)
+        break
+      case 'growing':
+        this.onNotice?.(`${state.crop.emoji} ${state.crop.name} will be ready in ${duration(state.readyAt - now)}`)
+        break
+      case 'ripe':
+        this.city.harvest(building.id, now)
+        break
+      case 'withered':
+        this.city.clearPlot(building.id, now)
+        break
+    }
+  }
+
   // The building type following the pointer, if any.
   private placingType(): BuildingType | null {
     if (this.mode.kind === 'build') return this.mode.type
@@ -109,7 +139,7 @@ export class Builder {
     switch (mode.kind) {
       case 'select': {
         const clicked = this.city.buildingAt(tile)
-        if (clicked) this.city.collect(clicked.id, Date.now())
+        if (clicked) this.tap(clicked)
         break
       }
       case 'build':
