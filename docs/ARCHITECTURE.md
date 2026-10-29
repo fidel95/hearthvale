@@ -113,6 +113,13 @@ tab being in the background, and makes offline progress automatic.
 | Runs while the game is closed? | Yes, so rent is waiting and crops grow (or wither) while you're away | No |
 | Why | Matches the genre: come back later and collect | Otherwise a week away would mean 800 years of tax bills |
 
+Because everything on real time is a timestamp, coming back after a day
+needs no catch-up simulation: asking each timer about *now* is the catch-up.
+`offline.ts` only *counts* what's waiting for the "Welcome back" window
+(shown when a save is at least 5 minutes old, or a hidden tab comes back
+after 5 minutes). A crop counts as "withered while you were away" if its
+wither time falls between when you left and now.
+
 `GameClock` also caps each step at 250 ms, so a stalled browser can't skip
 months in one frame, and has a development-only `speed` multiplier (`?speed=60`).
 

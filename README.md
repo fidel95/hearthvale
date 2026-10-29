@@ -67,6 +67,7 @@ to make each in-game month last one second, so you can watch a whole tax year in
 ### Time
 
 - **Income timers and crops use real time.** Rent keeps building while the game is closed and waits for you to collect it. A building pays one batch at a time; uncollected rent doesn't stack. Crops keep growing while you're away too, and can wither, so plant slow crops before you leave.
+- **Welcome back.** Open the game after 5 minutes or more away (or return to a tab you left in the background) and a summary shows what's waiting: income ready, crops ripe or withered, energy regained. **Collect all** gathers everything, using ⚡1 per pickup.
 - **The calendar only runs while you play.** One month is one minute of play, so a year is 12 minutes. Taxes follow the calendar: sales tax is sent every quarter, and income and property tax are paid on Tax Day after December.
 
 ### Taxes in one paragraph
@@ -96,6 +97,7 @@ src/
     utilityRules.ts       water, power and trash: demand, supply, effect on income (pure functions)
     Services.ts           keeps the utility report current and pays running costs monthly
     pathfinding.ts        A* shortest paths on the tile grid
+    offline.ts            what happened while you were away (for the welcome-back window)
     progression.ts        XP, level and energy rules (pure functions)
     Player.ts             the player's XP, level and energy over time
     City.ts               town state: coins, buildings, occupancy, income timers
@@ -118,6 +120,7 @@ src/
     LevelUpPanel.ts       the level-up window
     LandPanel.ts          the window for buying land
     TownPanel.ts          the Town window: population and utilities
+    WelcomeBackPanel.ts   the "Welcome back" summary
     dom.ts                small DOM helpers
 public/models/            3D models served as-is (Kenney City Kit, CC0)
 assets-src/               raw downloaded asset packs (git-ignored)
@@ -136,8 +139,8 @@ docs/                     the docs linked above
 | 4 | ✅ | Farms: plant, grow, harvest, wither; farm income and seed expenses on the tax return |
 | 5 | ✅ | Energy, XP and levels, unlocks; level rewards taxed as prizes |
 | 5.5 | ✅ | Expandable land, utilities (water, power, trash), walking residents, save upgrades |
-| 6 | ⏳ | "While you were away" summary, offline catch-up polish |
-| 7 | | Roads, population and community buildings |
+| 6 | ✅ | "Welcome back" summary, collect all, save upgrades |
+| 7 | ⏳ | Roads (walkers prefer them), community buildings |
 | 8 | | Supply chain: farm goods stock shops (cost of goods becomes deductible) |
 | 9 | | Quests and goals |
 | 10 | | Land expansions, decorations that boost payouts |

@@ -134,6 +134,22 @@ export class Builder {
     }
   }
 
+  // Collect every ready building and harvest every ripe crop, one energy
+  // each, until everything's done or energy runs out.
+  collectAll(): { actions: number; coins: number; outOfEnergy: boolean } {
+    const now = Date.now()
+    let actions = 0
+    let coins = 0
+    for (const b of this.city.all()) {
+      const ready = this.city.isReady(b, now) || cropState(b.crop, now).stage === 'ripe'
+      if (!ready) continue
+      if (!this.player.hasEnergy(now)) return { actions, coins, outOfEnergy: true }
+      coins += b.type.category === 'farm' ? this.city.harvest(b.id, now) : this.city.collect(b.id, now)
+      actions++
+    }
+    return { actions, coins, outOfEnergy: false }
+  }
+
   // The building type following the pointer, if any.
   private placingType(): BuildingType | null {
     if (this.mode.kind === 'build') return this.mode.type

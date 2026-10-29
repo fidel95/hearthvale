@@ -787,3 +787,20 @@ button {
 .bracket-fill.short {
   background: var(--bad);
 }
+
+/* Two buttons side by side at the bottom of a panel. */
+.panel-buttons {
+  display: flex;
+  gap: 8px;
+  margin: 0 18px 18px;
+}
+
+.panel-buttons .panel-button {
+  flex: 1;
+  margin: 0;
+}
+
+.panel-button.secondary {
+  background: var(--border);
+  color: var(--ink);
+}

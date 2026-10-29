@@ -5,6 +5,7 @@ import { Hud } from '../ui/Hud'
 import { LandPanel } from '../ui/LandPanel'
 import { LevelUpPanel } from '../ui/LevelUpPanel'
 import { TownPanel } from '../ui/TownPanel'
+import { WelcomeBackPanel } from '../ui/WelcomeBackPanel'
 import { TaxPanel } from '../ui/TaxPanel'
 import { Builder } from './Builder'
 import { BUILDINGS_BY_ID } from './buildings'
@@ -15,6 +16,7 @@ import { CROPS_BY_ID } from './crops'
 import { GameClock, MONTH_NAMES } from './GameClock'
 import { IncomeView } from './IncomeView'
 import { LandView } from './LandView'
+import { WELCOME_BACK_AFTER_MS, awaySummary } from './offline'
 import { PeopleView } from './PeopleView'
 import { Player } from './Player'
 import { Services } from './Services'
@@ -114,7 +116,8 @@ export class Game {
       taxes: this.taxes.toSave(),
       player: this.player.toSave(),
     }))
-    this.loadOrSeed()
+    const leftAt = this.loadOrSeed()
+    this.setUpWelcomeBack(container, builder, leftAt)
     // Save shortly after anything changes.
     this.city.onChange(() => this.saver.requestSave())
     this.taxes.onChange(() => this.saver.requestSave())
@@ -151,7 +154,8 @@ export class Game {
     this.labelRenderer.render(this.scene, this.camera)
   }
 
-  private loadOrSeed() {
+  // Returns when the player last left (the save's time), or null for a new town.
+  private loadOrSeed(): number | null {
     const save = readSave()
     if (save) {
       // Order matters: the clock first (Taxes reads it), then the town, then
@@ -160,7 +164,7 @@ export class Game {
       this.city.load(save.city)
       this.taxes.load(save.taxes)
       if (save.player) this.player.load(save.player)
-      return
+      return save.savedAt
     }
     // A small starting town so a new game isn't an empty field.
     // (Tiles 20–39 are the starting land in the middle of the world.)
@@ -175,6 +179,28 @@ export class Game {
     // Strawberries already 40 s in on the starting plot, so the first harvest comes quickly.
     const plot = this.city.buildingAt({ x: 32, z: 29 })!
     this.city.plant(plot.id, CROPS_BY_ID.get('strawberries')!, { now: Date.now() - 40_000, free: true })
+    return null
+  }
+
+  // Show what happened while you were away: when the game opens after a
+  // while, and when you come back to a tab that's been hidden for a while.
+  private setUpWelcomeBack(container: HTMLElement, builder: Builder, leftAt: number | null) {
+    const panel = new WelcomeBackPanel(container, () => {
+      const result = builder.collectAll()
+      let message = `Collected ${result.actions} for 🪙 ${result.coins}`
+      if (result.outOfEnergy) message = result.actions === 0 ? 'Out of energy ⚡' : `${message}. Out of energy for the rest ⚡`
+      this.hud.toast(message, result.outOfEnergy ? 'warn' : 'info')
+    })
+    const welcome = (since: number) => {
+      const now = Date.now()
+      if (now - since >= WELCOME_BACK_AFTER_MS) panel.show(awaySummary(this.city, this.player, since, now))
+    }
+    if (leftAt !== null) welcome(leftAt)
+    let hiddenAt: number | null = null
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') hiddenAt = Date.now()
+      else if (hiddenAt !== null) welcome(hiddenAt)
+    })
   }
 
   private newTown() {

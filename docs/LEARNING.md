@@ -291,8 +291,32 @@ the `*.test.ts` files, and [TAXES.md](TAXES.md)
 
 ---
 
+## Stage 6: welcome back
+
+**Files:** `offline.ts`, `ui/WelcomeBackPanel.ts`, `Builder.collectAll`,
+`Game.setUpWelcomeBack`, `save.ts` (`upgradeSave`, from Stage 5.5)
+
+- **Timestamps pay off.** Many games "simulate" the hours you were away,
+  tick by tick. Because every timer here is a timestamp, the town is already
+  up to date the moment it loads. `awaySummary` just counts what's waiting.
+- **Asking about the past.** "Did this crop wither while I was away?" is
+  "is its wither time between when I left and now?" No history needed, only
+  the same numbers the crop already has.
+- **Two ways to leave.** Closing the game is detected from the save's
+  `savedAt`; hiding the tab is detected with `visibilitychange`. Both feed
+  the same window.
+- **Convenience vs. the game's rules.** Collect all still spends ⚡1 per
+  pickup and stops when energy runs out, so a shortcut doesn't break the
+  pacing the energy system exists for.
+
+**Try it:**
+
+1. Add "🏗️ N plots empty" to the summary, so the player knows to replant.
+2. Change `WELCOME_BACK_AFTER_MS` to 10 seconds, switch tabs and come back.
+
+---
+
 ## Coming next
 
-- **Stage 6:** a "while you were away" summary and offline catch-up polish.
 - **Stage 7:** roads (walkers will prefer them), community buildings.
 - **Stage 8:** a supply chain, with cost of goods sold as a real deduction.
