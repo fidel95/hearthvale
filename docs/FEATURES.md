@@ -1,0 +1,181 @@
+# Design pillars and feature inventory
+
+Every item in the design spec, with its status and where it lives.
+✅ done · 🟡 partly, or done differently (see note) · ⏳ planned
+
+## Design pillars
+
+| Pillar | How Hearthvale meets it |
+|---|---|
+| 1. Readable city | Bubbles for every ready or blocked state, a context menu and details for any building, placement shown in words as well as color, 🚧 for cut-off shops, the city rating explained part by part |
+| 2. Meaningful progression | One new mechanic per level, quests that introduce each one, achievements, unlock previews (Quests → Progress), landmarks as long goals ([BALANCE.md](BALANCE.md)) |
+| 3. Resource trade-offs | Coins vs. materials vs. energy vs. land; quick vs. slow crops; power plant vs. solar; stocking shops vs. selling at market; decorations vs. community buildings |
+| 4. Low-friction offline play | No server or account; everything is in the browser. ⏳ Installing it to work with no connection at all (a service worker) is part of Stage 12 |
+| 5. Recoverable progress | Autosave on every change and when the page is hidden; versioned saves with upgrades; unreadable saves kept as a backup; export and import |
+| 6. Modular implementation | Rules as pure modules, state classes that talk through events, views that only listen; 170+ unit tests, data tests and balance tests ([ARCHITECTURE.md](ARCHITECTURE.md)) |
+
+## 4.1 City map and camera
+
+| Feature | | Where |
+|---|---|---|
+| Isometric view | ✅ | Orthographic camera at 45° (`CameraController.ts`) |
+| Grid-based placement | ✅ | `grid.ts`, `City.canPlace` |
+| Pan, zoom | ✅ | Drag, wheel, pinch; arrow keys / WASD, + / − |
+| Select buildings and empty tiles | 🟡 | Buildings select with a context menu; an empty tile shows its outline under the pointer (there's nothing to do with one except build, which the build menu covers) |
+| Placement preview, valid / invalid | ✅ | Ghost model, green / red outline, and words: "✓ Fits here", "✗ Doesn't fit", "⚠ needs a road" |
+| Highlight the selected building | ✅ | Yellow outline (`Builder.selection`) |
+| Starting plot and expansions | ✅ | 4 starting lots of 10×10; buy more (`land.ts`) |
+| Recenter the camera | ✅ | 🎯 in the top bar, or the Home key |
+| Readable UI at any size | ✅ | Phone layout (one-row top bar, bottom sheets) and desktop (side sheets); browser zoom scales everything |
+| Consistent tile coordinates | ✅ | Tile (x, z), 0–59; world = tile − 30 + 0.5 (`grid.ts`) |
+| World vs. screen coordinates | ✅ | Screen → ray → ground point → tile (`groundPointAt`, `worldToTile`) |
+| Grid-based collision regardless of artwork | ✅ | The occupancy grid, never the models' shapes |
+| Draw order | ✅ | 3D: the depth buffer. Labels: sorted by distance each frame, in a layer under the HUD and windows ([ARCHITECTURE.md](ARCHITECTURE.md#layers-on-screen)) |
+
+## 4.2 Building categories
+
+| Feature | | Where |
+|---|---|---|
+| Homes: population, rent, cooldowns | ✅ | 9 homes (`buildings.ts`: `residents`, `income`) |
+| Homes: road access | 🟡 | Not required; homes beside a road earn +5% |
+| Homes: show rent ready | ✅ | 🪙 bubble |
+| Businesses: sales cycle, stock, state | ✅ | 6 shops; shelves, Restock, timers, 📦 when out of stock |
+| Businesses: road access | ✅ | `requiresRoad`; 🚧 when cut off |
+| Businesses: nearby population | ⏳ | Not used |
+| Farms: crop choice, cost, time, reward, states | ✅ | 6 crops; empty → growing → ripe → withered (`crops.ts`) |
+| Harvest grants goods, coins, XP, quests | ✅ | |
+| Crop-specific land or seasons | ⏳ | |
+| Civic buildings: capacity, happiness, services | ✅ | Population capacity, location bonuses, the city rating; utilities |
+| Civic: construction and materials | ✅ | `build` data |
+| Decorations: appearance, small bonus | ✅ | 9 decorations, +1–8% nearby (capped at +10%) |
+| Landmarks | ✅ | Clock Tower, Lighthouse, Botanical Garden: one each, a minimum rating, town-wide bonus |
+
+## 4.3 Construction and placement
+
+| Feature | | Where |
+|---|---|---|
+| Catalog by category with cost, unlock, footprint, effect | ✅ | `BuildMenu.ts`, cards with 3D thumbnails and a preview |
+| Preview before placing | ✅ | |
+| Validate coins, materials, free and owned footprint | ✅ | `canPlace`, `canAfford`, `placementBlocker`; materials at construction |
+| Deduct only on success; cancel costs nothing | ✅ | Paid on ✓ only (`confirmPlacement`) |
+| Move mode | ✅ | Context menu → Move |
+| Rotate | ✅ | ⟳ / R; footprint swaps |
+| Sell / remove with a stated refund | ✅ | Remove: no refund (and why, under US tax law) |
+| No moving into locked land or onto buildings | ✅ | Same `canPlace` |
+
+## 4.4 Roads and access
+
+| Feature | | Where |
+|---|---|---|
+| Place and remove road tiles | ✅ | Drag to draw; remove from the context menu |
+| Roads occupy cells | ✅ | They're 1×1 buildings |
+| Buildings declare road needs | ✅ | `requiresRoad` |
+| Show disconnected buildings | ✅ | 🚧 bubble, info card, details |
+| Consistent adjacency rule | ✅ | A road on any tile touching one side (`City.hasRoadAccess`) |
+| Warn before a removal breaks access | ✅ | The Remove window lists what it cuts off |
+| Connectivity visualization | ⏳ | |
+
+## 4.5 Economy and resources
+
+| Feature | | Where |
+|---|---|---|
+| Coins, goods, materials, XP | ✅ | Plus energy |
+| Costs and rewards from data | ✅ | Catalogs and `quests.json` |
+| No negative balances | ✅ | Coins never go below 0; unpaid bills are a separate debt paid from income first. Goods and items can't go below 0 |
+| Show costs before confirming | ✅ | |
+| Central economy, balancing tables | 🟡 | Rules live in focused modules (`City`, `taxRules`, `utilityRules`, `communityRules`, `progression`) rather than one file; the balancing worksheet is generated from them ([BALANCE.md](BALANCE.md)) |
+| Debug tools | ✅ | 🐞 in development builds |
+
+## 4.6 Production timers
+
+| Feature | | Where |
+|---|---|---|
+| Defined durations, saved locally, ready on return | ✅ | Timestamps (`readyAt`, `plantedAt`, `endsAt`, `arrivesAt`) |
+| No background process | ✅ | State is computed from the clock when needed |
+| Time remaining or ready, shown clearly | ✅ | Info card, details progress bars, bubbles |
+| States idle / producing / ready / blocked | ✅ | `production.ts` (plus "building" for construction) |
+| Clock changes | ✅ | Documented: a local game uses the device clock; changing it changes timers. There's no pretend server time. Nothing breaks if the clock goes backward: timers just take longer |
+
+## 4.7 Quests and objectives
+
+| Feature | | Where |
+|---|---|---|
+| Quest panel, multiple objectives, auto-tracking | ✅ | `QuestsPanel.ts`, `quests.ts` |
+| Rewards, feedback, manual claim | ✅ | Toast, red badge, Claim |
+| Definitions in data files | ✅ | `src/data/quests.json`, checked by `data.test.ts` |
+| Tutorial objectives | ✅ | First quests and the tutorial |
+
+## 4.8 XP, levels, unlocks
+
+| Feature | | Where |
+|---|---|---|
+| XP for actions, level, configurable formula | ✅ | `progression.ts` |
+| Level-up notice, unlocks visible in the catalog | ✅ | Level-up window; 🔒 cards |
+| Saved locally; never pay a level reward twice | ✅ | `rewardedLevel` |
+
+## 4.9 Land expansion
+
+| Feature | | Where |
+|---|---|---|
+| Parcels with a visible boundary | ✅ | Muted ground beyond your land, 🏷️ signs, the map |
+| Price and requirements shown | ✅ | Coins, materials, level (`LandPanel.ts`) |
+| Validated; grid grows only on success | ✅ | `buyLand` checks all first |
+| Saved; nothing beyond the boundary | ✅ | |
+| Quest prerequisites | 🟡 | Level only; the "Room to Grow" quest introduces it |
+
+## 4.10 Inventory and collections
+
+All ✅: stored buildings, materials, goods, collectibles, five collection sets
+with rewards; counts never go below 0; saved.
+
+## 4.11 Happiness and city rating
+
+| Feature | | Where |
+|---|---|---|
+| A simple rating | ✅ | 0–100, six parts (`cityRating.ts`) |
+| Civic buildings and decorations add to it | ✅ | Neighborhoods and Greenery parts |
+| Minimum rating for some buildings | ✅ | Landmarks |
+| Explained, no hidden penalties | ✅ | Town window: every part, its points and what raises it; nothing but landmarks depends on it |
+
+## 4.12 Audio and feedback
+
+| Feature | | Where |
+|---|---|---|
+| Original sounds and music | ✅ | Synthesized by the game (`sound.ts`), so nothing to license |
+| Click, place, collect, level-up, error | ✅ | Plus harvest and ship |
+| Volume and mute | ✅ | Settings (0 mutes) |
+| Reduced motion | ✅ | Settings → Reduce motion |
+| Playable muted | ✅ | Sound never carries information that isn't also shown |
+
+## 4.13 Tutorial and help
+
+| Feature | | Where |
+|---|---|---|
+| Camera, selection, building, collecting, crops, quests, land | ✅ | `tutorial.ts` |
+| Review or dismiss | ✅ | Skip; Help (❓) has every topic; replay from Help |
+| Never blocks a different valid choice | ✅ | Steps already done another way are skipped |
+
+## 4.14 Offline save and resume
+
+| Feature | | Where |
+|---|---|---|
+| Autosave after changes; manual save | ✅ | `AutoSaver`; Settings → Save now |
+| New game with confirmation | ✅ | |
+| Everything saved | ✅ | [DATA_MODEL.md](DATA_MODEL.md) |
+| Schema version and migrations | ✅ | `upgradeSave` |
+| Corrupt or incompatible saves | ✅ | Kept as a backup, explained, downloadable |
+| Explain clearing site data | ✅ | Settings and Help |
+| Export / import | ✅ | Settings |
+
+## 4.15 Accessibility and usability
+
+| Feature | | Where |
+|---|---|---|
+| Keyboard and mouse | ✅ | Camera keys, Esc, R, Home; every control is a button |
+| Focus indicators | ✅ | `:focus-visible` rings |
+| Labels and tooltips for icons | ✅ | `aria-label` and `title` |
+| Contrast | ✅ | Dark text on light panels; light text on dark hints |
+| Scalable UI | 🟡 | Browser zoom scales the whole interface; no separate in-game setting |
+| Not color alone | ✅ | Placement in words; shortages say "short"; debt says "owe"; bubbles have icons |
+| Mute | ✅ | |
+| Confirm destructive actions | ✅ | Remove, new town, import |

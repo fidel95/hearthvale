@@ -106,6 +106,32 @@ loaded.
   at the town. Up to three quests are active; finished ones wait to be claimed.
   **Achievements** are tiers on the same stats.
 
+## Production states, roads and debt
+
+- `production.ts` turns a building and the time into one state (building,
+  idle, producing, ready, blocked with a reason). Bubbles, the info card and
+  details all ask it, so they can't disagree.
+- Shops have `requiresRoad`. `City.hasRoadAccess` applies one rule (a road on
+  a tile touching a side), `isOperating` gates sales, and `cutOffBy(road)`
+  lists what removing a road would disconnect.
+- Coins never go below zero. `City.bill()` pays what it can and adds the rest
+  to `debt`; `adjustCoins` sends income to the debt first and throws if
+  spending would go negative (every purchase checks first, so that's a bug).
+
+## Rating, landmarks, sound and saves
+
+- `cityRating.ts` adds up six parts from the town (`Services.rating()`); the
+  Town window shows each. Landmarks have `unique`, `minRating` and
+  `townBonus`; `Services.placementBlocker` is the one check for room, one of a
+  kind and rating, used by the build menu and placement alike.
+- `sound.ts` synthesizes every sound with Web Audio oscillators and envelopes;
+  Game plays them from events.
+- `readSave` returns the save, nothing, or a problem; an unreadable save is
+  moved to a backup key instead of being discarded. `importSave` checks a file
+  through `upgradeSave` before storing it.
+- Quests and achievements are JSON (`src/data/quests.json`): "have X" tasks are
+  data (`{ "building": "bakery" }`), measured by `quests.measure`.
+
 ## Balance
 
 Prices, timers, unlock levels and rewards live in the catalogs
@@ -182,6 +208,13 @@ first and loads the save last.
 Nothing in the game "ticks down". Timers are stored as **timestamps**
 (`readyAt`) and compared with the current time. That's cheaper, survives the
 tab being in the background, and makes offline progress automatic.
+
+## Time and the device clock
+
+Every timer is a timestamp from the device clock (`Date.now()`). There's no
+server, so nothing checks the clock: changing it changes the timers. That's a
+deliberate trade-off for a local, offline game, and nothing breaks if the clock
+goes backward; timers just take longer.
 
 ## Two kinds of time
 

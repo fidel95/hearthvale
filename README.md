@@ -15,6 +15,7 @@ ideas behind them.
 |---|---|
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | How the code fits together: state vs. views, events, the frame loop, saving |
 | [docs/TAXES.md](docs/TAXES.md) | The tax system: each tax, the real rule behind it, worked examples, simplifications |
+| [docs/FEATURES.md](docs/FEATURES.md) | The design pillars and every feature in the spec: status and where it lives |
 | [docs/DATA_MODEL.md](docs/DATA_MODEL.md) | Building definitions vs. placed buildings, and every field of the save file |
 | [docs/BALANCE.md](docs/BALANCE.md) | Balance principles, the unlock schedule, and a worksheet of every building and crop (generated) |
 | [docs/LEARNING.md](docs/LEARNING.md) | Stage-by-stage journal of the concepts each part teaches, with exercises |
@@ -93,9 +94,13 @@ the right on a wide screen) so the town stays in view.
 - **Docks and shipping:** build a Dock on the shore, order a coastal freighter or a container ship, and unload it (🚢) when it arrives.
 - **Utilities:** homes, shops and farms use 💧 water, 🔌 electricity and 🗑️ trash pickup. Beyond what the county supplies, build plants; they cost coins every month. Shortages cut income.
 - **Decorations:** trees, flower beds, stone paths, fences, benches, fountains and statues raise the income of homes and shops right around them (+1% to +8% each), up to +10% from decorations in all. Landscaping also raises a building's assessed value.
-- **Roads and community:** homes and shops beside a road earn +5%; near a Park, Fire Station or School, +10–15% (up to +40%), which also raises their assessed value.
+- **Roads and community:** shops need a road touching one side (🚧 means one is missing); homes and shops beside a road earn +5%; near a Park, Fire Station or School, +10–15% (up to +40%), which also raises their assessed value.
 - **People:** residents walk between homes, shops and parks, preferring roads.
 - **Taxes:** see below and [docs/TAXES.md](docs/TAXES.md).
+- **City rating (😊):** 0–100, from utilities, neighborhoods, roads, room to grow, finances and greenery. The Town window shows each part and what raises it. Landmarks need a minimum rating.
+- **Landmarks:** the Clock Tower, Lighthouse and Botanical Garden: expensive, one of each, and they raise all rent and sales in town.
+- **Sound and help:** sound effects and optional music (Settings), and ❓ for help on every topic. 🎯 or the Home key brings the camera back to your town.
+- **Your save:** saved automatically in this browser. Settings has Save now, Export (download a copy) and Import. Clearing site data deletes the save, so export a copy to keep it safe.
 - **Never stuck:** if nothing in your town earns coins and you can't afford a Cottage, the county offers a grant (once an hour).
 - **New town:** ⚙️ → Start a new town.
 
@@ -141,6 +146,8 @@ src/
     safetyNet.ts          the county grant for a town that would otherwise be stuck
     settings.ts           player settings and their defaults
     tutorial.ts           the new-town tutorial steps
+    production.ts         what a building is doing: building, idle, producing, ready, blocked
+    cityRating.ts         the city rating and its parts
     neighborData.ts       the neighbors, their generated towns, daily gifts and requests
     Neighbors.ts          friendship and today's helps, gifts and requests
     Visit.ts              a visit to a neighbor's town: its own scene, town and help bubbles
@@ -185,6 +192,11 @@ src/
     CollectionsPanel.ts   collection sets and rewards
     MapPanel.ts           the world map
     Coach.ts              the tutorial's instruction card
+    HelpPanel.ts          help topics
+    DebugPanel.ts         development tools
+    sound.ts              sound effects and music, made with Web Audio
+  data/
+    quests.json           quests and achievements, as data
     NeighborsList.ts      the neighbors tab of the Map
     dom.ts                small DOM helpers
 scripts/                  generators run with Vitest (npm run balance)

@@ -582,6 +582,31 @@ the `*.test.ts` files, and [TAXES.md](TAXES.md)
 
 ---
 
+## Stage 11.5: the design spec
+
+**Files:** [FEATURES.md](FEATURES.md), `production.ts`, `cityRating.ts`,
+`sound.ts`, `src/data/quests.json`, `save.ts` (`readSave`, `importSave`)
+
+- **Audit before you build.** Going through a spec line by line showed most
+  of it was already there; the gaps were specific and small enough to list.
+  FEATURES.md keeps that audit current.
+- **One state function.** Several screens were each working out "is this
+  ready?" in their own way. `productionState()` answers once, so they can't
+  disagree.
+- **Invariants that throw.** "Coins never go negative" is enforced where coins
+  change: spending more than you have throws, so a bug shows up immediately.
+  Bills that may exceed the balance go through `bill()`, which records debt.
+- **Explainable scores.** The city rating is a sum of named parts with hints,
+  not a mystery number. A score players can't understand feels arbitrary.
+- **Data with checks.** Moving quests into JSON makes them editable without
+  code; `data.test.ts` makes sure every id they mention exists.
+- **Sound without assets.** Each sound is a few oscillator notes with an
+  envelope: tiny, original, and offline.
+- **Never lose a save.** An unreadable save is set aside, explained, and can
+  be downloaded, instead of silently replaced.
+
+---
+
 ## Coming next
 
 - **Stage 12:** polish (animation, sound) and deploying the game online.

@@ -320,8 +320,9 @@ level 10 pays 250 coins; at a 12% marginal rate, 30 of those go to income tax.
 **Real rule:** the IRS failure-to-pay penalty is 0.5% of the unpaid tax per
 month, up to 25%, plus interest.
 
-**In the game:** building can never take you below zero, but a tax bill can.
-Negative coins are tax debt. Each month you're in debt, 0.5% of it (at least
+**In the game:** coins never go below zero. A bill bigger than the coins you
+have takes them all, and the rest is owed (shown as "owe" beside your coins).
+Income pays what's owed before it reaches your coins. Each month you're in debt, 0.5% of it (at least
 1 coin) is added as a penalty. Penalties aren't deductible (they aren't in real
 life either). Collecting income pays the debt down automatically, and you can't
 build until you're back above the building's cost.
