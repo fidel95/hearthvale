@@ -10,6 +10,9 @@ import type { Tile } from './grid'
 export const ROAD_BONUS = 0.05
 // However many amenities are nearby, the bonus stops here.
 export const MAX_LOCATION_BONUS = 0.4
+// Decorations (trees, flowers, fountains) count up to this much of it, so a
+// row of cheap trees can't stand in for a park or a school.
+export const MAX_DECOR_BONUS = 0.1
 
 interface Placed {
   type: BuildingType
@@ -47,19 +50,22 @@ export function edgeTiles(p: Placed): Tile[] {
 export function locationBonus(building: Placed, all: Iterable<Placed>, isRoad: (tile: Tile) => boolean): LocationBonus {
   const { category } = building.type
   if (category !== 'home' && category !== 'business') return NONE
-  let total = 0
+  let community = 0
+  let decor = 0
   const sources: string[] = []
   for (const other of all) {
     const amenity = other.type.amenity
     if (!amenity || footprintGap(building, other) > amenity.radius) continue
-    total += amenity.bonus
+    if (other.type.category === 'decoration') decor += amenity.bonus
+    else community += amenity.bonus
     sources.push(other.type.name)
   }
   if (edgeTiles(building).some(isRoad)) {
-    total += ROAD_BONUS
+    community += ROAD_BONUS
     sources.push('Road')
   }
-  return { total: Math.min(MAX_LOCATION_BONUS, total), sources }
+  const total = community + Math.min(MAX_DECOR_BONUS, decor)
+  return { total: Math.min(MAX_LOCATION_BONUS, Math.round(total * 1000) / 1000), sources }
 }
 
 // Which of a road tile's four neighbors are roads too, as a 4-bit number:

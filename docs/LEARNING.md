@@ -518,6 +518,38 @@ the `*.test.ts` files, and [TAXES.md](TAXES.md)
 
 ---
 
+## Stage 10: decorations and more buildings
+
+**Files:** `buildings.ts` (the new entries), `communityRules.ts`
+(`MAX_DECOR_BONUS`), `models.ts` (new shapes), `ui/BuildMenu.ts` (ordering)
+
+- **The payoff of data-driven design.** Five homes, four shops, two community
+  buildings and six decorations: almost all of it is new entries in
+  `buildings.ts`. The build menu, thumbnails, details, placement, taxes, the
+  balance worksheet and the balance tests picked them up without changes.
+- **Checking new content against the principles.** The balance tests
+  immediately check every new building: does each home cost more and pay more
+  than the one before? Is the new level's mechanic count still one?
+- **Caps inside caps.** Decorations are cheap, so their bonuses get their own
+  +10% cap inside the overall +40%. Otherwise the best strategy would be
+  "surround everything with trees", and parks and schools would stop mattering.
+- **Seeing your assets.** A throwaway page rendered every model in the pack
+  with the thumbnail renderer, to pick which houses to use. Tools you build
+  for the game (like the thumbnail renderer) often pay off in places you
+  didn't plan.
+- **Sorting for the player.** Cards are ordered by unlock level, then cost, so
+  each tab reads as a path from small to big, whatever order the catalog is in.
+
+**Try it:**
+
+1. Add a Gazebo: a decoration with `attractsVisitors`. Watch residents gather.
+2. Give the Eco House a bonus for being near a Solar Farm. Where does that
+   rule belong?
+3. Use `building-type-l` (the dark modern house) for a new late-game home, and
+   check the worksheet: does it fit between the Modern House and the Manor?
+
+---
+
 ## Coming next
 
-- **Stage 10:** decorations that boost payouts, and more buildings and models.
+- **Stage 11:** simulated neighbors to visit and help.

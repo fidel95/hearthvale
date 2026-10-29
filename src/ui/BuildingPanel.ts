@@ -156,7 +156,13 @@ export class BuildingPanel {
     if (bonus.total > 0 || share < 1 || needs.length) {
       const lines: HTMLElement[] = []
       if (needs.length) lines.push(el('p', '', `Uses ${needs.join(' ')}`))
-      if (bonus.total > 0) lines.push(el('p', '', `📍 +${percent(bonus.total)} from ${bonus.sources.join(', ')}`))
+      if (bonus.total > 0) {
+        // "Oak Tree ×3, Park" rather than every tree by name.
+        const counts = new Map<string, number>()
+        for (const s of bonus.sources) counts.set(s, (counts.get(s) ?? 0) + 1)
+        const from = [...counts].map(([name, n]) => (n > 1 ? `${name} ×${n}` : name)).join(', ')
+        lines.push(el('p', '', `📍 +${percent(bonus.total)} from ${from}`))
+      }
       if (share < 1) lines.push(el('p', 'warning', `⚠️ Earning only ${percent(share)}: the town is short on utilities.`))
       parts.push(section('🏘️ Location and services', ...lines))
     }

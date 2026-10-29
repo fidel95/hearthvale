@@ -91,6 +91,7 @@ the right on a wide screen) so the town stays in view.
 - **Land and the coast:** the world is 60×60 tiles in 10×10 lots, with the sea along the south. Tap a 🏷️ sign (or a lot on the Map) to buy the land next to yours.
 - **Docks and shipping:** build a Dock on the shore, order a coastal freighter or a container ship, and unload it (🚢) when it arrives.
 - **Utilities:** homes, shops and farms use 💧 water, 🔌 electricity and 🗑️ trash pickup. Beyond what the county supplies, build plants; they cost coins every month. Shortages cut income.
+- **Decorations:** trees, flower beds, stone paths, fences, benches, fountains and statues raise the income of homes and shops right around them (+1% to +8% each), up to +10% from decorations in all. Landscaping also raises a building's assessed value.
 - **Roads and community:** homes and shops beside a road earn +5%; near a Park, Fire Station or School, +10–15% (up to +40%), which also raises their assessed value.
 - **People:** residents walk between homes, shops and parks, preferring roads.
 - **Taxes:** see below and [docs/TAXES.md](docs/TAXES.md).
@@ -205,8 +206,8 @@ docs/                     the docs linked above
 | 9 | ✅ | New interface (top bar, toolbar, sheets, context menu, building details, map); construction and materials, shop stock, upgrades, storing; quests, achievements, inventory, collections |
 | 9.5 | ✅ | Balance pass: design principles, a generated balance worksheet (npm run balance), balance tests, one new mechanic per level, a safety-net grant |
 | 9.6 | ✅ | Data model: turning buildings, population capacity, settings, tutorial, save format version 3 |
-| 10 | ⏳ | Decorations that boost payouts, more buildings and models |
-| 11 | | Simulated neighbors to visit and help |
+| 10 | ✅ | Decorations that boost nearby income (capped at +10%); 5 new homes from the model pack, 4 new shops, a Library and Town Hall, 6 new decorations |
+| 11 | ⏳ | Simulated neighbors to visit and help |
 | 12 | | Polish (animation, sound, citizens) and deploy |
 
 ## Credits

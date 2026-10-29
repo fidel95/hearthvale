@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { BUILDINGS_BY_ID } from './buildings'
-import { MAX_LOCATION_BONUS, ROAD_BONUS, footprintGap, locationBonus, roadMask } from './communityRules'
+import { MAX_DECOR_BONUS, MAX_LOCATION_BONUS, ROAD_BONUS, footprintGap, locationBonus, roadMask } from './communityRules'
 import type { Tile } from './grid'
 
 const b = (id: string, x: number, z: number) => ({ type: BUILDINGS_BY_ID.get(id)!, tile: { x, z } })
@@ -53,3 +53,19 @@ describe('roadMask', () => {
     expect(roadMask({ x: 9, z: 9 }, isRoad)).toBe(0)
   })
 })
+
+describe('decorations', () => {
+  it('add a small bonus to homes right around them', () => {
+    const home = b('cottage', 5, 5)
+    expect(locationBonus(home, [home, b('oak-tree', 7, 5)], noRoads)).toEqual({ total: 0.02, sources: ['Oak Tree'] })
+    expect(locationBonus(home, [home, b('oak-tree', 9, 5)], noRoads).total).toBe(0) // 2 tiles away, radius 1
+  })
+
+  it('count for at most +10% together, on top of community buildings', () => {
+    const home = b('cottage', 5, 5)
+    const trees = [4, 5, 6, 7].flatMap((z) => [b('oak-tree', 4, z), b('oak-tree', 7, z)]) // 8 trees: +16% uncapped
+    expect(locationBonus(home, [home, ...trees], noRoads).total).toBeCloseTo(MAX_DECOR_BONUS)
+    expect(locationBonus(home, [home, ...trees, b('park', 9, 5)], noRoads).total).toBeCloseTo(MAX_DECOR_BONUS + 0.1)
+  })
+})
+

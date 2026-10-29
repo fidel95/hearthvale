@@ -210,6 +210,59 @@ function createPlaceholder(type: BuildingType): THREE.Group {
       add(new THREE.BoxGeometry(0.08, 0.08, d * 0.9), accent, w * 0.3, 0.2 + height * 1.6, d * 0.25)
       break
     }
+    case 'flowers': {
+      // A soil bed with a cluster of blooms.
+      add(new THREE.BoxGeometry(w * 0.8, 0.08, d * 0.8), color, 0, 0, 0)
+      const blooms = ['#e8579a', '#f2d23c', '#ffffff', '#9b59b6', '#e0553f']
+      blooms.forEach((c, i) => {
+        const a = (i / blooms.length) * Math.PI * 2
+        add(new THREE.IcosahedronGeometry(0.09, 0), c, Math.cos(a) * 0.2, 0.08, Math.sin(a) * 0.2)
+      })
+      add(new THREE.IcosahedronGeometry(0.11, 0), '#3f8f3a', 0, 0.08, 0)
+      break
+    }
+    case 'bench': {
+      // A slatted seat with a back (also stands in for a fence if its model fails).
+      add(new THREE.BoxGeometry(w * 0.8, 0.05, d * 0.3), color, 0, height * 0.6, 0)
+      add(new THREE.BoxGeometry(w * 0.8, height * 0.6, 0.04), color, 0, height * 0.6, -d * 0.15)
+      for (const x of [-0.3, 0.3]) add(new THREE.BoxGeometry(0.05, height * 0.6, d * 0.3), accent, x * w, 0, 0)
+      break
+    }
+    case 'fountain': {
+      // A round stone basin, water, and a tiered spout.
+      add(new THREE.CylinderGeometry(w * 0.42, w * 0.46, 0.18, 16), color, 0, 0, 0)
+      add(new THREE.CylinderGeometry(w * 0.37, w * 0.37, 0.04, 16), accent, 0, 0.16, 0)
+      add(new THREE.CylinderGeometry(0.08, 0.12, height * 0.6, 8), color, 0, 0.16, 0)
+      add(new THREE.CylinderGeometry(0.22, 0.18, 0.06, 12), color, 0, 0.16 + height * 0.6, 0)
+      add(new THREE.IcosahedronGeometry(0.1, 1), accent, 0, 0.22 + height * 0.6, 0)
+      break
+    }
+    case 'statue': {
+      // A plinth with a figure on top.
+      add(new THREE.BoxGeometry(0.5, height * 0.35, 0.5), color, 0, 0, 0)
+      add(new THREE.CylinderGeometry(0.1, 0.14, height * 0.4, 8), accent, 0, height * 0.35, 0)
+      add(new THREE.IcosahedronGeometry(0.1, 1), accent, 0, height * 0.75, 0)
+      break
+    }
+    case 'library': {
+      // A classical front: steps, columns and a pediment.
+      add(new THREE.BoxGeometry(w * 0.85, height * 0.7, d * 0.6), color, 0, 0, -d * 0.1)
+      add(new THREE.BoxGeometry(w * 0.9, 0.08, d * 0.3), color, 0, 0, d * 0.32)
+      for (const x of [-0.6, -0.2, 0.2, 0.6]) add(new THREE.CylinderGeometry(0.06, 0.06, height * 0.62, 8), '#f2ede2', x, 0.08, d * 0.32)
+      const roof = new THREE.ConeGeometry(Math.SQRT1_2, 1, 4).rotateY(Math.PI / 4)
+      roof.scale(w * 0.95, height * 0.3, d * 0.95)
+      add(roof, accent, 0, height * 0.7, 0)
+      break
+    }
+    case 'townhall': {
+      // A wide hall with a clock tower.
+      add(new THREE.BoxGeometry(w * 0.85, height * 0.55, d * 0.7), color, 0, 0, 0)
+      add(new THREE.BoxGeometry(w * 0.9, 0.08, d * 0.75), accent, 0, height * 0.55, 0)
+      add(new THREE.BoxGeometry(0.6, height * 0.6, 0.6), color, 0, height * 0.55, 0)
+      add(new THREE.CylinderGeometry(0.16, 0.16, 0.04, 16).rotateX(Math.PI / 2), '#ffffff', 0, height * 0.9, 0.31)
+      add(new THREE.ConeGeometry(0.45, 0.4, 4).rotateY(Math.PI / 4), accent, 0, height * 1.15, 0)
+      break
+    }
     case 'tree': {
       add(new THREE.CylinderGeometry(0.07, 0.09, height * 0.4, 6), color, 0, 0, 0)
       add(new THREE.IcosahedronGeometry(0.38, 0), accent, 0, height * 0.35, 0)

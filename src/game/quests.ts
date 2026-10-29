@@ -125,6 +125,15 @@ export const QUESTS: Quest[] = [
     reward: { coins: 250, xp: 25, materials: { lumber: 4 } },
   },
   {
+    id: 'decorate',
+    title: 'Green Thumb',
+    intro: 'Trees, flowers and benches make homes and shops beside them earn a little more (up to +10% from decorations).',
+    after: 'growing',
+    level: 2,
+    tasks: [{ label: 'Have 4 decorations', have: (w) => count(w, (_, c) => c === 'decoration'), count: 4 }],
+    reward: { coins: 120, xp: 12 },
+  },
+  {
     id: 'roads',
     title: 'Paving the Way',
     intro: 'Homes and shops beside a road earn more, and residents prefer to walk on them.',

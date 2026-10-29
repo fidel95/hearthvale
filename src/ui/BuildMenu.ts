@@ -42,7 +42,11 @@ function details(type: BuildingType): string[] {
   if (type.category === 'farm') lines.push('Plant crops on it: harvests stock your shops or sell at market')
   if (type.storage) lines.push(`Stores 📦 ${type.storage} goods`)
   if (type.supplies) lines.push(`Supplies ${UTILITY_INFO[type.supplies.utility].icon} ${type.supplies.amount} ${UTILITY_INFO[type.supplies.utility].name.toLowerCase()}`)
-  if (type.amenity) lines.push(`+${type.amenity.bonus * 100}% income for homes and shops within ${type.amenity.radius} tiles`)
+  if (type.amenity) {
+    const reach = type.amenity.radius === 0 ? 'right beside it' : `within ${type.amenity.radius} tile${type.amenity.radius === 1 ? '' : 's'}`
+    const cap = type.category === 'decoration' ? ' (decorations add up to +10% at most)' : ''
+    lines.push(`+${Math.round(type.amenity.bonus * 100)}% income for homes and shops ${reach}${cap}`)
+  }
   if (type.populationCapacity) lines.push(`Room for 👥 ${type.populationCapacity} more residents in town`)
   if (type.category === 'road') lines.push(`Drag to draw. Homes and shops beside a road earn +${ROAD_BONUS * 100}%`)
   if (type.onShore) lines.push('Must be built on the shore. Order shipments of goods here')
@@ -78,7 +82,9 @@ export class BuildMenu {
       b.addEventListener('click', () => this.showTab(tab))
       this.tabs.append(b)
     }
-    for (const type of BUILDING_TYPES) {
+    // Cheapest first within each level, so each tab reads as a path from small to big.
+    const ordered = [...BUILDING_TYPES].sort((a, b) => a.unlockLevel - b.unlockLevel || a.cost - b.cost)
+    for (const type of ordered) {
       const card = el('button', 'build-card')
       const picture = el('img', 'build-thumb')
       picture.alt = ''

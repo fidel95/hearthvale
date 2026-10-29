@@ -83,7 +83,9 @@ Potential income assumes you always collect on time. Buildings with no income
 **Location matters.** Real assessors value a home near a good school or a
 park higher, because it rents for more. In the game, the same location bonus
 that raises a building's income (parks, schools, fire stations, a road)
-raises its assessed value by the same percentage. A cottage next to a park
+raises its assessed value by the same percentage. That includes decorations:
+landscaping (trees, flower beds, a fountain) is a classic way to raise a
+property's value, and its assessment. A cottage next to a park
 (+10%) is assessed at 2,970 instead of 2,700, and pays 29.70 a year instead
 of 27.
 
