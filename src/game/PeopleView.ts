@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import type { City, PlacedBuilding } from './City'
 import { inBounds, tileToWorld, type Tile } from './grid'
+import { levelFactor } from './construction'
 import { findPath } from './pathfinding'
 import { isWater } from './terrain'
 
@@ -107,7 +108,7 @@ export class PeopleView {
     const out = new Map<number, number>()
     for (const w of this.walkers) out.set(w.homeId, (out.get(w.homeId) ?? 0) + 1)
     const homes = [...this.city.all()].filter(
-      (b) => b.type.residents && (out.get(b.id) ?? 0) < Math.ceil(b.type.residents / 2),
+      (b) => b.type.residents && this.city.isBuilt(b) && (out.get(b.id) ?? 0) < Math.ceil((b.type.residents * levelFactor(b.level)) / 2),
     )
     if (homes.length === 0) return
     const home = pick(homes)

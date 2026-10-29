@@ -1,6 +1,10 @@
 import type { City, PlacedBuilding } from '../game/City'
+import { MAX_LEVEL, canUpgrade, levelFactor, upgradeCost } from '../game/construction'
 import { cropState } from '../game/crops'
 import type { Docks } from '../game/Docks'
+import type { Inventory } from '../game/Inventory'
+import { MATERIALS, MATERIAL_IDS, materialsText, type Materials } from '../game/items'
+import type { Player } from '../game/Player'
 import type { Services } from '../game/Services'
 import type { Taxes } from '../game/Taxes'
 import { UTILITIES, UTILITY_INFO } from '../game/utilityRules'
@@ -12,10 +16,18 @@ import { Sheet, button } from './Sheet'
 // what it's worth, and actions. Opened from the context menu's Details.
 
 export interface BuildingActions {
-  collect: (b: PlacedBuilding) => void // collect, harvest or unload: whatever a tap would do
+  collect: (b: PlacedBuilding) => void // collect, harvest, unload, finish: whatever a tap would do
+  restock: (b: PlacedBuilding) => void
+  upgrade: (b: PlacedBuilding) => void
+  buyMaterials: (materials: Materials) => void
   move: (b: PlacedBuilding) => void
+  store: (b: PlacedBuilding) => void
   remove: (b: PlacedBuilding) => void
-  extra?: (b: PlacedBuilding) => HTMLElement[] // more buttons, added by later systems
+}
+
+// Can this building go into storage right now?
+export function canStore(b: PlacedBuilding, city: City, docks: Docks): boolean {
+  return city.isBuilt(b) && b.type.category !== 'road' && !(b.type.category === 'port' && docks.state(b, Date.now()).stage !== 'idle')
 }
 
 export class BuildingPanel {
@@ -26,18 +38,30 @@ export class BuildingPanel {
   private services: Services
   private taxes: Taxes
   private docks: Docks
+  private inventory: Inventory
+  private player: Player
   private describe: (b: PlacedBuilding, now: number) => [string, string]
   private actions: BuildingActions
 
   constructor(
     container: HTMLElement,
-    deps: { city: City; services: Services; taxes: Taxes; docks: Docks; describe: (b: PlacedBuilding, now: number) => [string, string] },
+    deps: {
+      city: City
+      services: Services
+      taxes: Taxes
+      docks: Docks
+      inventory: Inventory
+      player: Player
+      describe: (b: PlacedBuilding, now: number) => [string, string]
+    },
     actions: BuildingActions,
   ) {
     this.city = deps.city
     this.services = deps.services
     this.taxes = deps.taxes
     this.docks = deps.docks
+    this.inventory = deps.inventory
+    this.player = deps.player
     this.describe = deps.describe
     this.actions = actions
     this.sheet = new Sheet(container, '')
@@ -80,14 +104,49 @@ export class BuildingPanel {
       parts.push(section(progress.title, track, el('p', 'muted', progress.text)))
     }
 
-    // ---- Goods.
-    if (b.type.goodsPerSale) {
+    // ---- Construction: the materials it needs to finish.
+    if (b.construction && b.type.build?.materials) {
+      parts.push(section('🧱 Materials to finish', this.materialsList(b.type.build.materials)))
+    }
+
+    // ---- Goods: the shop's shelves, and the town storage they're filled from.
+    if (b.type.goodsPerSale && this.city.isBuilt(b)) {
+      const capacity = this.city.stockCapacity(b)
+      const track = el('div', 'progress')
+      const fill = el('div', 'progress-fill')
+      fill.style.width = `${(b.stock / capacity) * 100}%`
+      track.append(fill)
       parts.push(
         section(
-          '📦 Goods',
-          el('p', '', `Uses ${b.type.goodsPerSale} goods per sale. Town storage: ${this.city.goods} of ${this.city.storageCapacity}.`),
+          '📦 Stock',
+          track,
+          el('p', '', `${b.stock} of ${capacity} goods on the shelves · ${b.type.goodsPerSale} per sale`),
+          el('p', 'muted', `Town storage: ${this.city.goods} of ${this.city.storageCapacity}. Restocking moves goods onto the shelves.`),
         ),
       )
+    }
+
+    // ---- Upgrade.
+    if (this.city.isBuilt(b) && (b.type.category === 'home' || b.type.category === 'business')) {
+      if (canUpgrade(b.type, b.level)) {
+        const next = b.level + 1
+        const cost = upgradeCost(b.type, next)
+        parts.push(
+          section(
+            `⬆️ Upgrade to ${'★'.repeat(next)}`,
+            el(
+              'p',
+              '',
+              `Income${b.type.residents ? ', residents' : ''}${b.type.stockCapacity ? ', shelf space' : ''}: +${Math.round((levelFactor(b.level) - 1) * 100)}% now → +${Math.round((levelFactor(next) - 1) * 100)}% of the base building`,
+            ),
+            el('p', '', `Costs ${coins(cost.coins)} and ${materialsText(cost.materials)} · needs level ${cost.playerLevel}`),
+            this.materialsList(cost.materials),
+            el('p', 'muted', 'An upgrade is an improvement: its cost is added to what the building is depreciated on, and a building that earns more is assessed higher.'),
+          ),
+        )
+      } else {
+        parts.push(section(`⬆️ Level ${'★'.repeat(b.level)}`, el('p', 'muted', `Fully upgraded (level ${MAX_LEVEL}).`)))
+      }
     }
 
     // ---- Location and services.
@@ -116,17 +175,63 @@ export class BuildingPanel {
     this.sheet.body.replaceChildren(...parts)
 
     // ---- Actions.
+    const a = this.actions
     const buttons: HTMLElement[] = []
     const label = this.collectLabel(b, now)
-    if (label) buttons.push(button(label, () => this.actions.collect(b)))
-    buttons.push(...(this.actions.extra?.(b) ?? []))
-    buttons.push(button('✋ Move', () => this.actions.move(b), 'panel-button secondary'))
-    buttons.push(button('🗑️ Remove', () => this.actions.remove(b), 'panel-button danger'))
+    if (label) buttons.push(button(label, () => a.collect(b)))
+    if (b.construction && b.type.build?.materials) {
+      const missing = this.inventory.missing(b.type.build.materials)
+      if (Object.keys(missing).length) {
+        const price = this.inventory.priceOf(missing)
+        const buy = button(`Buy missing for ${coins(price)}`, () => a.buyMaterials(missing))
+        buy.disabled = this.city.coins < price
+        buttons.push(buy)
+      }
+    }
+    if (b.type.goodsPerSale && this.city.isBuilt(b)) {
+      const restock = button('📦 Restock', () => a.restock(b))
+      restock.disabled = b.stock >= this.city.stockCapacity(b) || this.city.goods === 0
+      buttons.push(restock)
+    }
+    if (this.city.isBuilt(b) && canUpgrade(b.type, b.level)) {
+      const cost = upgradeCost(b.type, b.level + 1)
+      const missing = this.inventory.missing(cost.materials)
+      const upgrade = button('⬆️ Upgrade', () => a.upgrade(b))
+      upgrade.disabled = this.player.level < cost.playerLevel || this.city.coins < cost.coins || Object.keys(missing).length > 0
+      buttons.push(upgrade)
+      if (Object.keys(missing).length && this.player.level >= cost.playerLevel) {
+        buttons.push(button(`Buy materials ${coins(this.inventory.priceOf(missing))}`, () => a.buyMaterials(missing), 'panel-button secondary'))
+      }
+    }
+    buttons.push(button('✋ Move', () => a.move(b), 'panel-button secondary'))
+    if (canStore(b, this.city, this.docks)) buttons.push(button('🎒 Store', () => a.store(b), 'panel-button secondary'))
+    buttons.push(button('🗑️ Remove', () => a.remove(b), 'panel-button danger'))
     this.sheet.setButtons(...buttons)
+  }
+
+  // Each material needed, with how many you have.
+  private materialsList(materials: Materials): HTMLElement {
+    const list = el('div', 'materials')
+    for (const id of MATERIAL_IDS) {
+      const need = materials[id]
+      if (!need) continue
+      const have = this.inventory.count(id)
+      list.append(el('span', have >= need ? 'have' : 'short', `${MATERIALS[id].icon} ${Math.min(have, need)}/${need}`))
+    }
+    return list
   }
 
   // What the building is working on: an income timer, a growing crop, a ship on its way.
   private progress(b: PlacedBuilding, now: number): { title: string; share: number; text: string } | null {
+    if (b.construction && b.type.build) {
+      const total = b.type.build.seconds * 1000
+      const left = b.construction.endsAt - now
+      return {
+        title: '🚧 Construction',
+        share: 1 - left / total,
+        text: left > 0 ? `Ready to finish in ${duration(left)}` : 'Built! Finish it with the materials below.',
+      }
+    }
     if (b.type.income) {
       const total = b.type.income.seconds * 1000
       const left = b.readyAt - now
@@ -155,6 +260,7 @@ export class BuildingPanel {
   }
 
   private collectLabel(b: PlacedBuilding, now: number): string | null {
+    if (b.construction) return this.city.constructionDone(b, now) ? '🔨 Finish' : null
     if (this.city.isReady(b, now) && this.city.hasStock(b)) return `🪙 Collect ${this.city.payout(b)}`
     const crop = cropState(b.crop, now)
     if (crop.stage === 'ripe') return '🧺 Harvest'

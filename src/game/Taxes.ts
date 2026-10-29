@@ -1,4 +1,5 @@
 import type { City, PlacedBuilding } from './City'
+import { levelFactor } from './construction'
 import type { GameClock } from './GameClock'
 import {
   LATE_PENALTY_PER_MONTH,
@@ -145,6 +146,23 @@ export class Taxes {
           this.assets.delete(event.building.id)
           this.emit({ kind: 'changed' })
           break
+        // Depreciation starts when an asset is "placed in service": for a new
+        // building, when construction finishes. The materials built into it
+        // become part of its cost (capitalized), and so does an upgrade.
+        case 'finished': {
+          const asset = this.assets.get(event.building.id)
+          if (asset) {
+            asset.placedMonth = this.clock.monthIndex
+            asset.basis += event.materialsCost
+          }
+          break
+        }
+        case 'upgraded': {
+          const asset = this.assets.get(event.building.id)
+          if (asset) asset.basis += event.cost
+          this.emit({ kind: 'changed' })
+          break
+        }
         case 'collected':
           this.recordIncome(event.building, event.amount)
           if (event.goodsUsed > 0) this.sellFromInventory(event.goodsUsed)
@@ -248,7 +266,7 @@ export class Taxes {
   // Every building we own with its assessed value and yearly property tax.
   properties(): { building: PlacedBuilding; value: number; annualTax: number }[] {
     return [...this.city.all()].map((building) => {
-      const location = this.city.valueMultiplier(building)
+      const location = this.city.valueMultiplier(building) * this.levelValue(building)
       return {
         building,
         value: assessedValue(building.type) * location,
@@ -283,9 +301,14 @@ export class Taxes {
     }
     this.inventory = save.inventory ?? { units: this.city.goods, cost: 0 }
     for (const [id, asset] of save.assets) {
-      if (this.city.get(id)) this.assets.set(id, asset)
+      if (this.city.get(id) || this.city.getStored(id)) this.assets.set(id, asset)
     }
     this.emit({ kind: 'changed' })
+  }
+
+  // Upgraded buildings earn more, so they're worth more (income approach).
+  private levelValue(building: PlacedBuilding): number {
+    return building.type.income ? levelFactor(building.level) : 1
   }
 
   // Shops sold some goods: move their share of the inventory's cost to cost of
@@ -335,10 +358,13 @@ export class Taxes {
       // Mid-month convention: a building placed this month counts for half of it.
       const fraction = asset.placedMonth === monthIndex ? 0.5 : 1
 
-      // A good location (parks, schools, roads nearby) raises the assessed value.
-      const location = this.city.valueMultiplier(building)
+      // A good location (parks, schools, roads nearby) raises the assessed
+      // value, and so does an upgrade that makes it earn more.
+      const location = this.city.valueMultiplier(building) * this.levelValue(building)
       this.ledger.propertyTax += ((annualPropertyTax(building.type) * location) / 12) * fraction
 
+      // Nothing to depreciate until it's built and in service.
+      if (!this.city.isBuilt(building)) continue
       const remaining = asset.basis - asset.depreciated
       const depreciation = Math.min(remaining, monthlyDepreciation(asset.basis, building.type) * fraction)
       asset.depreciated += depreciation

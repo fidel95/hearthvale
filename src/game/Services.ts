@@ -26,7 +26,8 @@ export class Services {
     // Value for property tax: a good location raises it (shortages are temporary, so they don't).
     city.valueMultiplier = (b) => 1 + this.bonus(b).total
     city.onChange((event) => {
-      if (event.kind === 'added' || event.kind === 'removed' || event.kind === 'moved') this.refresh()
+      const changes = ['added', 'removed', 'moved', 'finished', 'upgraded', 'stored', 'restored']
+      if (changes.includes(event.kind)) this.refresh()
     })
   }
 
@@ -50,14 +51,14 @@ export class Services {
   }
 
   private compute(): ServiceReport {
-    return serviceReport([...this.city.all()].map((b) => b.type))
+    return serviceReport([...this.city.all()].filter((b) => this.city.isBuilt(b)))
   }
 
   private refresh() {
     const before = this.report
     this.report = this.compute()
     // Any building can change the bonus of the ones around it, so redo them all. Cheap for a town this size.
-    const all = [...this.city.all()]
+    const all = [...this.city.all()].filter((b) => this.city.isBuilt(b))
     this.bonuses.clear()
     for (const b of all) this.bonuses.set(b.id, locationBonus(b, all, this.city.isRoad))
     this.emit({ kind: 'changed', report: this.report })

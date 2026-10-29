@@ -1,4 +1,5 @@
 import type { BuildingType, Category } from './buildings'
+import { levelFactor } from './construction'
 
 // The rules for town utilities: water, electricity and trash pickup.
 // (Services.ts applies them over time, like taxRules.ts and Taxes.ts.)
@@ -35,14 +36,17 @@ export interface ServiceReport {
   utilities: Record<Utility, UtilityStatus>
 }
 
-export function serviceReport(types: Iterable<BuildingType>): ServiceReport {
+// Built buildings only (construction sites don't use or supply anything yet).
+// Upgraded buildings house more people and use more, by their level factor.
+export function serviceReport(buildings: Iterable<{ type: BuildingType; level?: number }>): ServiceReport {
   const supply = { ...COUNTY_SUPPLY }
   const demand: Record<Utility, number> = { water: 0, power: 0, trash: 0 }
   let population = 0
   let upkeep = 0
-  for (const type of types) {
-    population += type.residents ?? 0
-    for (const u of UTILITIES) demand[u] += type.needs?.[u] ?? 0
+  for (const { type, level = 1 } of buildings) {
+    const factor = levelFactor(level)
+    population += Math.round((type.residents ?? 0) * factor)
+    for (const u of UTILITIES) demand[u] += Math.round((type.needs?.[u] ?? 0) * factor)
     if (type.supplies) supply[type.supplies.utility] += type.supplies.amount
     upkeep += type.upkeep ?? 0
   }

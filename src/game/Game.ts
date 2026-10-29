@@ -1,8 +1,12 @@
 import * as THREE from 'three'
 import { CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js'
 import { BuildMenu } from '../ui/BuildMenu'
-import { BuildingPanel } from '../ui/BuildingPanel'
+import { BuildingPanel, canStore } from '../ui/BuildingPanel'
+import { CollectionsPanel } from '../ui/CollectionsPanel'
 import { CropPicker } from '../ui/CropPicker'
+import { InventoryPanel } from '../ui/InventoryPanel'
+import { MapPanel } from '../ui/MapPanel'
+import { QuestsPanel } from '../ui/QuestsPanel'
 import { el } from '../ui/dom'
 import { Modal, Sheet, button } from '../ui/Sheet'
 import { DockPanel } from '../ui/DockPanel'
@@ -17,10 +21,17 @@ import { BUILDINGS_BY_ID } from './buildings'
 import { CameraController } from './CameraController'
 import { City, type PlacedBuilding } from './City'
 import { CityView } from './CityView'
+import { STARTING_MATERIALS } from './construction'
+import { Collections } from './collections'
 import { ContextMenu } from './ContextMenu'
+import { Inventory } from './Inventory'
+import { MATERIAL_IDS, materialsText } from './items'
+import { finishConstruction, upgradeBuilding, type ProjectResult } from './projects'
+import { Quests } from './quests'
 import { CROPS_BY_ID } from './crops'
 import { Docks } from './Docks'
 import { GameClock, MONTH_NAMES } from './GameClock'
+import { tileToWorld, worldToTile, type Lot } from './grid'
 import { IncomeView } from './IncomeView'
 import { LandView } from './LandView'
 import { WELCOME_BACK_AFTER_MS, awaySummary } from './offline'
@@ -56,6 +67,9 @@ export class Game {
   private player = new Player(this.city)
   private services = new Services(this.city)
   private docks = new Docks(this.city)
+  private inventory = new Inventory(this.city)
+  private collections = new Collections(this.city, this.inventory, this.player)
+  private quests!: Quests
   private clock: GameClock
   private taxes: Taxes
 
@@ -105,6 +119,7 @@ export class Game {
     this.peopleView = new PeopleView(this.scene, this.city)
     this.roadView = new RoadView(this.scene, this.city)
     this.taxes = new Taxes(this.city, this.clock)
+    this.quests = new Quests({ city: this.city, player: this.player, services: this.services }, this.inventory, this.collections, this.taxes)
     const builder = new Builder(this.scene, this.city, this.player, this.docks, this.cityView, this.controls, this.renderer.domElement)
     this.incomeView = new IncomeView(this.scene, this.city, this.cityView, this.services, this.docks, (b) => builder.tap(b))
     builder.onHoverBuilding = (b) => this.incomeView.setHovered(b)
@@ -112,16 +127,27 @@ export class Game {
     const taxPanel = new TaxPanel(container, this.city, this.taxes, this.clock)
     const townPanel = new TownPanel(container, this.city, this.services)
     const buildMenu = new BuildMenu(container, this.city, this.player, (type) => builder.setMode({ kind: 'build', type }))
-    const comingSoon = (what: string) => () => this.hud.toast(`${what} is coming in this update`)
+    const notice = (message: string) => this.hud.toast(message)
+    const inventoryPanel = new InventoryPanel(container, this.city, this.inventory, (b) => builder.setMode({ kind: 'restore', building: b }), notice)
+    const collectionsPanel = new CollectionsPanel(container, this.collections, this.inventory)
+    const questsPanel = new QuestsPanel(container, this.quests, this.player)
+    const landPanelForMap = (lot: Lot) => this.landPanel?.open(lot)
+    const mapPanel = new MapPanel(
+      container,
+      this.city,
+      () => worldToTile(this.controls.target) ?? { x: 30, z: 30 },
+      (tile) => this.controls.centerOn(tileToWorld(tile)),
+      landPanelForMap,
+    )
     this.hud = new Hud(container, builder, this.city, this.player, this.services, {
       onOpenBuild: () => {
         builder.setMode({ kind: 'select' })
         buildMenu.open()
       },
-      onOpenQuests: comingSoon('Quests'),
-      onOpenInventory: comingSoon('Inventory'),
-      onOpenCollections: comingSoon('Collections'),
-      onOpenMap: comingSoon('The map'),
+      onOpenQuests: () => questsPanel.open(),
+      onOpenInventory: () => inventoryPanel.open(),
+      onOpenCollections: () => collectionsPanel.open(),
+      onOpenMap: () => mapPanel.open(),
       onOpenTaxes: () => taxPanel.open(),
       onOpenTown: () => townPanel.open(),
       onOpenSettings: () => this.openSettings(container),
@@ -131,13 +157,16 @@ export class Game {
     const cropPicker = new CropPicker(container, this.city, this.player, (message) => this.hud.toast(message))
     builder.onPlantRequest = (plot) => cropPicker.open(plot)
     this.showPlayerEvents(new LevelUpPanel(container))
+    this.showCollectionEvents()
     this.services.onChange((event) => {
       if (event.kind !== 'shortage') return
       const names = event.utilities.map((u) => `${UTILITY_INFO[u].icon} ${UTILITY_INFO[u].name.toLowerCase()}`)
       this.hud.toast(`Not enough ${names.join(', ')}: income drops. Tap Town to see what to build.`, 'warn')
     })
     const landPanel = new LandPanel(container, this.city, this.player, (message) => this.hud.toast(message))
+    this.landPanel = landPanel
     landView.onLotClick = (lot) => landPanel.open(lot)
+    this.showQuestEvents()
     const dockPanel = new DockPanel(container, this.city, this.docks, (message) => this.hud.toast(message))
     builder.onDockRequest = (dock) => dockPanel.open(dock)
 
@@ -147,6 +176,9 @@ export class Game {
       taxes: this.taxes.toSave(),
       player: this.player.toSave(),
       shipments: this.docks.toSave(),
+      inventory: this.inventory.toSave(),
+      collections: this.collections.toSave(),
+      quests: this.quests.toSave(),
     }))
     const leftAt = this.loadOrSeed()
     this.setUpWelcomeBack(container, builder, leftAt)
@@ -154,6 +186,7 @@ export class Game {
     this.city.onChange(() => this.saver.requestSave())
     this.taxes.onChange(() => this.saver.requestSave())
     this.player.onChange(() => this.saver.requestSave())
+    this.inventory.onChange(() => this.saver.requestSave())
 
     window.addEventListener('resize', () => this.resize())
     this.resize()
@@ -203,6 +236,11 @@ export class Game {
       this.taxes.load(save.taxes)
       if (save.player) this.player.load(save.player)
       if (save.shipments) this.docks.load(save.shipments)
+      // Saves from before Stage 9 have no inventory: start them with the new-town materials.
+      if (save.collections) this.collections.load(save.collections)
+      if (save.quests) this.quests.load(save.quests)
+      if (save.inventory) this.inventory.load(save.inventory)
+      else for (const id of MATERIAL_IDS) this.inventory.add(id, STARTING_MATERIALS[id] ?? 0)
       return save.savedAt
     }
     // A small starting town so a new game isn't an empty field.
@@ -218,6 +256,7 @@ export class Game {
     // Strawberries already 40 s in on the starting plot, so the first harvest comes quickly.
     const plot = this.city.buildingAt({ x: 32, z: 29 })!
     this.city.plant(plot.id, CROPS_BY_ID.get('strawberries')!, { now: Date.now() - 40_000, free: true })
+    for (const id of MATERIAL_IDS) this.inventory.add(id, STARTING_MATERIALS[id] ?? 0)
     return null
   }
 
@@ -264,14 +303,52 @@ export class Game {
       Sheet.closeCurrent()
       builder.setMode({ kind: 'move', carrying: b })
     }
+    const store = (b: PlacedBuilding) => {
+      Sheet.closeCurrent()
+      if (this.city.store(b.id)) this.hud.toast(`${b.type.name} is in your Inventory. Place it again any time, free.`)
+    }
+    // Explain why a finish or upgrade didn't happen.
+    const explain = (r: ProjectResult, what: string) => {
+      if (r.ok) return
+      if (r.reason === 'materials') this.hud.toast(`${what} needs ${materialsText(r.missing)} more. Buy them in Details.`, 'warn')
+      if (r.reason === 'coins') this.hud.toast(`Not enough coins to ${what.toLowerCase()}`, 'warn')
+      if (r.reason === 'level') this.hud.toast(`Reach a higher level to ${what.toLowerCase()}`, 'warn')
+    }
+    const finish = (b: PlacedBuilding) => {
+      const result = finishConstruction(this.city, this.inventory, b, Date.now())
+      explain(result, `Finishing the ${b.type.name}`)
+      if (!result.ok && result.reason === 'materials') this.buildingPanel.open(b)
+    }
+    builder.onFinishRequest = finish
     this.buildingPanel = new BuildingPanel(
       container,
-      { city: this.city, services: this.services, taxes: this.taxes, docks: this.docks, describe: (b, now) => this.incomeView.describe(b, now) },
-      { collect: (b) => builder.tap(b), move, remove },
+      {
+        city: this.city,
+        services: this.services,
+        taxes: this.taxes,
+        docks: this.docks,
+        inventory: this.inventory,
+        player: this.player,
+        describe: (b, now) => this.incomeView.describe(b, now),
+      },
+      {
+        collect: (b) => builder.tap(b),
+        restock: (b) => {
+          if (this.city.restock(b.id) === 0) this.hud.toast('Nothing to restock: storage is empty or the shelves are full')
+        },
+        upgrade: (b) => explain(upgradeBuilding(this.city, this.inventory, this.player, b), 'Upgrade'),
+        buyMaterials: (m) => {
+          if (!this.inventory.buy(m)) this.hud.toast('Not enough coins for those materials', 'warn')
+        },
+        move,
+        store,
+        remove,
+      },
     )
     this.contextMenu = new ContextMenu(this.scene, this.cityView, this.incomeView, [
       { icon: 'ℹ️', label: 'Details', run: (b) => this.buildingPanel.open(b) },
       { icon: '✋', label: 'Move', run: move },
+      { icon: '🎒', label: 'Store', run: store, when: (b) => canStore(b, this.city, this.docks) },
       { icon: '🗑️', label: 'Remove', run: remove },
     ])
     builder.onSelect = (b) => this.contextMenu.show(b)
@@ -298,6 +375,31 @@ export class Game {
     this.saver.disable()
     clearSave()
     location.reload()
+  }
+
+  private landPanel: LandPanel | null = null
+
+  private showQuestEvents() {
+    const badge = () => this.hud.setBadge('Quests', this.quests.readyCount())
+    this.quests.onChange((e) => {
+      if (e.kind === 'questDone') this.hud.toast(`📜 Quest complete: ${e.quest.title}! Claim your reward in Quests.`)
+      if (e.kind === 'achievement') this.hud.toast(`${e.achievement.icon} Achievement: ${e.achievement.name} ${'★'.repeat(e.tier)}`)
+      badge()
+      if (e.kind !== 'changed') this.saver.requestSave()
+    })
+    badge()
+  }
+
+  private showCollectionEvents() {
+    this.collections.onChange((e) => {
+      if (e.kind === 'found') {
+        const building = 'building' in e.event ? e.event.building : null
+        if (building) this.incomeView.popup(building, `${e.item.icon} ${e.item.name} found!`, 'note')
+        else this.hud.toast(`${e.item.icon} Found a ${e.item.name} for your collections!`)
+      }
+      if (e.kind === 'completed') this.hud.toast(`🏆 ${e.collection.name} complete! Reward collected.`)
+      this.saver.requestSave()
+    })
   }
 
   private showPlayerEvents(levelUpPanel: LevelUpPanel) {

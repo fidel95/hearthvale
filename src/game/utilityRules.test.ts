@@ -7,7 +7,7 @@ const b = (id: string) => BUILDINGS_BY_ID.get(id)!
 
 describe('serviceReport', () => {
   it('adds up residents, demand, supply and running costs', () => {
-    const r = serviceReport([b('cottage'), b('cottage'), b('bakery'), b('water-tower')])
+    const r = serviceReport(['cottage', 'cottage', 'bakery', 'water-tower'].map((id) => ({ type: b(id) })))
     expect(r.population).toBe(4)
     expect(r.utilities.water).toEqual({ supply: COUNTY_SUPPLY.water + 20, demand: 6, level: 1 })
     expect(r.utilities.power).toEqual({ supply: 8, demand: 7, level: 1 })
@@ -16,7 +16,7 @@ describe('serviceReport', () => {
 
   it('reports the share of demand met when supply falls short', () => {
     // 5 cottages need 10 power; the county supplies 8.
-    const r = serviceReport(Array(5).fill(b('cottage')))
+    const r = serviceReport(Array(5).fill({ type: b('cottage') }))
     expect(r.utilities.power.level).toBeCloseTo(0.8)
   })
 
@@ -26,7 +26,7 @@ describe('serviceReport', () => {
 })
 
 describe('incomeMultiplier', () => {
-  const town = (ids: string[]) => serviceReport(ids.map(b))
+  const town = (ids: string[]) => serviceReport(ids.map((id) => ({ type: b(id) })))
 
   it('pays in full when every utility keeps up', () => {
     expect(incomeMultiplier(town(['cottage']), 'home')).toBe(1)

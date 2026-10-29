@@ -20,17 +20,28 @@ function town() {
 }
 
 describe('goods and shops', () => {
-  it('shops use goods for each sale, and stop when they run out', () => {
+  it('shops sell from their shelves, which are restocked from town storage', () => {
     const { city } = town()
-    const bakery = city.place(b('bakery'), at(0, 0), { now: 0, free: true })! // 4 goods a sale
-    expect(city.goods).toBe(40) // a new town's starting stock
+    const bakery = city.place(b('bakery'), at(0, 0), { now: 0, free: true })! // 4 goods a sale, shelves hold 40
+    expect(city.hasStock(bakery)).toBe(false) // a new shop starts empty
+    expect(city.collect(bakery.id, 45_000)).toBe(0)
+    expect(city.restock(bakery.id)).toBe(40) // all 40 starting goods
+    expect(city.goods).toBe(0)
     expect(city.collect(bakery.id, 45_000)).toBe(40)
-    expect(city.goods).toBe(36)
+    expect(bakery.stock).toBe(36)
     // Empty the shelves: 9 more sales use 36 goods.
     for (let i = 2; i <= 10; i++) city.collect(bakery.id, i * 45_000)
-    expect(city.goods).toBe(0)
-    expect(city.hasStock(bakery)).toBe(false)
+    expect(bakery.stock).toBe(0)
     expect(city.collect(bakery.id, 11 * 45_000)).toBe(0)
+  })
+
+  it('restocks only as much as the shelves hold and storage has', () => {
+    const { city } = town()
+    const bakery = city.place(b('bakery'), at(0, 0), { free: true })!
+    city.addGoods(50, 0) // 90 in storage
+    expect(city.restock(bakery.id)).toBe(40) // shelves hold 40
+    expect(city.restock(bakery.id)).toBe(0) // already full
+    expect(city.goods).toBe(50)
   })
 
   it('stores harvests as goods when the town has shops, selling only what does not fit', () => {
@@ -72,6 +83,8 @@ describe('inventory and cost of goods sold', () => {
     expect(taxes.inventory).toEqual({ units: 80, cost: 240 })
     expect(taxes.estimate().costOfGoodsSold).toBe(0) // buying isn't an expense
 
+    city.restock(bakery.id) // moving goods onto the shelves isn't a sale
+    expect(taxes.estimate().costOfGoodsSold).toBe(0)
     city.collect(bakery.id, 45_000) // sells 4 goods
     expect(taxes.estimate().costOfGoodsSold).toBeCloseTo(12)
     expect(taxes.inventory.units).toBe(76)

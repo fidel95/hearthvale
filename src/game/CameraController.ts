@@ -161,6 +161,12 @@ export class CameraController {
     this.apply()
   }
 
+  // Jump the view to look at a point on the ground.
+  centerOn(point: THREE.Vector3) {
+    this.target.set(point.x, 0, point.z)
+    this.apply()
+  }
+
   private setZoom(zoom: number) {
     this.camera.zoom = THREE.MathUtils.clamp(zoom, MIN_ZOOM, MAX_ZOOM)
     this.camera.updateProjectionMatrix()

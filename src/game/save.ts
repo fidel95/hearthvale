@@ -2,7 +2,9 @@ import type { CitySave } from './City'
 import { LOT_SIZE } from './grid'
 import { START_LOTS, START_LOT_VALUE } from './land'
 import type { Shipment } from './Docks'
+import type { Stack } from './Inventory'
 import type { PlayerSave } from './Player'
+import type { QuestsSave } from './quests'
 import type { TaxesSave } from './Taxes'
 
 // Saving to the browser's localStorage. Everything stays on this device;
@@ -21,6 +23,9 @@ export interface SaveData {
   taxes: TaxesSave
   player?: PlayerSave // missing in saves from before Stage 5
   shipments?: Shipment[] // missing in saves from before Stage 8
+  inventory?: [string, Stack][] // missing in saves from before Stage 9
+  collections?: [string, number][] // times each collection was completed
+  quests?: QuestsSave
 }
 
 export function readSave(): SaveData | null {

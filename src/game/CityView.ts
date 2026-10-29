@@ -2,7 +2,7 @@ import * as THREE from 'three'
 import type { City, PlacedBuilding } from './City'
 import { cropState } from './crops'
 import { footprintCenter } from './grid'
-import { createBuildingObject, createCropObject, cropLookFor, disposeCropObject } from './models'
+import { createBuildingObject, createConstructionSite, createCropObject, cropLookFor, disposeCropObject } from './models'
 
 // Keeps the 3D scene in sync with the City. It only reacts to City events;
 // it never decides anything about the game itself.
@@ -19,22 +19,21 @@ export class CityView {
     this.city = city
     city.onChange((event) => {
       switch (event.kind) {
-        case 'added': {
-          // Roads are drawn together by RoadView; here they only get an empty placeholder.
-          const obj = event.building.type.category === 'road' ? new THREE.Group() : createBuildingObject(event.building.type)
-          this.objects.set(event.building.id, obj)
-          this.scene.add(obj)
-          this.position(event.building)
+        case 'added':
+        case 'restored':
+          this.create(event.building)
           break
-        }
+        case 'finished': // the construction site becomes the real building
+        case 'upgraded': // it grows a little
+          this.destroy(event.building.id)
+          this.create(event.building)
+          break
         case 'moved':
           this.position(event.building)
           break
         case 'removed':
-          this.scene.remove(this.objects.get(event.building.id)!)
-          this.objects.delete(event.building.id)
-          this.tops.delete(event.building.id)
-          this.removeCrop(event.building.id)
+        case 'stored':
+          this.destroy(event.building.id)
           break
       }
     })
@@ -84,6 +83,25 @@ export class CityView {
     if (!box || box.isEmpty()) return 1.2
     this.tops.set(id, box.max.y)
     return box.max.y
+  }
+
+  private create(b: PlacedBuilding) {
+    // Roads are drawn together by RoadView; here they only get an empty placeholder.
+    const obj =
+      b.type.category === 'road' ? new THREE.Group() : b.construction ? createConstructionSite(b.type) : createBuildingObject(b.type)
+    // Upgraded buildings stand a little taller: 8% per level.
+    obj.scale.setScalar(1 + 0.08 * (b.level - 1))
+    this.objects.set(b.id, obj)
+    this.scene.add(obj)
+    this.position(b)
+  }
+
+  private destroy(id: number) {
+    const obj = this.objects.get(id)
+    if (obj) this.scene.remove(obj)
+    this.objects.delete(id)
+    this.tops.delete(id)
+    this.removeCrop(id)
   }
 
   private removeCrop(id: number) {

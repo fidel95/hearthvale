@@ -20,6 +20,8 @@ function hintFor(mode: Mode): string {
       return mode.type.category === 'road' ? 'Drag to draw road' : `Tap where the ${mode.type.name} should go`
     case 'move':
       return 'Tap where it should go'
+    case 'restore':
+      return `Tap where the ${mode.building.type.name} should go`
   }
 }
 
@@ -55,6 +57,7 @@ export class Hud {
   private xpBar = el('div', 'chip-bar-fill')
   private monthBar = el('div', 'chip-bar-fill')
   private toasts = el('div', 'toasts')
+  private badges = new Map<string, HTMLElement>()
   private shownMonth = -1
   private player: Player
 
@@ -74,6 +77,7 @@ export class Hud {
     })
     this.level = chip('⭐', 'Level and quests', callbacks.onOpenQuests)
     this.date = chip('📅', 'Calendar and taxes', callbacks.onOpenTaxes)
+    this.date.button.classList.add('chip-date')
     const xp = el('div', 'chip-bar')
     xp.append(this.xpBar)
     this.level.button.append(xp)
@@ -115,6 +119,10 @@ export class Hud {
       const b = el('button', 'tool')
       b.append(el('span', 'tool-icon', icon), el('span', 'tool-label', label))
       b.addEventListener('click', onClick)
+      const badge = el('span', 'tool-badge')
+      badge.hidden = true
+      b.append(badge)
+      this.badges.set(label, badge)
       toolbar.append(b)
     }
 
@@ -182,6 +190,14 @@ export class Hud {
       this.date.extra.textContent = ` · Year ${clock.year}`
     }
     this.monthBar.style.width = `${clock.monthProgress * 100}%`
+  }
+
+  // A small count on a toolbar button (0 hides it).
+  setBadge(tool: string, count: number) {
+    const badge = this.badges.get(tool)
+    if (!badge) return
+    badge.hidden = count === 0
+    badge.textContent = String(count)
   }
 
   // A message that shows for a few seconds under the top bar.

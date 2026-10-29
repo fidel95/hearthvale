@@ -48,6 +48,7 @@ describe('Taxes', () => {
   it('adds sales tax on top of shop sales and holds it until the quarter ends', () => {
     const { city, taxes, events, runMonths } = setup()
     const shop = city.place(bakery, at(0, 0), { now: 0, free: true })!
+    city.restock(shop.id)
     const before = city.coins
     city.collect(shop.id, 45_000)
     expect(city.coins).toBe(before + 40 + 3) // the sale plus 7% the customer paid

@@ -65,6 +65,12 @@ export class Player {
         case 'cleared':
           this.spendEnergy(now)
           break
+        case 'finished': // finishing construction: a bigger building, more XP
+          this.addXp(Math.max(2, Math.floor(event.building.type.cost / 50)), now, event.building)
+          break
+        case 'upgraded':
+          this.addXp(buildXp(event.cost), now, event.building)
+          break
         case 'goodsIn': // unloading a ship
           this.spendEnergy(now)
           this.addXp(Math.max(1, Math.floor(event.units / 20)), now)
@@ -132,6 +138,21 @@ export class Player {
       this.energyAt += Math.floor((now - this.energyAt) / ENERGY_REGEN_MS) * ENERGY_REGEN_MS
     }
     this.storedEnergy = current - 1
+    this.emit({ kind: 'energy' })
+  }
+
+  // XP and energy given as rewards (collections, quests).
+  grantXp(amount: number) {
+    this.addXp(amount, this.now())
+  }
+
+  // Bonus energy can go above the maximum; it just won't refill past it.
+  grantEnergy(amount: number) {
+    const now = this.now()
+    const current = this.energy(now)
+    if (current >= this.maxEnergy) this.energyAt = now
+    else this.energyAt += Math.floor((now - this.energyAt) / ENERGY_REGEN_MS) * ENERGY_REGEN_MS
+    this.storedEnergy = current + amount
     this.emit({ kind: 'energy' })
   }
 

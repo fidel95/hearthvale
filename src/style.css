@@ -163,13 +163,29 @@ button {
   }
 
   .chip {
-    font-size: 14px;
-    padding: 5px 8px;
+    font-size: 13px;
+    padding: 4px 7px;
     min-height: 32px;
+    gap: 3px;
+  }
+
+  .topbar,
+  .topbar-stats,
+  .topbar-right {
+    gap: 4px;
+  }
+
+  .topbar-right {
+    flex-wrap: nowrap;
   }
 
   .hud-top {
-    top: 92px;
+    top: 52px;
+  }
+
+  /* The date chip shrinks to its icon and month bar; tap it for Taxes. */
+  .chip-date .chip-value {
+    display: none;
   }
 }
 
@@ -922,8 +938,7 @@ button {
 
 @keyframes sheet-up {
   from {
-    translate: -50% 40px;
-    opacity: 0;
+    translate: -50% 60px;
   }
 }
 
@@ -943,8 +958,7 @@ button {
 
   @keyframes sheet-in {
     from {
-      translate: 30px 0;
-      opacity: 0;
+      translate: 40px 0;
     }
   }
 }
@@ -1096,4 +1110,262 @@ button {
   height: 100%;
   background: var(--good);
   transition: width 0.4s linear;
+}
+
+/* Materials needed, with what you have: green when there's enough, red when short. */
+.materials {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 6px 0;
+}
+
+.materials span {
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.materials .have {
+  background: #dff1e2;
+  color: var(--good);
+}
+
+.materials .short {
+  background: #fbe4df;
+  color: var(--bad);
+}
+
+/* A construction site ready to finish: a hammer on an orange bubble. */
+.bubble-build .bubble-face,
+.bubble-build .bubble-face::after {
+  background: #ffc27a;
+}
+
+/* ---- Inventory and collections ---- */
+
+.item-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.item-row {
+  display: grid;
+  grid-template-columns: 32px 1fr auto auto;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #fff;
+}
+
+.item-row .panel-button {
+  margin: 0;
+  padding: 6px 10px;
+  font-size: 12px;
+}
+
+.item-icon {
+  font-size: 22px;
+  text-align: center;
+}
+
+.item-name {
+  font-weight: 600;
+}
+
+.item-count {
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-soft);
+}
+
+.item-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.item-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 4px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #fff;
+  font-size: 12px;
+  text-align: center;
+}
+
+.collection {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.collection-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.collection-source {
+  margin: 2px 0 8px;
+  font-size: 12px;
+}
+
+.collection-slots {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.slot {
+  position: relative;
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  border-radius: 10px;
+  background: #fff4dc;
+  border: 2px solid var(--gold);
+}
+
+.slot.missing {
+  background: #f1ede6;
+  border-color: var(--border);
+}
+
+.slot.missing .slot-icon {
+  filter: grayscale(1) opacity(0.35);
+}
+
+.slot-icon {
+  font-size: 26px;
+}
+
+.slot-count {
+  position: absolute;
+  right: 4px;
+  bottom: 2px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+
+.collection .panel-button {
+  width: 100%;
+  margin: 0;
+}
+
+/* ---- Quests ---- */
+
+.quest,
+.achievement {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.quest > p {
+  margin: 4px 0 8px;
+}
+
+.quest .panel-button {
+  width: 100%;
+  margin: 10px 0 0;
+}
+
+.quest-task {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 6px 0 4px;
+  font-size: 13px;
+}
+
+.quest-task .done {
+  color: var(--good);
+  font-weight: 600;
+}
+
+.achievement {
+  display: grid;
+  grid-template-columns: 32px 1fr auto;
+  align-items: center;
+  gap: 4px 8px;
+}
+
+.achievement-icon {
+  grid-row: span 3;
+  font-size: 24px;
+}
+
+.achievement-stars {
+  color: #e3a91a;
+  letter-spacing: 2px;
+}
+
+.achievement-detail,
+.achievement .progress {
+  grid-column: 2 / span 2;
+  font-size: 12px;
+}
+
+/* A count on a toolbar button, e.g. quests ready to claim. */
+.tool {
+  position: relative;
+}
+
+.tool-badge {
+  position: absolute;
+  top: 2px;
+  right: 8px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--bad);
+  color: #fff;
+  font-size: 11px;
+  line-height: 18px;
+}
+
+/* ---- Map ---- */
+
+.world-map {
+  display: block;
+  width: 100%;
+  margin: 8px 0;
+  cursor: pointer;
+}
+
+.map-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+
+.map-legend span::before {
+  content: '';
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 4px;
+  border-radius: 2px;
+  background: var(--swatch);
+  vertical-align: -1px;
 }

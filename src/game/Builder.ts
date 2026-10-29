@@ -16,6 +16,7 @@ export type Mode =
   | { kind: 'select' }
   | { kind: 'build'; type: BuildingType }
   | { kind: 'move'; carrying: PlacedBuilding }
+  | { kind: 'restore'; building: PlacedBuilding } // placing a stored building back
 
 const COLORS = { hover: '#ffffff', ok: '#4ade80', blocked: '#ef4444' }
 
@@ -38,6 +39,8 @@ export class Builder {
   onPlantRequest?: (plot: PlacedBuilding) => void
   // An idle dock was tapped: show the shipments to order.
   onDockRequest?: (dock: PlacedBuilding) => void
+  // A construction site whose timer is done was tapped: finish it.
+  onFinishRequest?: (building: PlacedBuilding) => void
   // The selected building changed (null: nothing selected).
   onSelect?: (building: PlacedBuilding | null) => void
   // Asked first on every map tap; return true to swallow the tap (Game uses
@@ -136,7 +139,7 @@ export class Builder {
     })
     controls.onClick = (x, y) => this.onClick(x, y)
     city.onChange((e) => {
-      if (e.kind === 'removed' && this.selected?.id === e.building.id) this.select(null)
+      if ((e.kind === 'removed' || e.kind === 'stored') && this.selected?.id === e.building.id) this.select(null)
       if (e.kind === 'moved' && this.selected?.id === e.building.id) this.refresh()
     })
   }
@@ -175,6 +178,8 @@ export class Builder {
   // Does tapping this building do something right away (collect, harvest,
   // plant, unload)? If not, a tap selects it instead.
   hasQuickAction(b: PlacedBuilding, now: number): boolean {
+    if (b.construction) return this.city.constructionDone(b, now)
+    if (b.type.goodsPerSale && this.city.isReady(b, now) && !this.city.hasStock(b)) return this.city.goods > 0
     if (b.type.category === 'farm') return cropState(b.crop, now).stage !== 'growing'
     if (b.type.category === 'port') return this.docks.state(b, now).stage !== 'sailing'
     return this.city.isReady(b, now) && this.city.hasStock(b)
@@ -192,6 +197,11 @@ export class Builder {
       this.onNotice?.(outOfEnergyMessage(this.player, now))
       return true
     }
+    if (building.construction) {
+      if (this.city.constructionDone(building, now)) this.onFinishRequest?.(building)
+      else this.onNotice?.(`🚧 ${building.type.name} will be ready to finish in ${duration(building.construction.endsAt - now)}`)
+      return
+    }
     if (building.type.category === 'port') {
       const state = this.docks.state(building, now)
       if (state.stage === 'idle') this.onDockRequest?.(building)
@@ -202,7 +212,10 @@ export class Builder {
     if (building.type.category !== 'farm') {
       if (!this.city.isReady(building, now)) return
       if (!this.city.hasStock(building)) {
-        this.onNotice?.(`${building.type.name} needs 📦 ${building.type.goodsPerSale} goods to sell. Harvest crops, or order a shipment at a Dock.`)
+        // Out of stock: fill the shelves from town storage, if there's anything there.
+        if (this.city.restock(building.id) === 0) {
+          this.onNotice?.(`${building.type.name} needs goods to sell, and storage is empty. Harvest crops, or order a shipment at a Dock.`)
+        }
         return
       }
       if (!outOfEnergy()) this.city.collect(building.id, now)
@@ -275,6 +288,7 @@ export class Builder {
   private placingType(): BuildingType | null {
     if (this.mode.kind === 'build') return this.mode.type
     if (this.mode.kind === 'move') return this.mode.carrying.type
+    if (this.mode.kind === 'restore') return this.mode.building.type
     return null
   }
 
@@ -310,6 +324,10 @@ export class Builder {
         else this.setPending(anchor)
         break
       }
+      case 'restore':
+        if (this.city.canPlace(mode.building.type, anchorFor(mode.building.type, tile))) this.setPending(anchorFor(mode.building.type, tile))
+        else this.onNotice?.("It doesn't fit there")
+        break
       case 'move': {
         const moved = mode.carrying
         if (this.city.move(moved.id, anchorFor(moved.type, tile))) {
@@ -327,8 +345,9 @@ export class Builder {
   private setPending(tile: Tile | null) {
     this.pending = tile
     this.confirm.visible = tile !== null
-    if (tile && this.mode.kind === 'build') {
-      const { size } = this.mode.type
+    const type = this.placingType()
+    if (tile && type) {
+      const { size } = type
       this.confirm.position.copy(footprintCenter(tile, size)).setY(Math.max(size.x, size.z) * 1.2 + 0.4)
     }
     this.refresh()
@@ -337,6 +356,14 @@ export class Builder {
   // ✓: buy the building waiting at the pending spot. Stay in build mode, so
   // you can place another of the same.
   private confirmPlacement() {
+    if (this.mode.kind === 'restore' && this.pending) {
+      const b = this.mode.building
+      if (this.city.restore(b.id, this.pending)) {
+        this.setMode({ kind: 'select' })
+        this.select(b)
+      }
+      return
+    }
     if (this.mode.kind !== 'build' || !this.pending) return
     if (!this.city.place(this.mode.type, this.pending)) this.onNotice?.(`Not enough coins for a ${this.mode.type.name}`)
     this.setPending(null)
@@ -363,8 +390,8 @@ export class Builder {
     if (type) {
       const anchor = this.pending ?? anchorFor(type, tile)
       const ignoreId = this.mode.kind === 'move' ? this.mode.carrying.id : undefined
-      // Moving is free; building new needs the coins.
-      const affordable = this.mode.kind === 'move' || this.city.canAfford(type)
+      // Moving and restoring are free; building new needs the coins.
+      const affordable = this.mode.kind !== 'build' || this.city.canAfford(type)
       const color = affordable && this.city.canPlace(type, anchor, ignoreId) ? COLORS.ok : COLORS.blocked
       this.showFootprint(anchor, type.size, color)
       this.ghostMaterial.color.set(color)

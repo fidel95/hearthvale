@@ -20,7 +20,7 @@ const POPUP_MS = 1000 // keep in sync with the .popup animation length in style.
 const FARM_LABEL_HEIGHT = 0.75
 
 // What a bubble is asking you to do. Each kind has its own look in style.css.
-type BubbleKind = 'coins' | 'plant' | 'harvest' | 'withered' | 'stock' | 'cargo'
+type BubbleKind = 'coins' | 'plant' | 'harvest' | 'withered' | 'stock' | 'cargo' | 'build'
 
 interface Bubble {
   object: CSS2DObject
@@ -86,8 +86,19 @@ export class IncomeView {
           this.popup(event.building, `Withered ${event.crop.name.toLowerCase()} cleared`, 'note')
           break
         case 'removed':
+        case 'stored':
           this.removeBubble(event.building.id)
           if (this.hovered?.id === event.building.id) this.setHovered(null)
+          break
+        case 'restocked':
+          this.popup(event.building, `+${event.units} 📦 on the shelves`, 'note')
+          break
+        case 'finished':
+          this.removeBubble(event.building.id)
+          this.popup(event.building, `${event.building.type.name} is built! 🎉`, 'note')
+          break
+        case 'upgraded':
+          this.popup(event.building, `Upgraded to ${'★'.repeat(event.building.level)}`, 'note')
           break
       }
     })
@@ -120,6 +131,7 @@ export class IncomeView {
 
   // Which bubble a building should show right now, if any.
   private bubbleFor(b: PlacedBuilding, now: number): { kind: BubbleKind; icon: string } | null {
+    if (b.construction) return this.city.constructionDone(b, now) ? { kind: 'build', icon: '🔨' } : null
     if (this.city.isReady(b, now)) return this.city.hasStock(b) ? { kind: 'coins', icon: '🪙' } : { kind: 'stock', icon: '📦' }
     if (b.type.category === 'port') return this.docks.state(b, now).stage === 'arrived' ? { kind: 'cargo', icon: '🚢' } : null
     if (b.type.category !== 'farm') return null
@@ -153,6 +165,17 @@ export class IncomeView {
 
   // A building's name and a one-line status (also used by the context menu).
   describe(b: PlacedBuilding, now: number): [string, string] {
+    const name = b.level > 1 ? `${b.type.name} ${'★'.repeat(b.level)}` : b.type.name
+    if (b.construction) {
+      return this.city.constructionDone(b, now)
+        ? [name, '🔨 Ready to finish: tap to complete it']
+        : [name, `🚧 Under construction · ready in ${duration(b.construction.endsAt - now)}`]
+    }
+    const [, status] = this.describeBuilt(b, now)
+    return [name, status]
+  }
+
+  private describeBuilt(b: PlacedBuilding, now: number): [string, string] {
     if (b.type.category === 'farm') {
       const state = cropState(b.crop, now)
       switch (state.stage) {
@@ -180,11 +203,13 @@ export class IncomeView {
     if (supplies) return [b.type.name, `Supplies ${UTILITY_INFO[supplies.utility].icon} ${supplies.amount} · 🪙 ${upkeep}/month`]
     if (!b.type.income) return [b.type.name, '']
     const uses = b.type.goodsPerSale
-    if (uses && this.city.isReady(b, now) && !this.city.hasStock(b)) return [b.type.name, `Out of stock: needs 📦 ${uses} to sell`]
+    if (uses && this.city.isReady(b, now) && !this.city.hasStock(b)) {
+      return [b.type.name, this.city.goods > 0 ? 'Out of stock: tap to restock' : 'Out of stock, and storage is empty']
+    }
     const status = this.city.isReady(b, now)
       ? `Ready! Click to collect 🪙 ${this.city.payout(b)}`
       : `🪙 ${this.city.payout(b)} in ${duration(b.readyAt - now)}`
-    return [b.type.name, status + (uses ? ` · uses 📦 ${uses}` : '') + this.shortNote(b)]
+    return [b.type.name, status + (uses ? ` · 📦 ${b.stock}/${this.city.stockCapacity(b)}` : '') + this.shortNote(b)]
   }
 
   // " · 📍 +15%" for a good location, " · ⚠️ short on 💧🔌" when utilities cut income.
@@ -209,7 +234,7 @@ export class IncomeView {
     face.className = 'bubble-face'
     face.textContent = icon
     el.append(face)
-    el.title = { coins: 'Collect', plant: 'Plant a crop', harvest: 'Harvest', withered: 'Clear the withered crop', stock: 'Out of stock', cargo: 'Unload' }[kind]
+    el.title = { coins: 'Collect', plant: 'Plant a crop', harvest: 'Harvest', withered: 'Clear the withered crop', stock: 'Restock', cargo: 'Unload', build: 'Finish building' }[kind]
     el.addEventListener('click', () => this.onTap(building))
 
     const object = new CSS2DObject(el)

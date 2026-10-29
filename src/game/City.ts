@@ -1,4 +1,5 @@
 import { BUILDINGS_BY_ID, RENAMED_BUILDING_IDS, type BuildingType } from './buildings'
+import { levelFactor } from './construction'
 import { CROPS_BY_ID, cropState, type CropType, type PlantedCrop } from './crops'
 import {
   GRID_SIZE,
@@ -38,6 +39,23 @@ export interface PlacedBuilding {
   readyAt: number
   // Farm plots only: what's planted, or null when the plot is empty.
   crop: PlantedCrop | null
+  level: number // 1 to 3 (construction.ts)
+  stock: number // shops: goods on the shelves
+  // Under construction until endsAt; then it needs finishing (with materials).
+  construction: { endsAt: number } | null
+}
+
+// The plain-JSON form of a building, for the save file.
+interface BuildingSave {
+  id: number
+  typeId: string
+  tile: Tile
+  readyAt: number
+  crop?: PlantedCrop | null
+  level?: number // the fields from here on were added in Stage 9; older saves lack them
+  stock?: number
+  construction?: { endsAt: number } | null
+  stored?: boolean
 }
 
 // A lot of land the town owns, and what it cost (its value for property tax).
@@ -52,7 +70,7 @@ export interface CitySave {
   coins: number
   goods?: number // missing in saves from before Stage 8
   nextId: number
-  buildings: { id: number; typeId: string; tile: Tile; readyAt: number; crop?: PlantedCrop | null }[]
+  buildings: BuildingSave[]
   lots: { x: number; z: number; price: number }[]
 }
 
@@ -75,9 +93,19 @@ export type CityEvent =
   | { kind: 'coins'; coins: number }
   // The land changed: a lot was bought (bought is set), or a save was loaded.
   | { kind: 'land'; bought?: OwnedLot }
+  // Construction finished; materialsCost is what the materials used had cost.
+  | { kind: 'finished'; building: PlacedBuilding; materialsCost: number }
+  | { kind: 'restocked'; building: PlacedBuilding; units: number }
+  // cost: coins plus materials, all of it an improvement to the building.
+  | { kind: 'upgraded'; building: PlacedBuilding; cost: number }
+  // Taken off the map into the inventory, and put back.
+  | { kind: 'stored'; building: PlacedBuilding }
+  | { kind: 'restored'; building: PlacedBuilding }
 
 export class City {
   private buildings = new Map<number, PlacedBuilding>()
+  // Buildings taken off the map and kept in the inventory, by id.
+  private stored = new Map<number, PlacedBuilding>()
   // One slot per tile holding the id of the building on it, or null.
   // Tile (x, z) lives at index z * GRID_SIZE + x.
   private occupied: (number | null)[] = new Array(GRID_SIZE * GRID_SIZE).fill(null)
@@ -112,6 +140,14 @@ export class City {
 
   get(id: number): PlacedBuilding | undefined {
     return this.buildings.get(id)
+  }
+
+  storedBuildings(): Iterable<PlacedBuilding> {
+    return this.stored.values()
+  }
+
+  getStored(id: number): PlacedBuilding | undefined {
+    return this.stored.get(id)
   }
 
   isRoad = (tile: Tile): boolean => this.buildingAt(tile)?.type.category === 'road'
@@ -188,8 +224,10 @@ export class City {
     if (!this.canPlace(type, tile)) return null
     if (!free && !this.canAfford(type)) return null
 
-    const readyAt = type.income ? now + type.income.seconds * 1000 : 0
-    const building = { id: this.nextId++, type, tile, readyAt, crop: null }
+    // Bigger buildings start as a construction site (unless they're free, like the starting town).
+    const construction = type.build && !free ? { endsAt: now + type.build.seconds * 1000 } : null
+    const readyAt = type.income && !construction ? now + type.income.seconds * 1000 : 0
+    const building: PlacedBuilding = { id: this.nextId++, type, tile, readyAt, crop: null, level: 1, stock: 0, construction }
     this.buildings.set(building.id, building)
     this.mark(building, building.id)
     const paid = free ? 0 : type.cost
@@ -217,7 +255,63 @@ export class City {
   }
 
   isReady(building: PlacedBuilding, now: number): boolean {
-    return building.type.income !== undefined && now >= building.readyAt
+    return building.type.income !== undefined && !building.construction && now >= building.readyAt
+  }
+
+  // ---- Construction, upgrades and storing
+  // (Finishing and upgrading also use materials from the Inventory; projects.ts
+  // checks those and calls these.)
+
+  // Built and working: not a construction site.
+  isBuilt(building: PlacedBuilding): boolean {
+    return building.construction === null
+  }
+
+  // The construction timer has run out: it can be finished.
+  constructionDone(building: PlacedBuilding, now: number): boolean {
+    return building.construction !== null && now >= building.construction.endsAt
+  }
+
+  finish(id: number, now: number, materialsCost = 0): boolean {
+    const b = this.buildings.get(id)
+    if (!b || !this.constructionDone(b, now)) return false
+    b.construction = null
+    if (b.type.income) b.readyAt = now + b.type.income.seconds * 1000
+    this.emit({ kind: 'finished', building: b, materialsCost })
+    return true
+  }
+
+  upgrade(id: number, coins: number, materialsCost = 0): boolean {
+    const b = this.buildings.get(id)
+    if (!b || !this.isBuilt(b) || this._coins < coins) return false
+    b.level++
+    this.emit({ kind: 'upgraded', building: b, cost: coins + materialsCost })
+    this.adjustCoins(-coins)
+    return true
+  }
+
+  // Take a finished building off the map and keep it for later.
+  store(id: number): boolean {
+    const b = this.buildings.get(id)
+    if (!b || !this.isBuilt(b)) return false
+    this.mark(b, null)
+    this.buildings.delete(id)
+    this.stored.set(id, b)
+    this.emit({ kind: 'stored', building: b })
+    return true
+  }
+
+  // Put a stored building back on the map, free.
+  restore(id: number, tile: Tile, now = Date.now()): boolean {
+    const b = this.stored.get(id)
+    if (!b || !this.canPlace(b.type, tile)) return false
+    this.stored.delete(id)
+    b.tile = tile
+    if (b.type.income) b.readyAt = now + b.type.income.seconds * 1000
+    this.buildings.set(id, b)
+    this.mark(b, id)
+    this.emit({ kind: 'restored', building: b })
+    return true
   }
 
   // ---- Goods
@@ -228,13 +322,30 @@ export class City {
 
   get storageCapacity(): number {
     let capacity = BASE_STORAGE
-    for (const b of this.buildings.values()) capacity += b.type.storage ?? 0
+    for (const b of this.buildings.values()) if (this.isBuilt(b)) capacity += b.type.storage ?? 0
     return capacity
   }
 
-  // Shops need goods to sell; everything else always has "stock".
+  // Shops sell from their own shelves; everything else always has "stock".
   hasStock(building: PlacedBuilding): boolean {
-    return this._goods >= (building.type.goodsPerSale ?? 0)
+    return building.stock >= (building.type.goodsPerSale ?? 0)
+  }
+
+  // How many goods a shop's shelves hold (more at higher levels).
+  stockCapacity(building: PlacedBuilding): number {
+    return Math.round((building.type.stockCapacity ?? 0) * levelFactor(building.level))
+  }
+
+  // Fill a shop's shelves from town storage, as far as both allow. Returns the units moved.
+  restock(id: number): number {
+    const b = this.buildings.get(id)
+    if (!b || !b.type.goodsPerSale || !this.isBuilt(b)) return 0
+    const units = Math.min(this.stockCapacity(b) - b.stock, this._goods)
+    if (units <= 0) return 0
+    b.stock += units
+    this.emit({ kind: 'restocked', building: b, units })
+    this.adjustGoods(-units)
+    return units
   }
 
   // Goods bought and delivered. Only what fits in storage is taken (and paid
@@ -264,15 +375,16 @@ export class City {
     // The next timer starts when you collect, not when it became ready,
     // so leaving money uncollected doesn't stack up extra payouts.
     building.readyAt = now + building.type.income.seconds * 1000
+    building.stock -= goodsUsed
     this.emit({ kind: 'collected', building, amount, goodsUsed })
-    this.adjustGoods(-goodsUsed)
     this.adjustCoins(amount)
     return amount
   }
 
   // What collecting from this building pays right now (less when utilities fall short).
   payout(building: PlacedBuilding): number {
-    return Math.round((building.type.income?.coins ?? 0) * this.incomeMultiplier(building))
+    const coins = (building.type.income?.coins ?? 0) * levelFactor(building.level)
+    return Math.round(coins * this.incomeMultiplier(building))
   }
 
   // What a crop on this plot sells for right now (less without enough water).
@@ -306,7 +418,7 @@ export class City {
 
     plot.crop = null
     const goods = Math.round(state.crop.goods * this.incomeMultiplier(plot)) // less without enough water
-    const hasShops = [...this.buildings.values()].some((b) => b.type.goodsPerSale)
+    const hasShops = [...this.buildings.values()].some((b) => b.type.goodsPerSale && this.isBuilt(b))
     const room = hasShops ? Math.max(0, this.storageCapacity - this._goods) : 0
     const stored = Math.min(goods, room)
     const amount = goods > 0 ? Math.round((this.harvestValue(plot, state.crop) * (goods - stored)) / goods) : 0
@@ -357,13 +469,10 @@ export class City {
       coins: this._coins,
       goods: this._goods,
       nextId: this.nextId,
-      buildings: [...this.buildings.values()].map((b) => ({
-        id: b.id,
-        typeId: b.type.id,
-        tile: b.tile,
-        readyAt: b.readyAt,
-        crop: b.crop,
-      })),
+      buildings: [
+        ...[...this.buildings.values()].map((b) => this.saveBuilding(b, false)),
+        ...[...this.stored.values()].map((b) => this.saveBuilding(b, true)),
+      ],
       lots: [...this.land.values()].map(({ lot, price }) => ({ x: lot.x, z: lot.z, price })),
     }
   }
@@ -377,23 +486,50 @@ export class City {
     this.emit({ kind: 'land' })
     for (const saved of save.buildings) {
       const type = BUILDINGS_BY_ID.get(RENAMED_BUILDING_IDS[saved.typeId] ?? saved.typeId)
-      if (!type || !this.canPlace(type, saved.tile)) {
+      if (!type || (!saved.stored && !this.canPlace(type, saved.tile))) {
         console.warn('Skipping saved building that no longer fits:', saved)
         continue
       }
       // Saves from before Stage 4 have no crop field; a crop that was removed from the catalog is dropped.
       const crop = saved.crop && CROPS_BY_ID.has(saved.crop.cropId) ? saved.crop : null
-      const building = { id: saved.id, type, tile: saved.tile, readyAt: saved.readyAt, crop }
+      const building: PlacedBuilding = {
+        id: saved.id,
+        type,
+        tile: saved.tile,
+        readyAt: saved.readyAt,
+        crop,
+        level: saved.level ?? 1,
+        stock: saved.stock ?? 0,
+        construction: saved.construction ?? null,
+      }
+      this.nextId = Math.max(this.nextId, building.id + 1)
+      if (saved.stored) {
+        this.stored.set(building.id, building)
+        continue
+      }
       this.buildings.set(building.id, building)
       this.mark(building, building.id)
       this.emit({ kind: 'added', building, paid: 0 })
-      this.nextId = Math.max(this.nextId, building.id + 1)
     }
     this.nextId = Math.max(this.nextId, save.nextId)
     this._coins = save.coins
     this._goods = save.goods ?? STARTING_GOODS
     this.emit({ kind: 'goods', goods: this._goods })
     this.emit({ kind: 'coins', coins: this._coins })
+  }
+
+  private saveBuilding(b: PlacedBuilding, stored: boolean): BuildingSave {
+    return {
+      id: b.id,
+      typeId: b.type.id,
+      tile: b.tile,
+      readyAt: b.readyAt,
+      crop: b.crop,
+      level: b.level,
+      stock: b.stock,
+      construction: b.construction,
+      ...(stored ? { stored } : {}),
+    }
   }
 
   private mark(building: PlacedBuilding, value: number | null) {

@@ -390,6 +390,56 @@ the `*.test.ts` files, and [TAXES.md](TAXES.md)
 
 ---
 
+## Stage 9: the new interface, building systems, quests and collections
+
+**Files:** `ui/Sheet.ts`, `ui/Hud.ts`, `ui/BuildMenu.ts`, `ui/thumbnails.ts`,
+`ContextMenu.ts`, `ui/BuildingPanel.ts`, `construction.ts`, `projects.ts`,
+`Inventory.ts`, `items.ts`, `collections.ts`, `quests.ts`, `ui/QuestsPanel.ts`,
+`ui/InventoryPanel.ts`, `ui/CollectionsPanel.ts`, `ui/MapPanel.ts`
+
+- **One component instead of five copies.** Every window had its own overlay,
+  header, close button and Escape handling. `Sheet` and `Modal` now hold that
+  once; each panel just fills a body. When the look changed (bottom sheets
+  instead of centered windows), it changed in one place.
+- **Design around the content.** Sheets cover the bottom of the screen, not
+  all of it, and tapping the map closes them. Top-bar stats double as
+  buttons, so the most-used windows need no extra buttons.
+- **Rendering to an image.** The build menu's thumbnails come from a second,
+  offscreen three.js renderer: render once, `toDataURL`, cache. Models load
+  asynchronously, so each object carries a `ready` promise to wait for.
+- **Check everything, then change anything.** Finishing and upgrading touch
+  City, Inventory and Player. `projects.ts` checks all of them before changing
+  any, and returns *why* when it can't (`{ ok: false, reason: 'materials',
+  missing }`), which the UI turns into a message and a Buy button. A typed
+  result like this beats throwing errors for expected situations.
+- **Keeping identity.** Storing a building keeps the same object and id, so
+  everything keyed by that id (its tax record) survives the trip.
+- **Stats as the source of truth.** Quests and achievements both read lifetime
+  counters built from events. A quest remembers the counters' values when it
+  started, so "collect rent 3 times" counts from then.
+- **Injectable randomness.** Collections take a `random` function; the game
+  passes `Math.random`, the tests pass a list of numbers, so "a drop happens"
+  can be tested exactly.
+- **Real tax rules for new systems.** Materials and upgrades are capitalized
+  (added to basis), depreciation starts when a building is placed in service,
+  stored buildings pay no property tax, and quest and collection rewards are
+  taxable prizes.
+- **Bugs worth remembering:**
+  - Switching modes while a building waited for ✓ crashed: the old ghost was
+    removed and *then* the pending placement redrawn. Order of cleanup matters.
+  - Sheets looked faded in phone screenshots: the slide-in animation also
+    faded them in, and the screenshot caught it halfway. Sliding without
+    fading reads better anyway.
+
+**Try it:**
+
+1. Add a material (🧶 rope?) and give the Dock a need for it. Where do icons,
+   prices and the build menu pick it up?
+2. Add a quest: "Upgrade three buildings to ★★". Is it a `stat` task or a `have` task?
+3. Make collection drops a little likelier for buildings near a Park.
+
+---
+
 ## Coming next
 
-- **Stage 9:** quests and goals.
+- **Stage 10:** decorations that boost payouts, and more buildings and models.

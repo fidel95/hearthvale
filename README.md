@@ -42,33 +42,52 @@ to make each in-game month last one second, so you can watch a whole tax year in
 
 ## How to play
 
+The screen is built around the city: a slim bar of stats along the top, a
+toolbar along the bottom, and menus that slide up from the bottom (or in from
+the right on a wide screen) so the town stays in view.
+
+| | |
+|---|---|
+| **Top bar** | 🪙 coins (tap: Taxes) · 📦 goods (tap: Inventory) · 👥 population (tap: Town services) · ⚡ energy · ⭐ level (tap: Quests) · 📅 date (tap: Taxes) · ⚙️ settings |
+| **Toolbar** | 🔨 Build · 📜 Quests · 🎒 Inventory · 🏆 Collections · 🗺️ Map |
+| **Bubbles** | 🪙 rent or sales ready · 🧺 crop ripe · 🌱 plot empty · 📦 shop out of stock · 🔨 construction ready to finish · 🚢 ship waiting |
+
 | Action | Mouse | Touch |
 |---|---|---|
-| Pan | Drag | Drag |
-| Draw roads | Drag (with Road selected) | Drag |
-| Zoom | Scroll wheel | Pinch |
-| Collect rent / sales | Click the 🪙 bubble or the building | Tap |
-| Plant, harvest, clear crops | Click the plot or its bubble | Tap |
-| Building info | Hover a building | Tap it |
-| Cancel a tool | Esc, right-click or **Done** | **Done** |
+| Pan / zoom | Drag / scroll wheel | Drag / pinch |
+| Collect, harvest, restock, finish, unload | Click the building or its bubble | Tap |
+| Select a building (context menu) | Click it when it has nothing ready | Tap |
+| Draw roads | Drag with Road selected | Drag |
+| Close a menu | Esc, ✕, or click the map | ✕ or tap the map |
 
-- **Build:** pick a building. A green preview means it fits and you can afford it; red means it doesn't. Place as many as you like, then press Done.
-- **Levels and XP:** building, collecting and harvesting earn XP (⭐). Each level pays a coin reward, refills your energy, raises its maximum and unlocks new buildings and crops. Locked items are shown with the level that unlocks them.
-- **Energy (⚡):** collecting, harvesting, planting and clearing use 1 energy each; building and moving don't. It refills by 1 every 2 minutes, in real time, even while the game is closed.
-- **Land:** the world is 60×60 tiles, in 10×10 lots. You start with the middle four. Tap a 🏷️ sign on a lot next to your land to buy it; each lot costs more than the last and needs a higher level. Land pays property tax but is never depreciated.
-- **Utilities:** homes, shops and farms use 💧 water, 🔌 electricity and 🗑️ trash pickup. The county covers a small town for free; after that, build a Water Tower, Power Plant or Solar Farm, and Recycling Center. Plants cost coins every month to run (deductible on your taxes). When supply falls short, income drops: the top-left line turns red and the **Town** window shows what to build.
-- **The coast:** the south of the world is sea, with a beach, sailboats and fishing boats. Buy the lots south of town to reach the shore.
-- **Goods and storage (📦):** shops need goods to sell (the Bakery uses 4 a sale, the General Store 7) and show a grey 📦 bubble when they run out. Once you have a shop, harvests go into storage as goods; whatever doesn't fit is sold at the market for coins. Storage starts at 100; a Barn adds 150, a Warehouse 400, a Dock 100.
-- **Docks and shipping:** build a Dock on the shore and tap it to order goods: a coastal freighter (40 goods, 1 minute) or a container ship (150, cheaper per good, 5 minutes). The ship sails in from the horizon and arrives on time; tap 🚢 to unload (⚡1). Ships keep sailing while the game is closed.
-- **Roads:** pick Road from the build menu's Town tab and drag across the map to draw (a tap places one tile). Roads join up into straights, corners and crossings by themselves. Homes and shops touching a road earn +5%, and walkers prefer roads.
-- **Community buildings:** a Park, Fire Station and School each raise the income of homes and shops nearby (+10%, +10%, +15%), shown as a blue area while placing. Bonuses stack up to +40%. A better location also raises a building's assessed value, so property tax goes up too, as it does in real life. Each has a monthly running cost.
-- **People:** each home has residents (👥). About one in two is out walking at any time, between home, shops and neighbors.
-- **Farming:** build a Farm Plot, then tap it (🌱) to choose seeds. Crops grow through sprout, young and grown stages, then ripen (the crop's bubble appears): tap to harvest and sell. Wait too long and it withers (🥀): the harvest is lost and you tap to clear the plot. Quick crops earn the most per minute; slow ones can be left overnight. Tick "Plant all empty plots" to sow every empty plot at once.
-- **Move:** tap a building to pick it up, then tap where it should go.
-- **Demolish:** tap a building to remove it. You get no refund and no tax deduction; that's the real US rule, explained in docs/TAXES.md.
-- **Town:** population, how each utility keeps up with demand, the effect on income and the monthly running costs.
-- **Taxes:** your books for the year, an income tax estimate by bracket, the sales tax you're holding, property values and last year's return.
-- **New town** (top right) deletes the save and starts over.
+### The screens
+
+- **Build:** tabs for homes, businesses, community, farms, roads and decor. Each card shows a picture, price, size and what it earns; locked ones say which level unlocks them, and ones you can't afford say how much more you need. Pick a card to preview everything about it, press **Place**, tap the map, then ✓ to buy (✕ to try elsewhere). Roads are drawn by dragging.
+- **Context menu:** tap a building to select it: its name, what it's doing, and **Details**, **Move**, **Store** and **Remove**.
+- **Building details:** status; a progress bar for production, a growing crop, construction or a ship; the shop's stock; location and utility effects; its value and property tax; and actions: Collect, Restock, Finish, Upgrade, Move, Store, Remove.
+- **Quests:** active quests with task progress and rewards, what's coming next and why it's locked, your level and what the next levels unlock, achievements with three stars each, and finished quests. A red badge on Quests means a reward is waiting.
+- **Inventory:** stored buildings (place them again, free), construction materials (with a Buy button), goods and shop shelves, and collectibles.
+- **Collections:** five sets of five items. Items turn up while you collect rent, sell, harvest, unload ships and finish buildings. Hand in a full set for coins, XP and energy, as often as you complete it.
+- **Map:** the whole world at the game's angle. Tap to jump there; tap a lot for sale to buy it.
+- **Town services and Taxes:** tap 👥 or 🪙 in the top bar.
+
+### The systems
+
+- **Construction:** bigger buildings start as a construction site with a timer, then need materials (🧱 bricks, 🪵 lumber, 🪟 glass, 🔩 steel) to finish. You start with a few; buy more in Inventory, or right from the building's details.
+- **Shops and stock:** shops sell from their own shelves (the Bakery holds 40 goods, 4 per sale). Tap an out-of-stock shop, or press Restock, to fill its shelves from town storage.
+- **Upgrades:** homes and shops go up to ★★★: +50% and then +100% income, residents and shelf space, for coins, materials and a player level.
+- **Storing:** put a building away in your Inventory and place it again later for free. While stored it pays no property tax and isn't depreciated.
+- **Levels and XP:** building, collecting, harvesting, finishing and upgrading earn XP (⭐). Each level pays a reward, refills energy, raises its maximum and unlocks more.
+- **Energy (⚡):** collecting, harvesting, planting, clearing and unloading use 1. It refills by 1 every 2 minutes in real time, even while the game is closed.
+- **Farming:** tap an empty plot (🌱) to choose seeds. Crops sprout, grow and ripen; harvest before they wither (🥀). Quick crops earn the most per minute; slow ones can be left overnight.
+- **Goods and storage (📦):** once you have a shop, harvests go into storage as goods; what doesn't fit is sold at the market. A Barn, Warehouse or Dock adds space.
+- **Land and the coast:** the world is 60×60 tiles in 10×10 lots, with the sea along the south. Tap a 🏷️ sign (or a lot on the Map) to buy the land next to yours.
+- **Docks and shipping:** build a Dock on the shore, order a coastal freighter or a container ship, and unload it (🚢) when it arrives.
+- **Utilities:** homes, shops and farms use 💧 water, 🔌 electricity and 🗑️ trash pickup. Beyond what the county supplies, build plants; they cost coins every month. Shortages cut income.
+- **Roads and community:** homes and shops beside a road earn +5%; near a Park, Fire Station or School, +10–15% (up to +40%), which also raises their assessed value.
+- **People:** residents walk between homes, shops and parks, preferring roads.
+- **Taxes:** see below and [docs/TAXES.md](docs/TAXES.md).
+- **New town:** ⚙️ → Start a new town.
 
 ### Time
 
@@ -78,13 +97,13 @@ to make each in-game month last one second, so you can watch a whole tax year in
 
 ### Taxes in one paragraph
 
-Homes earn rent, shops earn sales and farms earn crop sales. Level-up rewards are prize money, which is taxable too. Goods are inventory: buying a shipment isn't deductible, but each sale deducts what its goods cost (cost of goods sold). Shops also
+Homes earn rent, shops earn sales and farms earn crop sales. Level-up, quest and collection rewards are prize money, which is taxable too. Goods are inventory: buying a shipment isn't deductible, but each sale deducts what its goods cost (cost of goods sold). Shops also
 collect 7% sales tax from customers, which you hold for the state and hand
 over each quarter. Crops are sold wholesale, so they carry no sales tax, and
 the seeds you buy are a deductible farm expense. Every
 building owes property tax on its assessed value. On Tax Day, your income
 minus deductions is taxed using the real US 2024 brackets, scaled ÷10.
-Deductions are the standard deduction, seeds, cost of goods sold, running costs, property tax (on buildings and land) and depreciation. If a bill pushes your coins below zero, you're in tax debt,
+Deductions are the standard deduction, seeds, cost of goods sold, running costs, property tax (on buildings and land) and depreciation. Materials and upgrades are added to a building's cost and depreciated, not deducted at once. If a bill pushes your coins below zero, you're in tax debt,
 and a 0.5% penalty is added each month until you've paid it off.
 [docs/TAXES.md](docs/TAXES.md) has the details.
 
@@ -102,6 +121,13 @@ src/
     land.ts               starting land and expansion prices
     terrain.ts            the coastline: which tiles are sea
     Docks.ts              shipments: ordering, sailing time, unloading
+    construction.ts       building levels, upgrade costs, starting materials
+    projects.ts           finishing construction and upgrading (checks everything first)
+    items.ts              construction materials
+    Inventory.ts          materials and collectibles, with what they cost
+    collections.ts        collectible sets, drops and rewards
+    quests.ts             quests, achievements and the stats behind them
+    ContextMenu.ts        the menu over a selected building
     utilityRules.ts       water, power and trash: demand, supply, effect on income (pure functions)
     communityRules.ts     location bonuses (parks, schools, roads) and road shapes (pure functions)
     Services.ts           keeps utilities and location bonuses current; pays running costs monthly
@@ -133,6 +159,14 @@ src/
     TownPanel.ts          the Town window: population and utilities
     WelcomeBackPanel.ts   the "Welcome back" summary
     DockPanel.ts          ordering shipments at a dock
+    Sheet.ts              the slide-up Sheet and centered Modal every window uses
+    BuildMenu.ts          the build menu, with thumbnails and a preview
+    thumbnails.ts         draws building pictures with three.js
+    BuildingPanel.ts      building details and actions
+    QuestsPanel.ts        quests, progress, achievements
+    InventoryPanel.ts     stored buildings, materials, goods, collectibles
+    CollectionsPanel.ts   collection sets and rewards
+    MapPanel.ts           the world map
     dom.ts                small DOM helpers
 public/models/            3D models served as-is (Kenney City Kit, CC0)
 assets-src/               raw downloaded asset packs (git-ignored)
@@ -154,8 +188,8 @@ docs/                     the docs linked above
 | 6 | ✅ | "Welcome back" summary, collect all, save upgrades |
 | 7 | ✅ | Roads (drag to draw, autotiled), parks, fire stations, schools, location bonuses |
 | 8 | ✅ | Coast and sea, goods and storage, docks and cargo ships, inventory and cost of goods sold |
-| 9 | ⏳ | Quests and goals |
-| 10 | | Land expansions, decorations that boost payouts |
+| 9 | ✅ | New interface (top bar, toolbar, sheets, context menu, building details, map); construction and materials, shop stock, upgrades, storing; quests, achievements, inventory, collections |
+| 10 | ⏳ | Decorations that boost payouts, more buildings and models |
 | 11 | | Simulated neighbors to visit and help |
 | 12 | | Polish (animation, sound, citizens) and deploy |
 

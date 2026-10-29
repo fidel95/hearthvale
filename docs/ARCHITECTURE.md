@@ -46,6 +46,66 @@ panel. Each of them is listening for `coins` and updates itself.
 passes it what it needs and runs the frame loop. If you want to know how two
 parts connect, start there.
 
+## Screens and windows
+
+The HUD (`ui/Hud.ts`) is a top bar of stat chips, each also a button, and a
+bottom toolbar. Everything else is a **Sheet** or a **Modal** (`ui/Sheet.ts`):
+
+- A Sheet slides up from the bottom (a drawer on the right on wide screens)
+  and leaves the city visible. Only one is open at a time, and tapping the map
+  closes it: `Builder.interceptClick` asks `Sheet.closeCurrent()` first.
+- A Modal is centered over a dimmed map, for level-ups, Tax Day and welcome back.
+
+Selecting works through Builder: tapping a building runs its *quick action*
+(`hasQuickAction`: collect, harvest, plant, restock, finish, unload) if it has
+one, and otherwise selects it. Selection shows the `ContextMenu` (an HTML label
+in the 3D scene, like the bubbles) and an outline; **Details** opens the
+`BuildingPanel` sheet, which redraws twice a second for its timers.
+
+Placing is two steps: tap to put a ghost down, then ✓ to buy (Builder's
+`pending` tile). Restoring a stored building uses the same flow with a
+`restore` mode.
+
+The build menu's pictures are drawn by three.js (`ui/thumbnails.ts`): one
+small offscreen renderer draws each model once and keeps a data URL. Each
+building object exposes `userData.ready`, a promise for when its model has
+loaded.
+
+## Construction, stock, upgrades and storing
+
+- **Construction.** A building with `build` data starts with
+  `construction: { endsAt }`. City treats it as not built: no income, no
+  storage, no utility use, no bonuses. When the timer is done, `projects.ts`
+  `finishConstruction` checks the materials, uses them from the `Inventory`
+  (getting their cost) and calls `City.finish`, which emits `finished`.
+- **Stock.** Shops have `stock` and `stockCapacity`. Sales take goods from the
+  shop's own stock; `City.restock` moves goods from town storage onto the
+  shelves. (For taxes that's a move within inventory, not a sale.)
+- **Upgrades.** `level` (1–3) multiplies income, residents, utility use and
+  shelf space by `levelFactor` (1, 1.5, 2). `upgradeBuilding` checks player
+  level, coins and materials, then `City.upgrade` emits `upgraded` with the
+  full cost.
+- **Storing.** `City.store` moves a building from the map to a `stored` map
+  (same object, same id), emitting `stored`; `restore` puts it back. Because
+  the id survives, the tax record (`Taxes.assets`) survives too, and because
+  `Taxes.accrue` only looks at buildings on the map, a stored one pays no
+  property tax and isn't depreciated.
+
+## Inventory, collections and quests
+
+- **Inventory** keeps stacks of items (materials and collectibles) with a
+  count *and a cost*, like goods. Using materials returns their average cost,
+  which becomes part of the building's basis.
+- **Collections** listens to City: collecting, harvesting, unloading and
+  finishing each have a chance to find an item from their set (it picks among
+  the items you have fewest of). Handing in a set pays a prize through
+  `City.awardCoins` (taxable), plus XP and energy. Its random function is
+  injectable for tests.
+- **Quests** keeps lifetime **stats** counted from events. A "do X" task
+  compares a stat with its value when the quest started; a "have X" task looks
+  at the town. Up to three quests are active; finished ones wait to be claimed.
+  **Achievements** are tiers on the same stats.
+
 ## Events
 
 State objects use a tiny observer pattern: `onChange(listener)` registers a
@@ -78,6 +138,12 @@ inside `switch (event.kind)`.
 | Taxes | `taxDay` | the yearly return is filed | Game → TaxPanel report |
 | Taxes | `penalty` | a late penalty is charged | Game → Hud toast |
 | Taxes | `changed` | anything in the books changed | TaxPanel, autosave |
+| City | `finished` | construction is finished | CityView (site → building), Taxes (in service, materials into basis), Player (XP), Quests, Collections |
+| City | `restocked` / `upgraded` | a shop's shelves were filled / a building went up a level | IncomeView, Taxes (upgrade into basis), Player (XP), Quests |
+| City | `stored` / `restored` | a building went into the inventory / back on the map | CityView, Services, Builder |
+| Inventory | `items` / `used` | items changed / materials were used | InventoryPanel, CollectionsPanel, autosave |
+| Collections | `found` / `completed` | an item turned up / a set was handed in | Game → pop-up or toast, Quests |
+| Quests | `questDone` / `claimed` / `achievement` | quest progress | Game → toast and Quests badge, QuestsPanel |
 
 Order matters in one place: listeners must be registered **before** the town is
 loaded, or they miss the `added` events. `Game`'s constructor creates the views
@@ -304,6 +370,9 @@ in the middle of the 60×60 world, and adds the starting lots.
   buildings and farm lines to the tax books; the loaders fill in defaults
   when they're missing (`crop: null`, `farmIncome: 0`), so older saves load as is.
   Stage 5 added `player`; a save without it starts at level 1 with full energy.
+  Stage 9 added `inventory`, `collections` and `quests`, and building `level`,
+  `stock`, `construction` and `stored`; older saves get the defaults (and the
+  starting materials).
 - **When:** `AutoSaver` saves one second after any change, batching bursts into
   one write, and immediately when the tab is hidden or closed (`pagehide`,
   `visibilitychange`).

@@ -2,6 +2,7 @@
 // lives here as plain data, so adding a building means adding an entry,
 // not writing new code.
 
+import type { Materials } from './items'
 import type { Utility } from './utilityRules'
 
 export type Category =
@@ -51,8 +52,13 @@ export interface BuildingType {
   upkeep?: number
   // Community buildings: homes and shops within `radius` tiles earn `bonus` more (communityRules.ts).
   amenity?: { bonus: number; radius: number }
-  // Shops: goods used up by each sale (they can't sell without them).
+  // Shops: goods used up by each sale (they can't sell without them), and how
+  // many goods their shelves hold (filled from town storage by restocking).
   goodsPerSale?: number
+  stockCapacity?: number
+  // Bigger buildings take time to build and need materials to finish
+  // (construction.ts). Without this, a building is ready the moment it's placed.
+  build?: { seconds: number; materials?: Materials }
   // Room for this many more goods in the town's storage.
   storage?: number
   // Must be built on the shore, next to the sea (docks).
@@ -90,6 +96,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     size: { x: 2, z: 2 },
     cost: 250,
     unlockLevel: 3,
+    build: { seconds: 60, materials: { lumber: 3 } },
     income: { coins: 35, seconds: 60 },
     residents: 3,
     needs: { water: 3, power: 3, trash: 3 },
@@ -103,6 +110,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     size: { x: 2, z: 2 },
     cost: 400,
     unlockLevel: 6,
+    build: { seconds: 120, materials: { bricks: 4, lumber: 4 } },
     income: { coins: 50, seconds: 90 },
     residents: 4,
     needs: { water: 4, power: 4, trash: 4 },
@@ -116,6 +124,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     size: { x: 2, z: 2 },
     cost: 600,
     unlockLevel: 8,
+    build: { seconds: 180, materials: { bricks: 4, glass: 4, steel: 2 } },
     income: { coins: 80, seconds: 120 },
     residents: 4,
     needs: { water: 4, power: 5, trash: 3 },
@@ -129,8 +138,10 @@ export const BUILDING_TYPES: BuildingType[] = [
     size: { x: 2, z: 2 },
     cost: 300,
     unlockLevel: 2,
+    build: { seconds: 60, materials: { bricks: 3 } },
     income: { coins: 40, seconds: 45 },
     goodsPerSale: 4,
+    stockCapacity: 40,
     needs: { water: 2, power: 3, trash: 2 },
     placeholder: { shape: 'shop', color: '#f6e7c8', accent: '#d9822b', height: 1 },
   },
@@ -141,8 +152,10 @@ export const BUILDING_TYPES: BuildingType[] = [
     size: { x: 3, z: 2 },
     cost: 500,
     unlockLevel: 5,
+    build: { seconds: 120, materials: { lumber: 4, glass: 2 } },
     income: { coins: 75, seconds: 90 },
     goodsPerSale: 7,
+    stockCapacity: 70,
     needs: { water: 2, power: 4, trash: 3 },
     placeholder: { shape: 'shop', color: '#e3e3e3', accent: '#3a8f5c', height: 1.2 },
   },
@@ -197,6 +210,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     size: { x: 2, z: 2 },
     cost: 250,
     unlockLevel: 2,
+    build: { seconds: 90, materials: { steel: 4 } },
     supplies: { utility: 'water', amount: 20 },
     upkeep: 15,
     recoveryYears: 25, // water utility property
@@ -209,6 +223,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     size: { x: 3, z: 2 },
     cost: 500,
     unlockLevel: 3,
+    build: { seconds: 180, materials: { steel: 6, bricks: 4 } },
     supplies: { utility: 'power', amount: 30 },
     upkeep: 30, // fuel makes it expensive to run
     recoveryYears: 20, // electric utility steam production plant
@@ -221,6 +236,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     size: { x: 2, z: 2 },
     cost: 300,
     unlockLevel: 3,
+    build: { seconds: 120, materials: { steel: 3, bricks: 3 } },
     supplies: { utility: 'trash', amount: 20 },
     upkeep: 20,
     recoveryYears: 7, // waste reduction and resource recovery plants
@@ -233,6 +249,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     size: { x: 3, z: 3 },
     cost: 1200,
     unlockLevel: 6,
+    build: { seconds: 240, materials: { glass: 8, steel: 4 } },
     supplies: { utility: 'power', amount: 25 },
     upkeep: 5, // no fuel: cheap to run
     recoveryYears: 5, // solar energy property gets a short 5-year period
@@ -246,6 +263,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     size: { x: 2, z: 2 },
     cost: 150,
     unlockLevel: 2,
+    build: { seconds: 60, materials: { lumber: 6 } },
     storage: 150,
     recoveryYears: 20, // farm buildings
     placeholder: { shape: 'barn', color: '#b5432f', accent: '#f2ead8', height: 1.1 },
@@ -257,6 +275,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     size: { x: 3, z: 2 },
     cost: 500,
     unlockLevel: 5,
+    build: { seconds: 180, materials: { steel: 6, lumber: 4 } },
     storage: 400,
     needs: { power: 1 },
     placeholder: { shape: 'warehouse', color: '#9aa3ad', accent: '#5b6570', height: 1 },
@@ -269,6 +288,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     size: { x: 3, z: 2 },
     cost: 800,
     unlockLevel: 4,
+    build: { seconds: 180, materials: { lumber: 10, steel: 4 } },
     onShore: true,
     storage: 100,
     upkeep: 10,
@@ -293,6 +313,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     size: { x: 2, z: 2 },
     cost: 200,
     unlockLevel: 3,
+    build: { seconds: 60, materials: { lumber: 3 } },
     needs: { water: 1 },
     upkeep: 5,
     amenity: { bonus: 0.1, radius: 4 },
@@ -306,6 +327,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     size: { x: 2, z: 2 },
     cost: 600,
     unlockLevel: 4,
+    build: { seconds: 180, materials: { bricks: 8, steel: 2 } },
     needs: { water: 2, power: 2, trash: 1 },
     upkeep: 20,
     amenity: { bonus: 0.1, radius: 6 },
@@ -318,6 +340,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     size: { x: 3, z: 2 },
     cost: 900,
     unlockLevel: 5,
+    build: { seconds: 240, materials: { bricks: 10, lumber: 6, glass: 4 } },
     needs: { water: 3, power: 3, trash: 2 },
     upkeep: 30,
     amenity: { bonus: 0.15, radius: 6 },

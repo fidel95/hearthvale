@@ -219,6 +219,35 @@ function createPlaceholder(type: BuildingType): THREE.Group {
   return group
 }
 
+// ---- Construction sites ----
+
+// What a building looks like while it's being built: a dirt pad, a half-built
+// grey shell inside a timber frame, and a couple of traffic cones.
+export function createConstructionSite(type: BuildingType): THREE.Group {
+  const w = type.size.x
+  const d = type.size.z
+  const group = new THREE.Group()
+  const add = (geometry: THREE.BufferGeometry, color: string, x: number, y: number, z: number) => {
+    geometry.computeBoundingBox()
+    const mesh = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({ color, flatShading: true }))
+    mesh.position.set(x, y - geometry.boundingBox!.min.y, z)
+    mesh.castShadow = true
+    mesh.receiveShadow = true
+    group.add(mesh)
+  }
+  add(new THREE.BoxGeometry(w * 0.95, 0.04, d * 0.95), '#9b7a52', 0, 0, 0)
+  add(new THREE.BoxGeometry(w * 0.6, 0.35, d * 0.6), '#b8b2a7', 0, 0.04, 0)
+  const h = 0.9
+  for (const [x, z] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
+    add(new THREE.BoxGeometry(0.06, h, 0.06), '#d9a85e', (x * w * 0.38), 0.04, (z * d * 0.38))
+  }
+  add(new THREE.BoxGeometry(w * 0.8, 0.05, 0.06), '#d9a85e', 0, h, -d * 0.38)
+  add(new THREE.BoxGeometry(w * 0.8, 0.05, 0.06), '#d9a85e', 0, h, d * 0.38)
+  add(new THREE.ConeGeometry(0.07, 0.18, 8), '#f07a2a', w * 0.42, 0.04, d * 0.45)
+  add(new THREE.ConeGeometry(0.07, 0.18, 8), '#f07a2a', -w * 0.42, 0.04, d * 0.45)
+  return group
+}
+
 // ---- Crops ----
 //
 // A plot of crops is dozens of little plants, each made of a few shapes. As

@@ -163,6 +163,28 @@ the return as "Utility operating costs" and comes off your income before
 brackets apply. Building a plant: depreciated over years. Running it: deducted
 right away. That pair is one of the central ideas in business taxes.
 
+## 3d. Construction, improvements and idle property
+
+**Real rules:**
+
+- The cost of building something includes its materials, so they're added to
+  its **basis** and recovered through depreciation, not deducted when bought.
+- Depreciation starts when an asset is **placed in service**: for a new
+  building, when it's finished, not when construction begins.
+- An improvement that makes a building better or bigger (an upgrade) is a
+  capital expense: added to the basis and depreciated. (A repair would be
+  deducted; the game has no repairs.)
+
+**In the game:**
+
+| What happens | Tax effect |
+|---|---|
+| Buy materials | Nothing deducted: they're held at cost in the Inventory |
+| Finish construction | The materials' cost is added to the building's basis; depreciation starts that month (mid-month convention) |
+| Under construction | No depreciation yet (property tax still accrues, on its cost) |
+| Upgrade (coins + materials) | Whole cost added to the basis; the building earns more, so it's assessed higher |
+| Store a building | Off the land, so no property tax; not in service, so no depreciation; its record waits for it |
+
 ## 4. Farm income and expenses
 
 **Real rule:** farmers report crop sales and farm costs on Schedule F. Most
@@ -265,7 +287,8 @@ exactly 0.22 more.
 contest prize, a game-show win or a raffle. They go on the return as "other
 income".
 
-**In the game:** the coins you get for reaching a level are prize money. They
+**In the game:** the coins you get for reaching a level, finishing a quest or
+handing in a collection are prize money. They
 appear on the return as "Prizes (level-up rewards)" and are part of gross
 income, so they're taxed at your marginal rate like everything else. Reaching
 level 10 pays 250 coins; at a 12% marginal rate, 30 of those go to income tax.
