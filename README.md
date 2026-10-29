@@ -121,6 +121,7 @@ the right on a wide screen) so the town stays in view.
 - **Sound and help:** sound effects and optional music (Settings), and ❓ for help on every topic. 🎯 or the Home key brings the camera back to your town.
 - **Your save:** saved automatically in this browser. Settings has Save now, Export (download a copy) and Import. Clearing site data deletes the save, so export a copy to keep it safe.
 - **Admin tools:** Settings → Admin tools adds a 🛠️ button: give yourself coins, levels and materials, finish every timer, run the calendar 10× or 60× faster, or switch on powers (build anything free and instantly, unlimited energy, everything ready at once).
+- **Building several at once:** after Place, tap a spot for each one (tap a spot again to take it back), then ✓ or "Buy N · 🪙 total" buys them all; coins, fit and room for residents are checked for the whole set.
 - **Removing roads:** tap a road and 🗑️ Remove, then tap or drag along more roads to pick several and remove them together; it warns if a shop would lose its road.
 - **Phones in landscape:** the toolbar moves to a slim column on the left and windows open down the right side, so the map stays visible; the map fills the screen around the notch.
 - **Moving buildings:** press and hold a building, or drag the selected one, and let go where it should go. The outline shows where it fits; dragging to the screen's edge scrolls the map.

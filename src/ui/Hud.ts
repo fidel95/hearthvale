@@ -17,7 +17,7 @@ function hintFor(mode: Mode): string {
     case 'select':
       return ''
     case 'build':
-      return mode.type.category === 'road' ? 'Drag to draw road' : `Tap where the ${mode.type.name} should go`
+      return mode.type.category === 'road' ? 'Drag to draw road' : `Tap a spot for each ${mode.type.name}`
     case 'move':
       return 'Drag it, or tap where it should go'
     case 'restore':
@@ -134,7 +134,15 @@ export class Hud {
       removeRoads.textContent = `🗑️ Remove ${count}`
       removeRoads.disabled = count === 0
     }
-    hint.append(hintText, placeInfo, removeRoads, done)
+    // Building several: buy every spot picked, with the total.
+    const buy = el('button', 'hint-done hint-buy', '')
+    buy.addEventListener('click', () => builder.buySpots())
+    builder.onSpotsChanged = (count, total) => {
+      buy.hidden = count === 0
+      buy.textContent = builder.placement.freeBuild ? `✓ Place ${count}` : `✓ Buy ${count} · 🪙 ${total.toLocaleString()}`
+    }
+    buy.hidden = true
+    hint.append(hintText, placeInfo, buy, removeRoads, done)
     builder.onPlacementInfo = (text) => {
       placeInfo.textContent = text ?? ''
       placeInfo.hidden = !text

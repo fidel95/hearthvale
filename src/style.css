@@ -225,6 +225,10 @@ button {
   background: var(--bad);
 }
 
+.hint-done.hint-buy {
+  background: var(--good);
+}
+
 .hint-done:disabled {
   opacity: 0.5;
   cursor: default;

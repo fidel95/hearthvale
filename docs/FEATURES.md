@@ -58,6 +58,7 @@ Every item in the design spec, with its status and where it lives.
 | Preview before placing | ✅ | |
 | Validate coins, materials, free and owned footprint | ✅ | `PlacementSystem.check`; materials at construction (`projects.ts`) |
 | Deduct only on success; cancel costs nothing | ✅ | Paid on ✓ only (`confirmPlacement`) |
+| Several at once | ✅ | Tap a spot for each, then one ✓ buys them all; `PlacementSystem.checkMany` checks fit, overlaps, total cost and room together |
 | Move mode | ✅ | Press and hold a building (or drag the selected one) and drop it; or context menu → Move. Dragging to the screen's edge scrolls; a drop that doesn't fit puts it back |
 | Rotate | ✅ | ⟳ / R; footprint swaps |
 | Sell / remove with a stated refund | ✅ | Remove: no refund (and why, under US tax law) |
