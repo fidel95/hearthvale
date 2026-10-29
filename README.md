@@ -203,6 +203,8 @@ docs/                     the docs linked above
 | 7 | ✅ | Roads (drag to draw, autotiled), parks, fire stations, schools, location bonuses |
 | 8 | ✅ | Coast and sea, goods and storage, docks and cargo ships, inventory and cost of goods sold |
 | 9 | ✅ | New interface (top bar, toolbar, sheets, context menu, building details, map); construction and materials, shop stock, upgrades, storing; quests, achievements, inventory, collections |
+| 9.5 | ✅ | Balance pass: design principles, a generated balance worksheet (npm run balance), balance tests, one new mechanic per level, a safety-net grant |
+| 9.6 | ✅ | Data model: turning buildings, population capacity, settings, tutorial, save format version 3 |
 | 10 | ⏳ | Decorations that boost payouts, more buildings and models |
 | 11 | | Simulated neighbors to visit and help |
 | 12 | | Polish (animation, sound, citizens) and deploy |
