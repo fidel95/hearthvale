@@ -4,6 +4,7 @@ import { inBounds, tileToWorld, type Tile } from './grid'
 import { levelFactor } from './construction'
 import { findPath } from './pathfinding'
 import { isTrack } from './buildings'
+import { SIDEWALK } from './RoadView'
 import { isWater } from './terrain'
 
 // Residents walking around town. Purely for looks: nothing here changes the
@@ -26,6 +27,7 @@ interface Walker {
   step: number // index of the tile being walked away from
   t: number // progress toward the next tile, 0 to 1
   offset: THREE.Vector2 // a small sideways shift so walkers don't overlap exactly
+  side: 1 | -1 // which sidewalk they keep to along a road
   pause: number // seconds left standing still
   goingHome: boolean
   lingerSeconds: number | null // how long to stay at the destination, if it's somewhere people linger
@@ -131,6 +133,7 @@ export class PeopleView {
       step: 0,
       t: 0,
       offset: new THREE.Vector2((Math.random() - 0.5) * 0.5, (Math.random() - 0.5) * 0.5),
+      side: Math.random() < 0.5 ? 1 : -1,
       pause: 0,
       goingHome: false,
       lingerSeconds: null,
@@ -210,14 +213,37 @@ export class PeopleView {
     this.place(walker)
   }
 
+  // Where a walker stands on the i-th tile of their path. On grass, near the
+  // middle (with their own small offset). On a road, on the sidewalk: to one
+  // side of the way they're going, and at a turn, the corner of the sidewalk,
+  // so they walk round the edge and never down the middle of the road.
+  private spot(walker: Walker, i: number): THREE.Vector3 {
+    const path = walker.path
+    const tile = path[i]
+    const c = tileToWorld(tile)
+    if (!this.city.isRoad(tile)) return c.add(new THREE.Vector3(walker.offset.x, 0, walker.offset.y))
+    const step = (a: Tile, b: Tile) => ({ x: b.x - a.x, z: b.z - a.z })
+    const into = i > 0 ? step(path[i - 1], tile) : i + 1 < path.length ? step(tile, path[i + 1]) : { x: 1, z: 0 }
+    const out = i + 1 < path.length ? step(tile, path[i + 1]) : into
+    // To the right of a heading (x, z) is (−z, x); add both headings' sides.
+    let nx = -into.z - out.z
+    let nz = into.x + out.x
+    if (nx === 0 && nz === 0) [nx, nz] = [-into.z, into.x] // turning right round
+    const scale = (0.5 - SIDEWALK / 2) / Math.max(Math.abs(nx), Math.abs(nz))
+    return c.add(new THREE.Vector3(nx * scale * walker.side, 0, nz * scale * walker.side))
+  }
+
   // Put the walker's model where it is along its path, facing where it's going.
   private place(walker: Walker) {
-    const a = tileToWorld(walker.path[walker.step])
+    const a = this.spot(walker, walker.step)
     const next = walker.path[walker.step + 1]
     const walking = next !== undefined && walker.pause <= 0
-    const pos = walking ? a.clone().lerp(tileToWorld(next), walker.t) : a
-    walker.object.position.set(pos.x + walker.offset.x, walking ? Math.abs(Math.sin(walker.phase)) * 0.03 : 0, pos.z + walker.offset.y)
-    if (walking) walker.object.rotation.y = Math.atan2(next.x - walker.path[walker.step].x, next.z - walker.path[walker.step].z)
+    const pos = walking ? a.clone().lerp(this.spot(walker, walker.step + 1), walker.t) : a
+    walker.object.position.set(pos.x, walking ? Math.abs(Math.sin(walker.phase)) * 0.03 : 0, pos.z)
+    if (walking) {
+      const b = this.spot(walker, walker.step + 1)
+      walker.object.rotation.y = Math.atan2(b.x - a.x, b.z - a.z)
+    }
   }
 
   private remove(walker: Walker) {

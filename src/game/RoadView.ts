@@ -9,7 +9,10 @@ import { tileToWorld } from './grid'
 // roadMask in communityRules.ts. All the pieces are merged into one mesh per
 // color, so a town with hundreds of road tiles still costs only three draw calls.
 
-const COLORS = { asphalt: '#5d6168', curb: '#cfccc4', paint: '#f2f2f2' }
+const COLORS = { asphalt: '#5d6168', curb: '#d8d4cb', paint: '#f2f2f2' }
+// Sidewalks run along every edge with no road beyond it; people walk on them
+// (PeopleView) and cars keep to their lane inside them (TrafficView).
+export const SIDEWALK = 0.16
 const ROAD_TOP = 0.03
 
 // The four directions in mask order, as unit steps.
@@ -72,10 +75,10 @@ export class RoadView {
             }
           }
         } else {
-          // A curb along each side with no road beyond it.
-          const w = d.dx !== 0 ? 0.1 : 1
-          const depth = d.dz !== 0 ? 0.1 : 1
-          box('curb', w, 0.05, depth, c.x + d.dx * 0.45, 0, c.z + d.dz * 0.45)
+          // A raised sidewalk along each side with no road beyond it.
+          const w = d.dx !== 0 ? SIDEWALK : 1
+          const depth = d.dz !== 0 ? SIDEWALK : 1
+          box('curb', w, 0.05, depth, c.x + d.dx * (0.5 - SIDEWALK / 2), 0, c.z + d.dz * (0.5 - SIDEWALK / 2))
         }
       }
     }

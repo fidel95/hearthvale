@@ -1,9 +1,9 @@
 import * as THREE from 'three'
-import type { City, PlacedBuilding } from './City'
+import { sizeOf, type City, type PlacedBuilding } from './City'
 import { edgeTiles } from './communityRules'
-import { tileToWorld, type Tile } from './grid'
+import { footprintCenter, tileToWorld, type Tile } from './grid'
 import { findPath } from './pathfinding'
-import { nextTile, pathToFarthest, Polyline, reachable } from './routes'
+import { nextTile, pathToFarthest, Polyline } from './routes'
 
 // Everything that moves along roads and track: cars, buses, trains, and the
 // army's marching squad and patrol jeep. Purely for looks, like PeopleView:
@@ -16,8 +16,8 @@ import { nextTile, pathToFarthest, Polyline, reachable } from './routes'
 //   pausing at each; with a single stop, out to the far end and back.
 // - Trains: from the station to the far end of the line and back, pausing at
 //   each end; the locomotive pulls going out and pushes coming back.
-// - Army: six soldiers march two abreast from the base to a spot on the road
-//   network and back, and a jeep patrols like a car.
+// - Army: six soldiers drill on the base's parade ground, marching two
+//   abreast round it and halting now and then; a jeep patrols the roads.
 
 const MAX_CARS = 16
 const LANE = 0.17 // how far right of the middle of the road vehicles drive
@@ -169,9 +169,9 @@ export class TrafficView {
     const all = [...this.city.all()]
     const roads = all.filter((b) => b.type.category === 'road').length
     const residents = all.reduce((sum, b) => sum + (this.city.isBuilt(b) ? (b.type.residents ?? 0) : 0), 0)
-    const base = all.find((b) => b.type.id === 'army-base' && this.city.isOperating(b))
+    const base = all.find((b) => b.type.id === 'army-base' && this.city.isBuilt(b))
     this.wantCars = roads >= 3 ? Math.min(MAX_CARS, Math.floor(residents / 5)) : 0
-    this.wantJeep = base !== undefined
+    this.wantJeep = base !== undefined && this.city.isOperating(base) // the jeep needs a road out
     // Cars that lost their road leave; too many cars, the extras leave.
     for (const car of [...this.cars]) if (!this.city.isRoad(car.at) || !this.city.isRoad(car.to)) this.removeCar(car)
     while (this.cars.length > this.wantCars + (this.wantJeep ? 1 : 0)) this.removeCar(this.cars[this.cars.length - 1])
@@ -291,21 +291,26 @@ export class TrafficView {
 
   // ---- The army
 
+  // The squad drills inside the base: a loop round the parade ground, between
+  // the two barracks and past the flag (laid out to match the base's model,
+  // and turned with it), halting once a lap.
   private planSquad(base: PlacedBuilding) {
-    const start = edgeTiles(base).find(this.city.isRoad)
-    if (!start) return
-    // March to somewhere a fair way along the roads, and back.
-    const paths = [...reachable(start, this.city.isRoad).values()].filter((p) => p.length >= 6)
-    const path = paths.length > 0 ? pick(paths) : pathToFarthest(start, this.city.isRoad)
-    if (path.length < 3) return
-    const out = new Polyline(path.map(center))
-    const back = new Polyline([...path].reverse().map(center))
+    const middle = footprintCenter(base.tile, sizeOf(base))
+    const turn = (-base.rotation * Math.PI) / 2
+    const corners = [
+      [-1.0, -0.3],
+      [0.62, -0.3],
+      [0.62, 0.3],
+      [-1.0, 0.3],
+      [-1.0, -0.3],
+    ].map(([x, z]) => new THREE.Vector3(x, 0, z).applyAxisAngle(new THREE.Vector3(0, 1, 0), turn).add(middle))
+    const loop = new Polyline(corners.map((v) => ({ x: v.x, z: v.z })))
     const objects = Array.from({ length: 6 }, makeSoldier)
     for (const o of objects) this.scene.add(o)
     this.shuttles.push({
-      kind: 'squad', objects, lines: [out, back], line: 0, s: 0.8,
-      stops: [[out.length], [back.length]], nextStop: 0, pause: PAUSE.march, pauseFor: PAUSE.march,
-      speed: SPEED.march, spacing: 0.4, phase: 0,
+      kind: 'squad', objects, lines: [loop], line: 0, s: 0,
+      stops: [[loop.length]], nextStop: 0, pause: PAUSE.march, pauseFor: PAUSE.march,
+      speed: SPEED.march * 0.7, spacing: 0.32, phase: 0,
     })
   }
 
@@ -328,7 +333,7 @@ export class TrafficView {
       if (s.s >= line.length && s.pause <= 0) {
         // End of the line: a loop starts over; out-and-back turns around.
         s.line = (s.line + 1) % s.lines.length
-        s.s = s.kind === 'bus' ? 0 : s.spacing * (s.kind === 'train' ? s.objects.length - 1 : 2)
+        s.s = s.kind === 'train' ? s.spacing * (s.objects.length - 1) : 0
         s.nextStop = 0
       }
     }
@@ -343,11 +348,13 @@ export class TrafficView {
       }
       return
     }
-    // The squad: two abreast, in rows behind the leader, bobbing as they march.
+    // The squad: two abreast, in rows behind the leader round the loop,
+    // bobbing as they march.
     const bob = s.pause > 0 ? 0 : Math.abs(Math.sin(s.phase)) * 0.03
     s.objects.forEach((o, i) => {
       const row = Math.floor(i / 2)
-      place(o, line.at(s.s - row * s.spacing, i % 2 === 0 ? -0.12 : 0.12), bob)
+      const d = (((s.s - row * s.spacing) % line.length) + line.length) % line.length
+      place(o, line.at(d, i % 2 === 0 ? -0.1 : 0.1), bob)
     })
   }
 }

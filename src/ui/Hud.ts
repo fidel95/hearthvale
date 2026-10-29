@@ -231,6 +231,9 @@ export class Hud {
 
     hud.append(topbar, messages, toolbar, this.visitBar)
     container.append(hud)
+    // Hints and messages go just under the top bar, however many rows it
+    // wraps onto (two on a narrow phone).
+    new ResizeObserver(() => hud.style.setProperty('--topbar-bottom', `${topbar.offsetTop + topbar.offsetHeight}px`)).observe(topbar)
   }
 
   // Called every frame; only touches the DOM when something visible changed.

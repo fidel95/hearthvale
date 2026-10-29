@@ -407,7 +407,10 @@ back only at dead ends), `reachable` and `pathToFarthest` (breadth-first), and
 any distance along it, shifted into the right-hand lane. Cars step tile to
 tile; buses loop through their stops (found with A*); a train shuttles from
 the station to the end of the line, the locomotive pulling out and pushing
-back; the squad marches two abreast, out and back. Railway track is its own
+back; the squad drills two abreast round the base's parade ground. Roads
+have sidewalks along their edges (`SIDEWALK` in RoadView): walkers keep to
+one side, cutting each corner diagonally (`PeopleView.spot`), and cars keep
+to their lane inside them. Railway track is its own
 category (`rail`, the one new mechanic at level 14) and is drawn by `RailView`
 like roads; `isTrack()` covers both wherever roads and track behave alike
 (drawn by dragging, removed with the picker, walkable for residents).
