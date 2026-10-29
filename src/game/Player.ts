@@ -1,3 +1,4 @@
+import { Emitter } from './events'
 import type { BuildingType } from './buildings'
 import type { City, PlacedBuilding } from './City'
 import type { CropType } from './crops'
@@ -42,7 +43,7 @@ export class Player {
   private energyAt = 0
   private city: City
   private now: () => number
-  private listeners: ((event: PlayerEvent) => void)[] = []
+  private events = new Emitter<PlayerEvent>()
 
   // now is injectable so tests can control time; the game uses the real clock.
   constructor(city: City, now: () => number = Date.now) {
@@ -84,7 +85,7 @@ export class Player {
   }
 
   onChange(listener: (event: PlayerEvent) => void) {
-    this.listeners.push(listener)
+    this.events.on(listener)
   }
 
   get xp() {
@@ -103,10 +104,6 @@ export class Player {
 
   get maxEnergy() {
     return maxEnergy(this.level)
-  }
-
-  isUnlocked(item: { unlockLevel: number }): boolean {
-    return this.level >= item.unlockLevel
   }
 
   // Energy right now: what was stored plus one for every full regen period
@@ -195,6 +192,6 @@ export class Player {
   }
 
   private emit(event: PlayerEvent) {
-    for (const listener of this.listeners) listener(event)
+    this.events.emit(event)
   }
 }

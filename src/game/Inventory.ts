@@ -1,3 +1,4 @@
+import { Emitter } from './events'
 import type { City } from './City'
 import { MATERIALS, MATERIAL_IDS, type Materials } from './items'
 
@@ -23,14 +24,14 @@ export type InventoryEvent =
 export class Inventory {
   private stacks = new Map<string, Stack>()
   private city: City
-  private listeners: ((event: InventoryEvent) => void)[] = []
+  private events = new Emitter<InventoryEvent>()
 
   constructor(city: City) {
     this.city = city
   }
 
   onChange(listener: (event: InventoryEvent) => void) {
-    this.listeners.push(listener)
+    this.events.on(listener)
   }
 
   count(id: string): number {
@@ -120,6 +121,6 @@ export class Inventory {
   }
 
   private emit(event: InventoryEvent) {
-    for (const listener of this.listeners) listener(event)
+    this.events.emit(event)
   }
 }

@@ -1,3 +1,4 @@
+import { Emitter } from './events'
 import type { City } from './City'
 import type { Inventory } from './Inventory'
 import { MATERIALS } from './items'
@@ -40,7 +41,7 @@ export class Neighbors {
   private city: City
   private player: Player
   private inventory: Inventory
-  private listeners: ((event: NeighborsEvent) => void)[] = []
+  private events = new Emitter<NeighborsEvent>()
 
   constructor(city: City, player: Player, inventory: Inventory) {
     this.city = city
@@ -49,11 +50,11 @@ export class Neighbors {
   }
 
   onChange(listener: (event: NeighborsEvent) => void) {
-    this.listeners.push(listener)
+    this.events.on(listener)
   }
 
   get unlocked(): boolean {
-    return this.player.level >= NEIGHBORS_UNLOCK_LEVEL
+    return this.player.level >= NEIGHBORS_UNLOCK_LEVEL // the level is set in neighborData, listed in UnlockSystem
   }
 
   // A neighbor's town grows with yours.
@@ -90,7 +91,7 @@ export class Neighbors {
     s.friendship += HELP_REWARD.friendship
     this.city.economy.award(HELP_REWARD.coins, `Helping ${n.name}`)
     this.player.grantXp(HELP_REWARD.xp)
-    for (const listener of this.listeners) listener({ kind: 'helped' })
+    this.events.emit({ kind: 'helped' })
     this.emit()
     return true
   }
@@ -157,6 +158,6 @@ export class Neighbors {
   }
 
   private emit() {
-    for (const listener of this.listeners) listener({ kind: 'changed' })
+    this.events.emit({ kind: 'changed' })
   }
 }

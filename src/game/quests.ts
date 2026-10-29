@@ -1,3 +1,4 @@
+import { Emitter } from './events'
 import type { City } from './City'
 import type { Collections } from './collections'
 import type { Inventory } from './Inventory'
@@ -122,7 +123,7 @@ export class Quests {
   private announced = new Set<string>() // quests already reported as done this session
   private world: World
   private inventory: Inventory
-  private listeners: ((event: QuestsEvent) => void)[] = []
+  private events = new Emitter<QuestsEvent>()
 
   constructor(world: World, inventory: Inventory, collections: Collections, taxes: Taxes, neighbors?: Neighbors) {
     this.world = world
@@ -171,7 +172,7 @@ export class Quests {
   }
 
   onChange(listener: (event: QuestsEvent) => void) {
-    this.listeners.push(listener)
+    this.events.on(listener)
   }
 
   stat(id: StatId): number {
@@ -284,6 +285,6 @@ export class Quests {
   }
 
   private emit(event: QuestsEvent) {
-    for (const listener of this.listeners) listener(event)
+    this.events.emit(event)
   }
 }

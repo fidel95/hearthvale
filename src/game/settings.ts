@@ -1,3 +1,5 @@
+import { Emitter } from './events'
+
 // Player preferences, saved with the town. Each one is applied by whatever
 // it affects (Game wires them up), so adding a setting means adding a field
 // here, a row in the Settings sheet, and one line where it applies.
@@ -33,21 +35,21 @@ export const SETTING_LABELS: Record<SwitchSetting, string> = {
 
 export class SettingsStore {
   values: Settings = { ...DEFAULT_SETTINGS }
-  private listeners: ((settings: Settings) => void)[] = []
+  private events = new Emitter<Settings>()
 
   onChange(listener: (settings: Settings) => void) {
-    this.listeners.push(listener)
+    this.events.on(listener)
     listener(this.values)
   }
 
   set<K extends keyof Settings>(key: K, value: Settings[K]) {
     this.values[key] = value
-    for (const listener of this.listeners) listener(this.values)
+    this.events.emit(this.values)
   }
 
   load(saved: Partial<Settings>) {
     // Unknown or missing keys fall back to the defaults, so old saves and new settings both work.
     this.values = { ...DEFAULT_SETTINGS, ...saved }
-    for (const listener of this.listeners) listener(this.values)
+    this.events.emit(this.values)
   }
 }

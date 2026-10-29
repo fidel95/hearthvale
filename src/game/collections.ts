@@ -1,3 +1,4 @@
+import { Emitter } from './events'
 import type { City, CityEvent } from './City'
 import type { Inventory } from './Inventory'
 import type { ItemType } from './items'
@@ -117,7 +118,7 @@ export class Collections {
   private inventory: Inventory
   private player: Player
   private random: () => number
-  private listeners: ((event: CollectionsEvent) => void)[] = []
+  private events = new Emitter<CollectionsEvent>()
 
   // random is injectable so tests can decide what drops.
   constructor(city: City, inventory: Inventory, player: Player, random: () => number = Math.random) {
@@ -139,7 +140,7 @@ export class Collections {
   }
 
   onChange(listener: (event: CollectionsEvent) => void) {
-    this.listeners.push(listener)
+    this.events.on(listener)
   }
 
   timesCompleted(id: string): number {
@@ -174,6 +175,6 @@ export class Collections {
   }
 
   private emit(event: CollectionsEvent) {
-    for (const listener of this.listeners) listener(event)
+    this.events.emit(event)
   }
 }

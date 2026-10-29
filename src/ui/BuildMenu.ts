@@ -1,8 +1,9 @@
 import { BUILDING_TYPES, type BuildingType, type Category } from '../game/buildings'
 import type { City } from '../game/City'
 import { ROAD_BONUS } from '../game/communityRules'
+import type { PlacementSystem } from '../game/PlacementSystem'
 import type { Player } from '../game/Player'
-import type { Services } from '../game/Services'
+import type { UnlockSystem } from '../game/UnlockSystem'
 import { UTILITIES, UTILITY_INFO } from '../game/utilityRules'
 import { el } from './dom'
 import { Sheet, button } from './Sheet'
@@ -69,15 +70,20 @@ export class BuildMenu {
   private preview = el('div', 'build-preview')
   private cards: { card: HTMLButtonElement; status: HTMLElement; type: BuildingType }[] = []
   private chosen: BuildingType | null = null
-  private city: City
-  private player: Player
-  private services: Services
+  private placement: PlacementSystem
+  private unlocks: UnlockSystem
   private onPlace: (type: BuildingType) => void
 
-  constructor(container: HTMLElement, city: City, player: Player, services: Services, onPlace: (type: BuildingType) => void) {
-    this.city = city
-    this.player = player
-    this.services = services
+  constructor(
+    container: HTMLElement,
+    city: City,
+    player: Player,
+    placement: PlacementSystem,
+    unlocks: UnlockSystem,
+    onPlace: (type: BuildingType) => void,
+  ) {
+    this.placement = placement
+    this.unlocks = unlocks
     this.onPlace = onPlace
     this.sheet = new Sheet(container, '🔨 Build', 'build-sheet')
     this.sheet.body.append(this.tabs, this.grid)
@@ -135,12 +141,12 @@ export class BuildMenu {
   // Lock and price status on every card.
   private refresh() {
     for (const { card, status, type } of this.cards) {
-      const locked = !this.player.isUnlocked(type)
-      const short = type.cost - this.city.coins
-      const blocker = this.services.placementBlocker(type)
+      // The placement system says what's in the way; the menu only shows it.
+      const check = this.placement.check(type)
+      const locked = !this.unlocks.isUnlocked(type)
       card.classList.toggle('locked', locked)
-      card.classList.toggle('unaffordable', !locked && (short > 0 || blocker !== null))
-      status.textContent = locked ? `🔒 Reach level ${type.unlockLevel}` : short > 0 ? `Need 🪙 ${short.toLocaleString()} more` : (blocker ?? '')
+      card.classList.toggle('unaffordable', !locked && !check.ok)
+      status.textContent = check.problems[0] ?? ''
       status.hidden = status.textContent === ''
     }
     if (this.chosen) this.choose(this.chosen)
@@ -153,23 +159,14 @@ export class BuildMenu {
     this.sheet.footer.hidden = type === null
     if (!type) return
 
-    const locked = !this.player.isUnlocked(type)
-    const short = type.cost - this.city.coins
-    const blocker = this.services.placementBlocker(type)
+    const check = this.placement.check(type)
     const list = el('ul', 'build-details')
     for (const line of details(type)) list.append(el('li', '', line))
-    const place = button(
-      locked
-        ? `🔒 Reach level ${type.unlockLevel}`
-        : short > 0
-          ? `Need 🪙 ${short.toLocaleString()} more`
-          : (blocker ?? `Place for 🪙 ${type.cost.toLocaleString()}`),
-      () => {
-        this.sheet.close()
-        this.onPlace(type)
-      },
-    )
-    place.disabled = locked || short > 0 || blocker !== null
+    const place = button(check.problems[0] ?? `Place for 🪙 ${type.cost.toLocaleString()}`, () => {
+      this.sheet.close()
+      this.onPlace(type)
+    })
+    place.disabled = !check.ok
     const title = el('div', 'build-preview-title')
     title.append(el('strong', '', type.name), el('span', 'muted', ` · ${type.size.x}×${type.size.z} tiles`))
     this.preview.replaceChildren(title, list, place)

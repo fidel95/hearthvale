@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { BUILDINGS_BY_ID } from './buildings'
 import { City } from './City'
+import { PlacementSystem } from './PlacementSystem'
+import { Player } from './Player'
 import { Services } from './Services'
+import { UnlockSystem } from './UnlockSystem'
 
 const at = (x: number, z: number) => ({ x: 20 + x, z: 20 + z })
 const b = (id: string) => BUILDINGS_BY_ID.get(id)!
@@ -36,17 +39,22 @@ describe('landmarks', () => {
   it('need a minimum rating, and only one of each can be built', () => {
     const city = new City()
     const services = new Services(city)
+    const player = new Player(city)
+    player.grantXp(100_000) // high enough level to build landmarks
+    city.economy.adjust(10_000)
+    const placement = new PlacementSystem(city, services, new UnlockSystem(player))
+    const problems = () => placement.check(tower).problems.join(' ')
     const tower = b('clock-tower')
     // A bare cottage, with no road or neighborhood around it, rates low.
     city.place(b('cottage'), at(0, 0), { free: true })
-    expect(services.placementBlocker(tower)).toMatch(/rating/)
+    expect(problems()).toMatch(/rating/)
     // A road and a tree make it a tidy little town.
     city.place(b('road'), at(2, 0), { free: true })
     city.place(b('oak-tree'), at(0, 2), { free: true })
     expect(services.rating().total).toBeGreaterThanOrEqual(tower.minRating!)
-    expect(services.placementBlocker(tower)).toBeNull()
+    expect(placement.check(tower).ok).toBe(true)
     city.place(tower, at(6, 6), { free: true })
-    expect(services.placementBlocker(tower)).toMatch(/already/)
+    expect(problems()).toMatch(/already/)
   })
 
   it('raise all rent and sales in town', () => {

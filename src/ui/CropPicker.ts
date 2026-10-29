@@ -63,7 +63,7 @@ export class CropPicker {
     this.list.replaceChildren(
       ...CROP_TYPES.map((crop) => {
         const item = el('button', 'catalog-item crop-item')
-        if (!this.player.isUnlocked(crop)) {
+        if (this.player.level < crop.unlockLevel) {
           item.disabled = true
           item.classList.add('locked')
           item.append(

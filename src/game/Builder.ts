@@ -8,8 +8,8 @@ import type { CityView } from './CityView'
 import { cropState } from './crops'
 import type { Docks } from './Docks'
 import { footprintCenter, worldToTile, type Tile } from './grid'
-import { edgeTiles } from './communityRules'
 import { createBuildingObject } from './models'
+import type { PlacementSystem } from './PlacementSystem'
 import type { Player } from './Player'
 
 // What a click on the map currently does.
@@ -60,9 +60,8 @@ export class Builder {
   onPlacementInfo?: (text: string | null) => void
   // Settings: when false, a tap buys and places right away, without the ✓ step.
   confirmPurchases = true
-  // Asked before placing: a reason it can't be built (no room for residents,
-  // one-of-a-kind already built, city rating too low), or null. Game wires it to Services.
-  placementBlocker: (type: BuildingType) => string | null = () => null
+  // Every placement rule (unlocks, coins, room, rating, fit, roads). Game sets it.
+  placement!: PlacementSystem
   private cityView: CityView
   private controls: CameraController
   private hoverTile: Tile | null = null
@@ -355,18 +354,17 @@ export class Builder {
         // Two steps: tap to put the building down, then ✓ to buy it (or tap
         // somewhere else to try another spot). Roads skip this: they're drawn.
         const anchor = anchorFor(mode.type, tile, this.rotation)
-        if (!this.player.isUnlocked(mode.type)) this.onNotice?.(`${mode.type.name} unlocks at level ${mode.type.unlockLevel}`)
-        else if (!this.city.canAfford(mode.type)) this.onNotice?.(`Not enough coins for a ${mode.type.name}`)
-        else if (this.placementBlocker(mode.type)) this.onNotice?.(this.placementBlocker(mode.type)!)
-        else if (!this.city.canPlace(mode.type, anchor, undefined, this.rotation)) this.onNotice?.(mode.type.onShore ? 'It must stand on the shore, next to the sea' : "It doesn't fit there")
+        const check = this.placement.check(mode.type, { tile: anchor, rotation: this.rotation })
+        if (!check.ok) this.onNotice?.(check.problems[0])
         else if (mode.type.category === 'road' || !this.confirmPurchases) this.city.place(mode.type, anchor, { rotation: this.rotation })
         else this.setPending(anchor)
         break
       }
       case 'restore': {
         const anchor = anchorFor(mode.building.type, tile, this.rotation)
-        if (this.city.canPlace(mode.building.type, anchor, undefined, this.rotation)) this.setPending(anchor)
-        else this.onNotice?.("It doesn't fit there")
+        const check = this.placement.check(mode.building.type, { tile: anchor, rotation: this.rotation }, { free: true })
+        if (check.ok) this.setPending(anchor)
+        else this.onNotice?.(check.problems[0])
         break
       }
       case 'move': {
@@ -434,15 +432,11 @@ export class Builder {
       const size = footprint(type, this.rotation)
       const anchor = this.pending ?? anchorFor(type, tile, this.rotation)
       const ignoreId = this.mode.kind === 'move' ? this.mode.carrying.id : undefined
-      // Moving and restoring are free; building new needs the coins.
-      const affordable = this.mode.kind !== 'build' || this.city.canAfford(type)
-      const fits = this.city.canPlace(type, anchor, ignoreId, this.rotation)
-      const color = affordable && fits ? COLORS.ok : COLORS.blocked
+      // Moving and restoring are free; building new is checked in full.
+      const check = this.placement.check(type, { tile: anchor, rotation: this.rotation, ignoreId }, { free: this.mode.kind !== 'build' })
+      const color = check.ok ? COLORS.ok : COLORS.blocked
       // Say it in words too: color alone isn't enough for everyone.
-      const needsRoad = type.requiresRoad && !edgeTiles({ type, tile: anchor, rotation: this.rotation }).some(this.city.isRoad)
-      this.onPlacementInfo?.(
-        !affordable ? '✗ Not enough coins' : !fits ? "✗ Doesn't fit here" : needsRoad ? '⚠ Fits, but needs a road beside it to open' : '✓ Fits here',
-      )
+      this.onPlacementInfo?.(!check.ok ? `✗ ${check.problems[0]}` : check.warnings.length ? `⚠ Fits, but ${check.warnings[0].toLowerCase()}` : '✓ Fits here')
       this.showFootprint(anchor, size, color)
       this.ghostMaterial.color.set(color)
       this.ghost!.position.copy(footprintCenter(anchor, size))

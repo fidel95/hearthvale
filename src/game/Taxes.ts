@@ -1,3 +1,4 @@
+import { Emitter } from './events'
 import type { City, PlacedBuilding } from './City'
 import { levelFactor } from './construction'
 import type { GameClock } from './GameClock'
@@ -122,7 +123,7 @@ export class Taxes {
   private city: City
   private clock: GameClock
   private assets = new Map<number, Asset>()
-  private listeners: ((event: TaxEvent) => void)[] = []
+  private events = new Emitter<TaxEvent>()
 
   constructor(city: City, clock: GameClock) {
     this.city = city
@@ -205,7 +206,7 @@ export class Taxes {
   }
 
   onChange(listener: (event: TaxEvent) => void) {
-    this.listeners.push(listener)
+    this.events.on(listener)
   }
 
   // Called by the game once for every in-game month that ends.
@@ -400,6 +401,6 @@ export class Taxes {
   }
 
   private emit(event: TaxEvent) {
-    for (const listener of this.listeners) listener(event)
+    this.events.emit(event)
   }
 }

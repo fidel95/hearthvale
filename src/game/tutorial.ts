@@ -1,3 +1,4 @@
+import { Emitter } from './events'
 import type { City, CityEvent } from './City'
 
 // A short guided start for a brand-new town: each step asks for one thing,
@@ -72,7 +73,7 @@ export interface TutorialSave {
 export class Tutorial {
   step = 0
   skipped = false
-  private listeners: (() => void)[] = []
+  private events = new Emitter<void>()
 
   private city: City
 
@@ -84,7 +85,7 @@ export class Tutorial {
   }
 
   onChange(listener: () => void) {
-    this.listeners.push(listener)
+    this.events.on(listener)
   }
 
   get current(): TutorialStep | null {
@@ -118,6 +119,6 @@ export class Tutorial {
   }
 
   private emit() {
-    for (const listener of this.listeners) listener()
+    this.events.emit(undefined)
   }
 }

@@ -1,4 +1,4 @@
-import type { BuildingType } from './buildings'
+import { Emitter } from './events'
 import type { City, PlacedBuilding } from './City'
 import { cityRating, type CityRating } from './cityRating'
 import { locationBonus, type LocationBonus } from './communityRules'
@@ -18,7 +18,7 @@ export class Services {
   report: ServiceReport
   private bonuses = new Map<number, LocationBonus>()
   private city: City
-  private listeners: ((event: ServicesEvent) => void)[] = []
+  private events = new Emitter<ServicesEvent>()
 
   constructor(city: City) {
     this.city = city
@@ -34,7 +34,7 @@ export class Services {
   }
 
   onChange(listener: (event: ServicesEvent) => void) {
-    this.listeners.push(listener)
+    this.events.on(listener)
   }
 
   // Landmarks' bonus to all rent and sales.
@@ -59,16 +59,6 @@ export class Services {
       hasRoad: (b) => this.city.hasRoadAccess(b as PlacedBuilding),
       debt: this.city.debt,
     })
-  }
-
-  // Can this building be placed, apart from coins and space? A reason if not.
-  placementBlocker(type: BuildingType): string | null {
-    if (type.unique && [...this.city.all(), ...this.city.storedBuildings()].some((b) => b.type.id === type.id)) {
-      return `You already have the ${type.name}`
-    }
-    if (type.minRating && this.rating().total < type.minRating) return `Needs a city rating of ${type.minRating} (now ${this.rating().total})`
-    if (!this.roomFor(type.residents ?? 0)) return 'No room for more residents: build a Park, Fire Station or School'
-    return null
   }
 
   // Is there room in town for this many more residents?
@@ -108,6 +98,6 @@ export class Services {
   }
 
   private emit(event: ServicesEvent) {
-    for (const listener of this.listeners) listener(event)
+    this.events.emit(event)
   }
 }

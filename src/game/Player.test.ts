@@ -3,6 +3,7 @@ import { BUILDINGS_BY_ID } from './buildings'
 import { City } from './City'
 import { CROPS_BY_ID } from './crops'
 import { Player, type PlayerEvent } from './Player'
+import { UnlockSystem } from './UnlockSystem'
 import { ENERGY_REGEN_MS, maxEnergy } from './progression'
 
 // Tests use tiles relative to the starting land, which begins at tile 20 on both axes.
@@ -69,8 +70,11 @@ describe('Player XP', () => {
 
   it('knows what is unlocked', () => {
     const { player } = setup()
-    expect(player.isUnlocked(cottage)).toBe(true)
-    expect(player.isUnlocked(BUILDINGS_BY_ID.get('townhouse')!)).toBe(false)
+    const unlocks = new UnlockSystem(player)
+    expect(unlocks.isUnlocked(cottage)).toBe(true)
+    expect(unlocks.isUnlocked(BUILDINGS_BY_ID.get('townhouse')!)).toBe(false)
+    expect(unlocks.hasFeature('neighbors')).toBe(false)
+    expect(unlocks.at(7).features).toContain('neighbors')
   })
 })
 

@@ -36,6 +36,8 @@ import { Quests } from './quests'
 import { Neighbors } from './Neighbors'
 import type { Neighbor } from './neighborData'
 import { Visit } from './Visit'
+import { PlacementSystem } from './PlacementSystem'
+import { UnlockSystem } from './UnlockSystem'
 import { GRANT, canClaimGrant } from './safetyNet'
 import { CROPS_BY_ID } from './crops'
 import { Docks } from './Docks'
@@ -83,6 +85,8 @@ export class Game {
   private collections = new Collections(this.city, this.inventory, this.player)
   private quests!: Quests
   private neighbors = new Neighbors(this.city, this.player, this.inventory)
+  private unlocks = new UnlockSystem(this.player)
+  private placement = new PlacementSystem(this.city, this.services, this.unlocks)
   private visit: Visit | null = null
   private homeView: THREE.Vector3 | null = null // where the camera was before a visit
   private settings = new SettingsStore()
@@ -150,7 +154,9 @@ export class Game {
     const taxPanel = new TaxPanel(container, this.city, this.taxes, this.clock)
     const townPanel = new TownPanel(container, this.city, this.services)
     const help = new HelpPanel(container, () => this.tutorial.load({ step: 0, skipped: false }))
-    const buildMenu = new BuildMenu(container, this.city, this.player, this.services, (type) => builder.setMode({ kind: 'build', type }))
+    const buildMenu = new BuildMenu(container, this.city, this.player, this.placement, this.unlocks, (type) =>
+      builder.setMode({ kind: 'build', type }),
+    )
     const notice = (message: string) => this.hud.toast(message)
     const inventoryPanel = new InventoryPanel(container, this.city, this.inventory, (b) => builder.setMode({ kind: 'restore', building: b }), notice)
     const collectionsPanel = new CollectionsPanel(container, this.collections, this.inventory)
@@ -407,7 +413,7 @@ export class Game {
       if (!result.ok && result.reason === 'materials') this.buildingPanel.open(b)
     }
     builder.onFinishRequest = finish
-    builder.placementBlocker = (type) => this.services.placementBlocker(type)
+    builder.placement = this.placement
     this.docks.speedBonus = () => this.services.shipSpeedBonus()
     this.buildingPanel = new BuildingPanel(
       container,
