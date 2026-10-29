@@ -420,6 +420,20 @@ roll, a Catmull-Rom curve round the town, landing roll, turn round) in the
 airport's own coordinates, then turns and moves it to where the airport
 stands. It banks the plane by how fast its heading changes.
 
+## The army
+
+`Army.ts` holds the one rule that touches the books: a parade costs coins (an
+operating expense), adds +10% to all rent and sales for three minutes (through
+`Services.extraTownBonus`), and needs a ten-minute rest before the next; it's
+saved as `army.lastParadeAt`. `ArmyView` is the life of each base, for looks:
+soldiers with jointed arms and legs run a drill (march, form up, salute while
+the flag is raised, jumping jacks, push-ups, a run, at ease), easing from one
+part to the next; the flag's cloth ripples vertex by vertex; a sentry scans
+from the tower; a helicopter spins up, circles the town and lands; and during a
+parade the squad marches out along the roads behind a flag bearer and a
+drummer and comes home when it ends. Positions on the base (`ARMY_BASE` in
+models.ts) are shared with the model.
+
 ## Leisure, mountains and weather
 
 `LeisureView` adds people having fun, for looks only: sunbathers on each

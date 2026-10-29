@@ -50,6 +50,8 @@ import { RoadView } from './RoadView'
 import { TrafficView } from './TrafficView'
 import { FlightView } from './FlightView'
 import { LeisureView } from './LeisureView'
+import { ArmyView } from './ArmyView'
+import { PARADE } from './Army'
 import { addMountains } from './MountainView'
 import { WeatherView } from './WeatherView'
 import { ShipView } from './ShipView'
@@ -111,6 +113,7 @@ export class Game {
   private trafficView: TrafficView
   private flightView: FlightView
   private leisureView: LeisureView
+  private armyView: ArmyView
   private weather: WeatherView
   private ambient = new THREE.HemisphereLight('#e8f4ff', '#8fbf6a', 1.3)
   private landView: LandView
@@ -156,6 +159,7 @@ export class Game {
     this.trafficView = new TrafficView(this.scene, this.city)
     this.flightView = new FlightView(this.scene, this.city)
     this.leisureView = new LeisureView(this.scene, this.city)
+    this.armyView = new ArmyView(this.scene, this.city, this.state.army)
     addMountains(this.scene)
     this.weather = new WeatherView(this.scene, () => this.controls.target, [this.sun, this.ambient])
     const builder = new Builder(this.scene, this.city, this.player, this.docks, this.cityView, this.controls, this.renderer.domElement)
@@ -230,6 +234,7 @@ export class Game {
       this.trafficView.setVisible(s.showTraffic)
       this.flightView.setVisible(s.showTraffic)
       this.leisureView.setVisible(s.showPeople)
+      this.armyView.setVisible(s.showTraffic)
       this.weather.enabled = s.weather
       this.weather.showDrops = !s.reduceMotion
       builder.confirmPurchases = s.confirmPurchases
@@ -330,6 +335,7 @@ export class Game {
     this.trafficView.update(Math.min(dt, 100) / 1000)
     this.flightView.update(Math.min(dt, 100) / 1000)
     this.leisureView.update(Math.min(dt, 100) / 1000)
+    this.armyView.update(Math.min(dt, 100) / 1000)
     this.weather.update(Math.min(dt, 100) / 1000)
     this.sound.setRain(this.weather.intensity)
     this.controls.update(Math.min(dt, 100) / 1000)
@@ -458,6 +464,7 @@ export class Game {
     this.contextMenu = new ContextMenu(this.scene, this.cityView, this.incomeView, [
       { icon: 'ℹ️', label: 'Details', run: (b) => this.buildingPanel.open(b) },
       { icon: '✋', label: 'Move', run: move },
+      { icon: '🎖️', label: 'Parade', run: () => this.holdParade(), when: (b) => b.type.id === 'army-base' && this.city.isBuilt(b) },
       { icon: '⟳', label: 'Turn', run: (b) => builder.turnPlaced(b), when: (b) => !isTrack(b.type) },
       { icon: '🎒', label: 'Store', run: store, when: (b) => canStore(b, this.city, this.docks) },
       { icon: '🗑️', label: 'Remove', run: remove },
@@ -535,6 +542,22 @@ export class Game {
       },
     })
     return this.admin
+  }
+
+  // The Army Base's Parade button (Army.ts has the rules).
+  private holdParade() {
+    const result = this.state.army.holdParade(Date.now())
+    if (result.ok) {
+      this.hud.toast(`🎖️ Parade! The squad marches through town: +${PARADE.bonus * 100}% to all rent and sales for ${PARADE.durationMs / 60_000} minutes.`)
+      return
+    }
+    const message =
+      result.reason === 'no-base'
+        ? 'The squad needs a road out of the base to parade.'
+        : result.reason === 'coins'
+          ? `A parade costs 🪙 ${PARADE.cost}.`
+          : `The troops are resting. Next parade in ${Math.ceil((result.waitMs ?? 0) / 60_000)} min.`
+    this.hud.toast(message, 'warn')
   }
 
   // Make everything that's waiting ready now: construction, income, crops, ships.

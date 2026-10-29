@@ -46,6 +46,7 @@ export class SaveSystem {
       tutorial: s.tutorial.toSave(),
       safetyNet: { lastGrantAt: s.safetyNet.lastGrantAt },
       neighbors: s.neighbors.toSave(),
+      army: s.army.toSave(),
     }
   }
 
@@ -65,6 +66,7 @@ export class SaveSystem {
     s.tutorial.load(save.tutorial)
     s.safetyNet.lastGrantAt = save.safetyNet.lastGrantAt
     if (save.neighbors) s.neighbors.load(save.neighbors)
+    s.army.load(save.army)
   }
 
   // Load the town saved in this browser, or start a new one. Returns when it
@@ -92,5 +94,6 @@ export class SaveSystem {
     s.neighbors.onChange(changed)
     s.tutorial.onChange(changed)
     s.settings.onChange(changed)
+    s.army.onChange(changed)
   }
 }

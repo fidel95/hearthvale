@@ -326,6 +326,10 @@ depreciates quickly while the station takes decades. An **airport** is mostly
 runway, taxiways and aprons, which are land improvements (asset class 00.3,
 15 years), so the game depreciates it over 15.
 
+An **army parade** is a running cost of the town's own (like utility
+upkeep): it's paid in coins and recorded as an operating expense, so it's
+deducted in full that year.
+
 **In the game:** coins never go below zero. A bill bigger than the coins you
 have takes them all, and the rest is owed (shown as "owe" beside your coins).
 Income pays what's owed before it reaches your coins. Each month you're in debt, 0.5% of it (at least

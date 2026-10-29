@@ -183,6 +183,16 @@ function fitToFootprint(model: THREE.Object3D, type: BuildingType): THREE.Object
   return wrapper
 }
 
+// Where things are on the Army Base, in its own coordinates (center at the
+// origin, before it's turned), shared by the model and ArmyView's soldiers,
+// flag, sentry and helicopter. The parade ground runs between the barracks.
+export const ARMY_BASE = {
+  flag: { x: 0.9, z: 0, top: 1.3, bottom: 0.35 },
+  pad: { x: 1.0, z: 0.85 },
+  tower: { x: 1.15, z: -1.15, floor: 1.12 },
+  ground: { x0: -1.0, x1: 0.62, z0: -0.3, z1: 0.3 },
+}
+
 // The Ski Resort's mountain, in the building's own coordinates (its center
 // at the origin): a cone with its peak over (cx, cz). Skiers ride on it and
 // the lift climbs it (LeisureView), so they share these numbers with the model.
@@ -325,8 +335,12 @@ function createPlaceholder(type: BuildingType): THREE.Group {
         const roof = new THREE.CylinderGeometry(0.3, 0.3, w * 0.55, 8, 1, false, 0, Math.PI).rotateZ(Math.PI / 2)
         add(roof, '#55613b', -0.35, 0.04 + height * 0.5, z)
       }
-      add(new THREE.CylinderGeometry(0.025, 0.025, height * 1.6, 6), '#dddddd', 0.9, 0.04, 0)
-      add(new THREE.BoxGeometry(0.32, 0.2, 0.02), '#2f7fe0', 1.07, height * 1.35, 0)
+      // The flagpole (ArmyView flies the flag, so it can wave and be raised)
+      // and a helipad with an H, where ArmyView's helicopter lands.
+      add(new THREE.CylinderGeometry(0.025, 0.025, height * 1.6, 6), '#dddddd', ARMY_BASE.flag.x, 0.04, ARMY_BASE.flag.z)
+      add(new THREE.CylinderGeometry(0.38, 0.38, 0.012, 24), '#5b6570', ARMY_BASE.pad.x, 0.04, ARMY_BASE.pad.z)
+      for (const dz of [-0.1, 0.1]) add(new THREE.BoxGeometry(0.22, 0.005, 0.04), '#ffffff', ARMY_BASE.pad.x, 0.052, ARMY_BASE.pad.z + dz)
+      add(new THREE.BoxGeometry(0.04, 0.005, 0.2), '#ffffff', ARMY_BASE.pad.x, 0.052, ARMY_BASE.pad.z)
       for (const [x, z] of [[1.15, -1.15]]) {
         for (const [lx, lz] of [[-0.12, -0.12], [0.12, -0.12], [-0.12, 0.12], [0.12, 0.12]]) {
           add(new THREE.BoxGeometry(0.04, height * 1.2, 0.04), '#6b4a2f', x + lx, 0.04, z + lz)

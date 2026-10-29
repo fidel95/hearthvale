@@ -7,6 +7,7 @@ import type { UnlockSystem } from '../game/UnlockSystem'
 import { UTILITIES, UTILITY_INFO } from '../game/utilityRules'
 import { el } from './dom'
 import { Sheet, button } from './Sheet'
+import { PARADE } from '../game/Army'
 import { thumbnail } from './thumbnails'
 
 // The build menu: tabs by kind of building, a card for each with a picture,
@@ -58,7 +59,10 @@ function details(type: BuildingType): string[] {
   if (type.id === 'rail') lines.push('Drag to lay track. A Train Station beside it runs a train to the end of the line and back')
   if (type.requiresRail) lines.push('🛤️ Needs railway track touching one of its sides; its train runs along the track')
   if (type.id === 'bus-stop') lines.push('🚌 Buses drive from stop to stop on your roads')
-  if (type.id === 'army-base') lines.push('🪖 A squad drills on the parade ground and a jeep patrols the roads')
+  if (type.id === 'army-base') {
+    lines.push('🪖 A squad drills on the parade ground, a sentry keeps watch, a helicopter flies, and a jeep patrols')
+    lines.push(`🎖️ Hold a parade (🪙 ${PARADE.cost}): +${PARADE.bonus * 100}% to all rent and sales for ${PARADE.durationMs / 60_000} minutes`)
+  }
   if (type.id === 'airport') lines.push('✈️ Planes take off, fly round the town and land')
   if (type.id === 'public-beach') lines.push('🏖️ Sunbathers and swimmers come when it isn\'t raining')
   if (type.id === 'ski-resort') lines.push('⛷️ Skiers ski down and ride the chairlift back up')

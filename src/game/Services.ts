@@ -38,8 +38,11 @@ export class Services {
   }
 
   // Landmarks' bonus to all rent and sales.
+  // Anything else lifting the whole town for a while (an army parade). GameState sets it.
+  extraTownBonus: () => number = () => 0
+
   townBonus(): number {
-    let bonus = 0
+    let bonus = this.extraTownBonus()
     for (const b of this.city.all()) if (this.city.isOperating(b)) bonus += b.type.townBonus ?? 0
     return bonus
   }

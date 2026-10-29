@@ -1,7 +1,7 @@
 import * as THREE from 'three'
-import { sizeOf, type City, type PlacedBuilding } from './City'
+import type { City, PlacedBuilding } from './City'
 import { edgeTiles } from './communityRules'
-import { footprintCenter, tileToWorld, type Tile } from './grid'
+import { tileToWorld, type Tile } from './grid'
 import { findPath } from './pathfinding'
 import { nextTile, pathToFarthest, Polyline } from './routes'
 
@@ -16,13 +16,12 @@ import { nextTile, pathToFarthest, Polyline } from './routes'
 //   pausing at each; with a single stop, out to the far end and back.
 // - Trains: from the station to the far end of the line and back, pausing at
 //   each end; the locomotive pulls going out and pushes coming back.
-// - Army: six soldiers drill on the base's parade ground, marching two
-//   abreast round it and halting now and then; a jeep patrols the roads.
+// - Army: a jeep patrols the roads (the base's own life is ArmyView).
 
 const MAX_CARS = 16
 const LANE = 0.17 // how far right of the middle of the road vehicles drive
-const SPEED = { car: 1.8, bus: 1.3, train: 2.2, march: 0.8 } // tiles per second
-const PAUSE = { bus: 2.5, train: 3, march: 3 } // seconds stopped at each stop or end
+const SPEED = { car: 1.8, bus: 1.3, train: 2.2 } // tiles per second
+const PAUSE = { bus: 2.5, train: 3 } // seconds stopped at each stop or end
 const CAR_COLORS = ['#e0453a', '#2f7fe0', '#f2c230', '#f5f5f5', '#3fae6b', '#8a56d6', '#f08a24', '#2b2d33', '#e85d9b']
 const OLIVE = '#5f6b3a'
 
@@ -42,10 +41,6 @@ const GEOMETRY = {
   locoChimney: new THREE.CylinderGeometry(0.04, 0.05, 0.12, 8).translate(0.24, 0.3, 0),
   carriage: box(0.72, 0.2, 0.22, 0, 0.06),
   carriageWindows: box(0.6, 0.06, 0.226, 0, 0.16),
-  legs: box(0.08, 0.12, 0.06),
-  torso: new THREE.CylinderGeometry(0.06, 0.07, 0.15, 6).translate(0, 0.195, 0),
-  head: new THREE.IcosahedronGeometry(0.055, 0).translate(0, 0.32, 0),
-  helmet: new THREE.SphereGeometry(0.065, 8, 4, 0, Math.PI * 2, 0, Math.PI / 2).translate(0, 0.335, 0),
 }
 const materials = new Map<string, THREE.MeshLambertMaterial>()
 function material(color: string) {
@@ -77,16 +72,6 @@ const makeJeep = () => build([[GEOMETRY.jeepBody, OLIVE], [GEOMETRY.jeepBar, '#3
 const makeBus = () => build([[GEOMETRY.busBody, '#f2c230'], [GEOMETRY.busWindows, '#2b3a4a']], [-0.25, 0.25])
 const makeLoco = () => build([[GEOMETRY.locoBody, '#d23c32'], [GEOMETRY.locoCab, '#8f2a24'], [GEOMETRY.locoChimney, '#2b2d33']], [-0.22, 0.22])
 const makeCarriage = (color: string) => build([[GEOMETRY.carriage, color], [GEOMETRY.carriageWindows, '#fff4d6']], [-0.22, 0.22])
-function makeSoldier(): THREE.Group {
-  const s = build([
-    [GEOMETRY.legs, '#3b4226'],
-    [GEOMETRY.torso, OLIVE],
-    [GEOMETRY.head, pick(['#f1c9a5', '#d9a47c', '#a86f4c', '#6b4430'])],
-    [GEOMETRY.helmet, '#4a5530'],
-  ])
-  s.scale.setScalar(1.4)
-  return s
-}
 
 const center = (t: Tile) => {
   const c = tileToWorld(t)
@@ -121,7 +106,7 @@ interface Shuttle {
   pauseFor: number
   speed: number
   spacing: number // distance between the train's carriages, or the squad's rows
-  kind: 'bus' | 'train' | 'squad'
+  kind: 'bus' | 'train'
   phase: number
 }
 
@@ -182,7 +167,6 @@ export class TrafficView {
     this.shuttles = []
     this.planBuses(all)
     this.planTrain(all)
-    if (base) this.planSquad(base)
   }
 
   private clearAll() {
@@ -291,29 +275,6 @@ export class TrafficView {
 
   // ---- The army
 
-  // The squad drills inside the base: a loop round the parade ground, between
-  // the two barracks and past the flag (laid out to match the base's model,
-  // and turned with it), halting once a lap.
-  private planSquad(base: PlacedBuilding) {
-    const middle = footprintCenter(base.tile, sizeOf(base))
-    const turn = (-base.rotation * Math.PI) / 2
-    const corners = [
-      [-1.0, -0.3],
-      [0.62, -0.3],
-      [0.62, 0.3],
-      [-1.0, 0.3],
-      [-1.0, -0.3],
-    ].map(([x, z]) => new THREE.Vector3(x, 0, z).applyAxisAngle(new THREE.Vector3(0, 1, 0), turn).add(middle))
-    const loop = new Polyline(corners.map((v) => ({ x: v.x, z: v.z })))
-    const objects = Array.from({ length: 6 }, makeSoldier)
-    for (const o of objects) this.scene.add(o)
-    this.shuttles.push({
-      kind: 'squad', objects, lines: [loop], line: 0, s: 0,
-      stops: [[loop.length]], nextStop: 0, pause: PAUSE.march, pauseFor: PAUSE.march,
-      speed: SPEED.march * 0.7, spacing: 0.32, phase: 0,
-    })
-  }
-
   // ---- Moving along a route
 
   private runShuttle(s: Shuttle, dt: number) {
@@ -346,15 +307,6 @@ export class TrafficView {
         const object = s.line === 0 ? s.objects[i] : s.objects[n - 1 - i]
         place(object, line.at(s.s - i * s.spacing))
       }
-      return
     }
-    // The squad: two abreast, in rows behind the leader round the loop,
-    // bobbing as they march.
-    const bob = s.pause > 0 ? 0 : Math.abs(Math.sin(s.phase)) * 0.03
-    s.objects.forEach((o, i) => {
-      const row = Math.floor(i / 2)
-      const d = (((s.s - row * s.spacing) % line.length) + line.length) % line.length
-      place(o, line.at(d, i % 2 === 0 ? -0.1 : 0.1), bob)
-    })
   }
 }
