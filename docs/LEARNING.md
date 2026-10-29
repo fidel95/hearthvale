@@ -605,6 +605,27 @@ the `*.test.ts` files, and [TAXES.md](TAXES.md)
 - **Never lose a save.** An unreadable save is set aside, explained, and can
   be downloaded, instead of silently replaced.
 
+## Refactor: one home per responsibility
+
+**Files:** `GameState.ts`, `SaveSystem.ts`, `Economy.ts`, `ProductionSystem.ts`,
+`PlacementSystem.ts`, `UnlockSystem.ts`, `events.ts`
+
+- **Split by reason to change.** City held buildings, coins and every
+  production action. Now `city.economy` changes when money rules change,
+  `city.production` when timers do, and City itself only when the map does.
+- **Mechanical renames, safety net of tests.** About 150 call sites moved from
+  `city.collect(` to `city.production.collect(`. A search-and-replace plus the
+  type checker plus 170 tests made that a ten-minute job, not a risky one.
+- **One question, one answer.** The build menu, the builder and the ghost
+  preview each had their own "can I place this?" logic. `PlacementSystem.check`
+  returns every reason once; the screens just show `problems[0]`.
+- **Quotes for the interface.** `upgradeQuote` and `landQuote` use the same
+  checks as the actions, so a button can't be enabled when the action would
+  refuse.
+- **State without a screen.** `GameState` is the whole game with no three.js or
+  DOM, so a test can build a town, save it, load it into a fresh one and check
+  the two saves match exactly.
+
 ---
 
 ## Coming next

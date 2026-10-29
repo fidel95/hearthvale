@@ -129,7 +129,14 @@ src/
   main.ts                 entry point: creates the Game
   style.css               all styling (HUD, labels, panels)
   game/
-    Game.ts               creates and wires everything; the frame loop
+    Game.ts               puts views and windows on the game state; the frame loop
+    GameState.ts          every game system, with no rendering (used by saves and tests)
+    SaveSystem.ts         which system owns which part of the save, and restore order
+    events.ts             the typed event emitter every system uses
+    Economy.ts            coins, goods and debt (never negative)
+    ProductionSystem.ts   collect, restock, plant, harvest, finish, upgrade (timestamps)
+    PlacementSystem.ts    can it go here: every placement rule, with reasons
+    UnlockSystem.ts       what's available at the player's level
     grid.ts               tile ↔ world coordinate math
     buildings.ts          the building catalog (pure data)
     crops.ts              the crop catalog and crop stages (empty → growing → ripe → withered)
@@ -159,11 +166,11 @@ src/
     offline.ts            what happened while you were away (for the welcome-back window)
     progression.ts        XP, level and energy rules (pure functions)
     Player.ts             the player's XP, level and energy over time
-    City.ts               town state: coins, buildings, occupancy, income timers
+    City.ts               the town: buildings, occupancy, land, roads (owns its economy and production)
     GameClock.ts          the in-game calendar (play time, not wall time)
     taxRules.ts           tax rates, brackets and formulas (pure functions)
     Taxes.ts              the tax books: ledger, quarterly/yearly payments, penalties
-    save.ts               localStorage save/load and autosave
+    save.ts               save storage: localStorage, versions, backups, export/import, autosave
     CameraController.ts   pan, zoom, pinch, click detection
     CityView.ts           keeps 3D objects in sync with City
     LandView.ts           the ground, owned land and "for sale" signs
@@ -193,6 +200,7 @@ src/
     MapPanel.ts           the world map
     Coach.ts              the tutorial's instruction card
     HelpPanel.ts          help topics
+    SettingsPanel.ts      settings, saving, export / import
     DebugPanel.ts         development tools
     sound.ts              sound effects and music, made with Web Audio
   data/

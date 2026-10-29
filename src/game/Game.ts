@@ -10,6 +10,7 @@ import { MapPanel } from '../ui/MapPanel'
 import { neighborsList } from '../ui/NeighborsList'
 import { DebugPanel } from '../ui/DebugPanel'
 import { HelpPanel } from '../ui/HelpPanel'
+import { SettingsPanel } from '../ui/SettingsPanel'
 import { Sound } from '../ui/sound'
 import { QuestsPanel } from '../ui/QuestsPanel'
 import { el } from '../ui/dom'
@@ -22,26 +23,19 @@ import { TownPanel } from '../ui/TownPanel'
 import { WelcomeBackPanel } from '../ui/WelcomeBackPanel'
 import { TaxPanel } from '../ui/TaxPanel'
 import { Builder } from './Builder'
-import { BUILDINGS_BY_ID } from './buildings'
 import { CameraController } from './CameraController'
-import { City, type PlacedBuilding } from './City'
+import type { PlacedBuilding } from './City'
 import { CityView } from './CityView'
-import { STARTING_MATERIALS } from './construction'
-import { Collections } from './collections'
 import { ContextMenu } from './ContextMenu'
-import { Inventory } from './Inventory'
 import { MATERIAL_IDS, materialsText } from './items'
 import { finishConstruction, upgradeBuilding, type ProjectResult } from './projects'
-import { Quests } from './quests'
-import { Neighbors } from './Neighbors'
 import type { Neighbor } from './neighborData'
 import { Visit } from './Visit'
-import { PlacementSystem } from './PlacementSystem'
-import { UnlockSystem } from './UnlockSystem'
 import { GRANT, canClaimGrant } from './safetyNet'
 import { CROPS_BY_ID } from './crops'
-import { Docks } from './Docks'
-import { GameClock, MONTH_NAMES } from './GameClock'
+import { MONTH_NAMES } from './GameClock'
+import { GameState } from './GameState'
+import { SaveSystem } from './SaveSystem'
 import { LOT_FOOTPRINT, footprintCenter, lotCorner, tileToWorld, worldToTile, type Lot } from './grid'
 import { IncomeView } from './IncomeView'
 import { LandView } from './LandView'
@@ -49,14 +43,13 @@ import { WELCOME_BACK_AFTER_MS, awaySummary } from './offline'
 import { PeopleView } from './PeopleView'
 import { RoadView } from './RoadView'
 import { ShipView } from './ShipView'
-import { Player } from './Player'
-import { Services } from './Services'
-import { STARTING_TOWN } from './land'
-import { AutoSaver, citySave, clearSave, downloadText, importSave, readSave, unreadableBackup } from './save'
-import { SETTING_LABELS, SettingsStore, type SwitchSetting } from './settings'
-import { Tutorial } from './tutorial'
-import { Taxes } from './Taxes'
+import { AutoSaver } from './save'
 import { UTILITY_INFO } from './utilityRules'
+
+// In development, ?speed=60 makes a game month last one second.
+function devSpeed(): number {
+  return import.meta.env.DEV ? Number(new URLSearchParams(location.search).get('speed')) || 1 : 1
+}
 
 // How many world units of the map fit vertically on screen at zoom 1.
 const VIEW_SIZE = 24
@@ -76,23 +69,26 @@ export class Game {
   private controls: CameraController
   private sun = new THREE.DirectionalLight('#fff4e0', 2)
 
-  // Game state: the town, the player's progress, the calendar and the tax books.
-  private city = new City()
-  private player = new Player(this.city)
-  private services = new Services(this.city)
-  private docks = new Docks(this.city)
-  private inventory = new Inventory(this.city)
-  private collections = new Collections(this.city, this.inventory, this.player)
-  private quests!: Quests
-  private neighbors = new Neighbors(this.city, this.player, this.inventory)
-  private unlocks = new UnlockSystem(this.player)
-  private placement = new PlacementSystem(this.city, this.services, this.unlocks)
+  // Every game system (GameState.ts), and the save (SaveSystem.ts). The
+  // short names below are just for convenience in this file.
+  private state = new GameState(devSpeed())
+  private saves = new SaveSystem(this.state)
+  private city = this.state.city
+  private player = this.state.player
+  private services = this.state.services
+  private docks = this.state.docks
+  private inventory = this.state.inventory
+  private collections = this.state.collections
+  private quests = this.state.quests
+  private neighbors = this.state.neighbors
+  private unlocks = this.state.unlocks
+  private placement = this.state.placement
+  private settings = this.state.settings
+  private tutorial = this.state.tutorial
+  private clock = this.state.clock
+  private taxes = this.state.taxes
   private visit: Visit | null = null
   private homeView: THREE.Vector3 | null = null // where the camera was before a visit
-  private settings = new SettingsStore()
-  private tutorial = new Tutorial(this.city)
-  private clock: GameClock
-  private taxes: Taxes
 
   // Views and UI that react to the state.
   private cityView: CityView
@@ -127,10 +123,6 @@ export class Game {
 
     this.addLights()
 
-    // In development, ?speed=60 makes a game month last one second.
-    const speed = import.meta.env.DEV ? Number(new URLSearchParams(location.search).get('speed')) || 1 : 1
-    this.clock = new GameClock(speed)
-
     // Everything that listens to City must exist before the town is loaded,
     // or it misses the 'added' events.
     const landView = new LandView(this.scene, this.city)
@@ -139,14 +131,6 @@ export class Game {
     this.cityView = new CityView(this.scene, this.city)
     this.peopleView = new PeopleView(this.scene, this.city)
     this.roadView = new RoadView(this.scene, this.city)
-    this.taxes = new Taxes(this.city, this.clock)
-    this.quests = new Quests(
-      { city: this.city, player: this.player, services: this.services },
-      this.inventory,
-      this.collections,
-      this.taxes,
-      this.neighbors,
-    )
     const builder = new Builder(this.scene, this.city, this.player, this.docks, this.cityView, this.controls, this.renderer.domElement)
     this.incomeView = new IncomeView(this.scene, this.city, this.cityView, this.services, this.docks, (b) => builder.tap(b))
     builder.onHoverBuilding = (b) => this.incomeView.setHovered(b)
@@ -199,7 +183,7 @@ export class Game {
       onOpenMap: () => mapPanel.open(),
       onOpenTaxes: () => taxPanel.open(),
       onOpenTown: () => townPanel.open(),
-      onOpenSettings: () => this.openSettings(container),
+      onOpenSettings: () => this.settingsPanel.open(),
       onOpenHelp: () => help.open(),
       onRecenter: () => this.recenter(),
       onOpenDebug: import.meta.env.DEV ? () => this.debugPanel(container).open() : undefined,
@@ -208,8 +192,6 @@ export class Game {
     new Coach(container, this.tutorial)
     this.controls.onMove = () => this.tutorial.complete('camera')
     this.hud.onGoHome = () => this.endVisit()
-    this.neighbors.onChange(() => this.saver.requestSave())
-    this.tutorial.onChange(() => this.saver.requestSave())
     // Apply settings now and whenever they change.
     this.settings.onChange((s) => {
       this.sound.setVolume(s.soundVolume)
@@ -237,27 +219,10 @@ export class Game {
     const dockPanel = new DockPanel(container, this.city, this.docks, (message) => this.hud.toast(message))
     builder.onDockRequest = (dock) => dockPanel.open(dock)
 
-    this.saver = new AutoSaver(() => {
-      const city = this.city.toSave()
-      const report = this.services.report
-      return {
-        player: { ...this.player.toSave(), level: this.player.level },
-        resources: { coins: city.coins, goods: city.goods ?? 0, debt: city.debt ?? 0 },
-        population: { current: report.population, capacity: report.capacity },
-        land: { parcels: city.lots },
-        buildings: { nextId: city.nextId, list: city.buildings },
-        quests: this.quests.toSave(),
-        inventory: { items: this.inventory.toSave(), collections: this.collections.toSave() },
-        shipments: this.docks.toSave(),
-        taxes: this.taxes.toSave(),
-        calendar: { playedMs: this.clock.playedMs },
-        settings: this.settings.values,
-        tutorial: this.tutorial.toSave(),
-        safetyNet: { lastGrantAt: this.lastGrantAt },
-        neighbors: this.neighbors.toSave(),
-      }
-    })
-    const leftAt = this.loadOrSeed()
+    this.saver = new AutoSaver(() => this.saves.toSave())
+    this.settingsPanel = new SettingsPanel(container, this.settings, this.saver, (message, kind) => this.hud.toast(message, kind))
+    const { savedAt: leftAt, problem } = this.saves.restoreOrStart()
+    this.loadProblem = problem
     this.setUpSounds(builder)
     if (this.loadProblem) {
       const notice = new Modal(container)
@@ -267,10 +232,7 @@ export class Game {
     this.setUpSafetyNet(container)
     this.setUpWelcomeBack(container, builder, leftAt)
     // Save shortly after anything changes.
-    this.city.onChange(() => this.saver.requestSave())
-    this.taxes.onChange(() => this.saver.requestSave())
-    this.player.onChange(() => this.saver.requestSave())
-    this.inventory.onChange(() => this.saver.requestSave())
+    this.saves.watch(() => this.saver.requestSave())
 
     window.addEventListener('resize', () => this.resize())
     this.resize()
@@ -316,37 +278,6 @@ export class Game {
   }
 
   // Returns when the player last left (the save's time), or null for a new town.
-  private loadOrSeed(): number | null {
-    const result = readSave()
-    this.loadProblem = result.save ? null : result.problem
-    const save = result.save
-    if (save) {
-      // Order matters: the clock first (Taxes reads it), then the town, then
-      // the tax books, which replace the records City's 'added' events created.
-      this.clock.playedMs = save.calendar.playedMs
-      this.city.load(citySave(save))
-      this.taxes.load(save.taxes)
-      this.player.load(save.player)
-      this.docks.load(save.shipments)
-      this.collections.load(save.inventory.collections)
-      if (save.quests) this.quests.load(save.quests)
-      this.inventory.load(save.inventory.items)
-      this.settings.load(save.settings)
-      this.tutorial.load(save.tutorial)
-      this.lastGrantAt = save.safetyNet.lastGrantAt
-      if (save.neighbors) this.neighbors.load(save.neighbors)
-      return save.savedAt
-    }
-    // A new town: the starting buildings and materials (land.ts, construction.ts).
-    const now = Date.now()
-    for (const start of STARTING_TOWN) {
-      const b = this.city.place(BUILDINGS_BY_ID.get(start.typeId)!, start.tile, { free: true })!
-      if (start.crop) this.city.production.plant(b.id, CROPS_BY_ID.get(start.crop.cropId)!, { now: now - start.crop.secondsIn * 1000, free: true })
-    }
-    for (const id of MATERIAL_IDS) this.inventory.add(id, STARTING_MATERIALS[id] ?? 0)
-    return null
-  }
-
   // Show what happened while you were away: when the game opens after a
   // while, and when you come back to a tab that's been hidden for a while.
   private setUpWelcomeBack(container: HTMLElement, builder: Builder, leftAt: number | null) {
@@ -460,89 +391,9 @@ export class Game {
     }
   }
 
-  private settingsSheet: Sheet | null = null
+  private settingsPanel!: SettingsPanel
   private loadProblem: string | null = null
   private sound = new Sound()
-
-  private openSettings(container: HTMLElement) {
-    if (!this.settingsSheet) {
-      const sheet = new Sheet(container, '⚙️ Settings')
-      for (const key of Object.keys(SETTING_LABELS) as SwitchSetting[]) {
-        const row = el('label', 'setting-row')
-        const box = el('input', '')
-        box.type = 'checkbox'
-        box.addEventListener('change', () => {
-          this.settings.set(key, box.checked)
-          this.saver.requestSave()
-        })
-        this.settings.onChange((s) => (box.checked = s[key]))
-        row.append(el('span', '', SETTING_LABELS[key]), box)
-        sheet.body.append(row)
-      }
-      // Volume: 0 mutes; the game is fully playable without sound.
-      const volumeRow = el('label', 'setting-row')
-      const volume = el('input', '')
-      volume.type = 'range'
-      volume.min = '0'
-      volume.max = '1'
-      volume.step = '0.1'
-      volume.setAttribute('aria-label', 'Sound volume')
-      volume.addEventListener('input', () => {
-        this.settings.set('soundVolume', Number(volume.value))
-        this.saver.requestSave()
-      })
-      this.settings.onChange((s) => (volume.value = String(s.soundVolume)))
-      volumeRow.append(el('span', '', '🔊 Sound volume (left = mute)'), volume)
-      sheet.body.append(volumeRow)
-
-      // Saving: manual save, export and import.
-      const saveNow = button('💾 Save now', () => this.hud.toast(this.saver.saveNow() ? 'Saved.' : "Couldn't save: the browser isn't allowing it.", 'info'), 'panel-button secondary')
-      const exportSave = button('⬇️ Export', () => {
-        const day = new Date().toISOString().slice(0, 10)
-        downloadText(`hearthvale-${day}.json`, JSON.stringify(this.saver.snapshot(), null, 2))
-      }, 'panel-button secondary')
-      const file = el('input', '')
-      file.type = 'file'
-      file.accept = 'application/json,.json'
-      file.hidden = true
-      file.addEventListener('change', async () => {
-        const chosen = file.files?.[0]
-        if (!chosen) return
-        if (!confirm('Replace your current town with the imported one?')) return
-        const problem = importSave(await chosen.text())
-        if (problem) this.hud.toast(problem, 'warn')
-        else {
-          this.saver.disable() // don't overwrite the import on the way out
-          location.reload()
-        }
-      })
-      const importButton = button('⬆️ Import', () => file.click(), 'panel-button secondary')
-      const tools = el('div', 'panel-buttons')
-      tools.append(saveNow, exportSave, importButton, file)
-      const backup = unreadableBackup()
-      sheet.body.append(
-        el('h3', 'level-subtitle', 'Your save'),
-        el(
-          'p',
-          'muted',
-          'Your town saves itself in this browser, on this device; nothing is sent anywhere. Clearing site data or private browsing deletes it, so export a copy to keep it safe.',
-        ),
-        tools,
-        ...(backup ? [button('Download the unreadable save that was set aside', () => downloadText('hearthvale-unreadable.json', backup), 'panel-button secondary')] : []),
-        el('p', 'muted', 'Models: City Kit (Suburban) by Kenney, CC0. Sounds are made by the game. Built with three.js.'),
-      )
-      sheet.setButtons(button('Start a new town', () => this.newTown(), 'panel-button danger'))
-      this.settingsSheet = sheet
-    }
-    this.settingsSheet.open()
-  }
-
-  private newTown() {
-    if (!confirm('Start a new town? Your current town will be deleted.')) return
-    this.saver.disable()
-    clearSave()
-    location.reload()
-  }
 
   private landPanel: LandPanel | null = null
 
@@ -633,7 +484,6 @@ export class Game {
     if (this.homeView) this.controls.centerOn(this.homeView)
     this.hud.setVisit(null)
   }
-  private lastGrantAt: number | null = null
 
   // The safety net (safetyNet.ts): if the town has nothing that earns and
   // can't afford anything that would, offer the county grant.
@@ -642,7 +492,7 @@ export class Game {
     let offered = false
     const check = () => {
       const now = Date.now()
-      if (!canClaimGrant(this.city, this.lastGrantAt, now)) {
+      if (!canClaimGrant(this.city, this.state.safetyNet.lastGrantAt, now)) {
         offered = false
         return
       }
@@ -656,7 +506,7 @@ export class Game {
         '🤝 A helping hand',
         button(`Accept 🪙 ${GRANT}`, () => {
           modal.close()
-          this.lastGrantAt = Date.now()
+          this.state.safetyNet.lastGrantAt = Date.now()
           this.city.economy.award(GRANT, 'County grant', { payDebt: false })
         }),
       )
@@ -674,7 +524,6 @@ export class Game {
       if (e.kind === 'questDone') this.hud.toast(`📜 Quest complete: ${e.quest.title}! Claim your reward in Quests.`)
       if (e.kind === 'achievement') this.hud.toast(`${e.achievement.icon} Achievement: ${e.achievement.name} ${'★'.repeat(e.tier)}`)
       badge()
-      if (e.kind !== 'changed') this.saver.requestSave()
     })
     badge()
   }
@@ -687,7 +536,6 @@ export class Game {
         else this.hud.toast(`${e.item.icon} Found a ${e.item.name} for your collections!`)
       }
       if (e.kind === 'completed') this.hud.toast(`🏆 ${e.collection.name} complete! Reward collected.`)
-      this.saver.requestSave()
     })
   }
 

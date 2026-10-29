@@ -42,9 +42,33 @@ This one-way flow is the same idea behind React, Redux and most game engines'
 remember to update the counter, the catalog's greyed-out buttons and the tax
 panel. Each of them is listening for `coins` and updates itself.
 
-`Game.ts` is the only file that knows about everything: it creates each piece,
-passes it what it needs and runs the frame loop. If you want to know how two
-parts connect, start there.
+`GameState.ts` creates every game system, and nothing that draws: it's the
+whole game without a screen, which is what the save and the tests use.
+`Game.ts` puts the views and windows on top of it and runs the frame loop.
+If you want to know how two parts connect, start with those two.
+
+## Systems and who owns what
+
+No file owns rendering, economy, quests, saving and the interface at once.
+Each responsibility has one home:
+
+| Responsibility | Where | What it does |
+|---|---|---|
+| Grid | `grid.ts`, `CameraController.ts` | Tile ↔ world coordinates (`tileToWorld`, `worldToTile`, footprints, lots); screen → ray → ground → tile |
+| PlacementSystem | `PlacementSystem.ts` | Can this building go here: unlocks, coins, one-of-a-kind, rating, room for residents, footprint, owned land, collisions, road warning. One answer, with reasons, for the build menu and the builder. (`City.canPlace` is the footprint part, which City also uses to protect its own state.) |
+| EconomySystem | `Economy.ts` (`city.economy`) | Coins, goods and debt: spending, income, bills, awards, expenses, deliveries. Enforces "never negative" in one place |
+| ProductionSystem | `ProductionSystem.ts` (`city.production`) | Collecting, restocking, planting, harvesting, clearing, finishing construction, upgrading, all from timestamps. `production.ts` turns time into a display state |
+| Projects | `projects.ts` | Actions that need several systems (materials + coins + level): finish, upgrade, buy land. Quotes say what they'd cost and whether they'd work, from the same checks |
+| QuestSystem | `quests.ts` + `src/data/quests.json` | Tracks objectives from events (City, Taxes, Collections, Neighbors, Player) |
+| ProgressionSystem | `progression.ts` (rules), `Player.ts` (state) | XP, levels, energy, level-up rewards paid once |
+| UnlockSystem | `UnlockSystem.ts` | What's available: buildings, crops and features by level |
+| SaveSystem | `SaveSystem.ts` (what's in a save, restore order), `save.ts` (storage, versions, backups, files) | Serializes and restores every system |
+| EventBus | `events.ts` (`Emitter`) | Each system has a typed channel for its own events (`placed`/`added`, `collected`, `harvested`, …); others subscribe. Typed channels, rather than one global bus, make each system's dependencies visible in its imports |
+| UI panels | `src/ui/` | Show state and send commands. They ask the systems (`placement.check`, `upgradeQuote`, `landQuote`, `production.payout`) rather than working out rules themselves |
+
+The other systems follow the same pattern: `Services` (utilities, location
+bonuses, the rating), `Taxes`, `Docks`, `Inventory`, `Collections`,
+`Neighbors`, `Tutorial`, `GameClock`.
 
 ## Screens and windows
 
@@ -99,7 +123,7 @@ loaded.
 - **Collections** listens to City: collecting, harvesting, unloading and
   finishing each have a chance to find an item from their set (it picks among
   the items you have fewest of). Handing in a set pays a prize through
-  `City.awardCoins` (taxable), plus XP and energy. Its random function is
+  `city.economy.award` (taxable), plus XP and energy. Its random function is
   injectable for tests.
 - **Quests** keeps lifetime **stats** counted from events. A "do X" task
   compares a stat with its value when the quest started; a "have X" task looks
@@ -114,15 +138,15 @@ loaded.
 - Shops have `requiresRoad`. `City.hasRoadAccess` applies one rule (a road on
   a tile touching a side), `isOperating` gates sales, and `cutOffBy(road)`
   lists what removing a road would disconnect.
-- Coins never go below zero. `City.bill()` pays what it can and adds the rest
-  to `debt`; `adjustCoins` sends income to the debt first and throws if
+- Coins never go below zero. `economy.bill()` pays what it can and adds the
+  rest to `debt`; `economy.adjust` sends income to the debt first and throws if
   spending would go negative (every purchase checks first, so that's a bug).
 
 ## Rating, landmarks, sound and saves
 
 - `cityRating.ts` adds up six parts from the town (`Services.rating()`); the
   Town window shows each. Landmarks have `unique`, `minRating` and
-  `townBonus`; `Services.placementBlocker` is the one check for room, one of a
+  `townBonus`; `PlacementSystem.check` is the one check for room, one of a
   kind and rating, used by the build menu and placement alike.
 - `sound.ts` synthesizes every sound with Web Audio oscillators and envelopes;
   Game plays them from events.
@@ -294,7 +318,7 @@ share met. `incomeMultiplier` turns that into how much of its income each
 building earns. `Services` recomputes the report when buildings are added or
 removed, plugs `City.incomeMultiplier` into it (so `City.collect` and
 `City.harvest` pay the reduced amount, and stay testable without Services),
-and pays running costs at each month's end via `City.payExpense`.
+and pays running costs at each month's end via `city.economy.expense`.
 
 Supply is town-wide, as if every building were connected to every pipe and
 wire. That keeps it understandable; coverage areas or pipes could come later.
@@ -394,7 +418,7 @@ period since then. When spending, the clock only moves forward by the whole
 periods already counted, so partial progress toward the next point is kept.
 
 Levels come from XP with a formula (`levelForXp`), never stored. Each new
-level calls `City.awardCoins`, which emits `award` so Taxes can record the
+level calls `city.economy.award`, which emits `award` so Taxes can record the
 prize as income.
 
 ## Saving
