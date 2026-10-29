@@ -1618,3 +1618,128 @@ button {
   outline: 3px solid #3f7fe0;
   outline-offset: 2px;
 }
+
+
+/* ---- Safe areas ----
+   The page fills the whole screen, under a phone's notch and rounded corners
+   too (viewport-fit=cover in index.html), so the map runs edge to edge. The
+   HUD keeps its buttons inside the "safe area" the browser reports. */
+
+.hud {
+  padding-top: max(10px, env(safe-area-inset-top));
+  padding-left: max(10px, env(safe-area-inset-left));
+  padding-right: max(10px, env(safe-area-inset-right));
+}
+
+.toolbar {
+  bottom: calc(12px + env(safe-area-inset-bottom));
+}
+
+.sheet {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* ---- Phones held sideways ----
+   Landscape phones are wide but short: a bottom toolbar and bottom sheets
+   would cover a third of the map. Instead the toolbar becomes a slim column
+   on the left, windows open as a panel down the right side, and everything
+   gets a little more compact. */
+
+@media (orientation: landscape) and (max-height: 520px) {
+  .hud {
+    padding-top: max(6px, env(safe-area-inset-top));
+  }
+
+  .chip {
+    min-height: 30px;
+    padding: 3px 9px;
+    font-size: 13px;
+  }
+
+  .topbar-stats,
+  .topbar-right {
+    gap: 4px;
+  }
+
+  .hud-top {
+    top: 46px;
+  }
+
+  .toolbar {
+    left: max(8px, env(safe-area-inset-left));
+    top: 50%;
+    bottom: auto;
+    translate: 0 -50%;
+    flex-direction: column;
+    padding: 4px;
+    border-radius: 14px;
+  }
+
+  .tool {
+    min-width: 54px;
+    padding: 4px 4px 3px;
+    font-size: 10px;
+  }
+
+  .tool-icon {
+    font-size: 18px;
+  }
+
+  .sheet {
+    left: auto;
+    right: max(8px, env(safe-area-inset-right));
+    top: 46px;
+    bottom: 6px;
+    translate: none;
+    width: min(440px, 56%);
+    max-height: none;
+    padding-bottom: 0;
+    border-radius: 16px;
+    border-bottom: 1px solid var(--border);
+    animation-name: sheet-in;
+  }
+
+  .sheet-header {
+    padding: 8px 14px;
+  }
+
+  .sheet-body {
+    padding: 8px 14px 12px;
+  }
+
+  .coach {
+    bottom: 8px;
+    width: min(400px, calc(100% - 160px));
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+
+  .coach p {
+    margin-bottom: 4px;
+  }
+
+  .context-menu {
+    padding: 6px 8px;
+    font-size: 12px;
+  }
+
+  .context-buttons button {
+    min-width: 46px;
+    padding: 4px 4px 3px;
+    font-size: 10px;
+  }
+
+  .overlay {
+    padding: 8px;
+  }
+
+  .panel {
+    max-height: calc(100% - 16px);
+  }
+
+  @keyframes sheet-in {
+    from {
+      translate: 40px 0;
+    }
+  }
+}
