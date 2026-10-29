@@ -20,9 +20,10 @@ export const UTILITY_INFO: Record<Utility, { name: string; icon: string; builds:
   trash: { name: 'Trash pickup', icon: '🗑️', builds: 'Recycling Center' },
 }
 
-// A small town is served by the county for free: enough for a few buildings,
-// so a new town works before it can afford its own plants.
-export const COUNTY_SUPPLY: Record<Utility, number> = { water: 8, power: 8, trash: 8 }
+// A small town is served by the county for free: enough for the buildings of
+// the first three levels, so shortages only start around level 4, when the
+// plants that fix them unlock (see docs/BALANCE.md).
+export const COUNTY_SUPPLY: Record<Utility, number> = { water: 20, power: 16, trash: 16 }
 
 export interface UtilityStatus {
   supply: number

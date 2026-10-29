@@ -57,9 +57,12 @@ export function collectXp(coins: number): number {
 
 // ---- Energy
 
-export const ENERGY_REGEN_MS = 2 * 60_000 // one energy every 2 minutes, real time
+// One energy a minute, real time: three cottages use about 6 a minute, so a
+// full bar lasts an active early session of several minutes, and a level-up
+// (frequent early on) refills it. See docs/BALANCE.md, "Energy".
+export const ENERGY_REGEN_MS = 60_000
 
 // Each level adds one to the maximum.
 export function maxEnergy(level: number): number {
-  return 14 + level
+  return 19 + level
 }

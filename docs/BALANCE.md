@@ -1,0 +1,195 @@
+# Game balance and progression
+
+How Hearthvale is balanced: the principles it follows, the numbers behind
+every building and crop, and the tests that keep them honest.
+
+- The **principles** below are design rules, each with what the game does to
+  meet it and the test in `src/game/balance.test.ts` that checks it.
+- The **worksheet** further down is generated from the game's catalogs by
+  `npm run balance` (code in `src/game/balance.ts`), so it always matches the
+  game. The same data is in [`balance.json`](balance.json), and as CSV for a
+  spreadsheet: [`balance-buildings.csv`](balance-buildings.csv) and
+  [`balance-crops.csv`](balance-crops.csv).
+
+After changing any price, timer or unlock level: run `npm test` (the balance
+tests may fail and tell you which principle broke) and `npm run balance`
+(to refresh the worksheet).
+
+## Principles
+
+### 1. Early actions are quick and rewarding
+
+- Level 1 buildings and crops produce within a minute (Cottage 30 s,
+  Strawberries 1 min) and pay back within a few minutes.
+- The first levels come fast: level 2 at 10 XP, a cottage gives 5 XP to build
+  and 1 per collection, and the first quest is three collections and a harvest.
+- Level-ups refill energy, and they're frequent early on.
+- **Tested:** level-1 cycles ≤ 1 minute; early earners pay back within 15
+  minutes; the first quest's tasks can be done with the starting town.
+
+### 2. Nobody gets stuck for good
+
+Every shortage in the game recovers on its own or has a way out:
+
+| Shortage | Way out |
+|---|---|
+| Energy | Refills 1 a minute, in real time, and on every level-up |
+| Coins | Homes keep paying rent; nothing costs coins to keep (except plants you chose to build) |
+| Tax debt | Income pays it down; the penalty is 0.5% a month |
+| Utilities | A shortage lowers income but never to zero: the county always supplies some |
+| Materials | Always for sale for coins (Inventory, or from the building's details) |
+| Goods | Harvests (seeds cost coins), or a shipment at a dock |
+| **Nothing that earns and too few coins to build one** | **The county grant** (`safetyNet.ts`): if nothing on the map or in storage earns, and you can't afford a Cottage, the county offers 150 coins, at most once an hour. It's taxable, like any grant to a business. |
+
+- **Tested:** every material has a price; the county supplies every utility;
+  a town with no earners and no coins can claim the grant, and a working town
+  can't.
+
+### 3. One new mechanic per level
+
+Each level from 2 up introduces at most one new mechanic, with a quest that
+introduces it:
+
+| Level | Mechanic | Introduced by |
+|---|---|---|
+| 1 | Homes, farming, roads, decorations (the starting kit) | Welcome to Hearthvale, A Growing Town, Paving the Way |
+| 2 | Shops and goods | Open for Business |
+| 3 | Construction and materials | Master Builder |
+| 4 | Utilities | Keep the Taps Running |
+| 5 | Storage | Room for the Harvest |
+| 6 | Community bonuses | Community Spirit |
+| 7 | Upgrades | Renovator |
+| 8 | Land expansion | Room to Grow |
+| 9 | Shipping | Harbor Town |
+
+New crops and bigger versions of things you already know (a Family House, a
+School) aren't new mechanics; they arrive at the levels in between and after.
+
+- **Tested:** `mechanicsByLevel()` has at most one entry per level from 2 up.
+
+### 4. Bigger buildings are meaningful goals
+
+Within each kind, a later building costs more, takes longer to pay back, and
+pays more per collection (more coins for the same energy):
+
+| Home | Level | Cost | Per collection |
+|---|---|---|---|
+| Cottage | 1 | 100 | 15 |
+| Townhouse | 3 | 250 + materials | 35 |
+| Family House | 6 | 400 + materials | 50 |
+| Modern House | 11 | 600 + materials | 80 |
+
+- **Tested:** within homes and within shops, coins per collection rise with
+  unlock level, and so does the total cost.
+
+### 5. Timers fit the play session
+
+| Stage | Timers | Built for |
+|---|---|---|
+| Early (levels 1–3) | 30 s – 5 min | A first session: something to tap every few seconds |
+| Middle (4–7) | 1 – 20 min, constructions 1–3 min | Short sessions, a few times a day |
+| Late (8+) | 1 h – 8 h crops, 5-min shipments | Coming back later: plant before you leave |
+
+- Every crop stays fresh at least as long as it took to grow, so a crop
+  planted before a break survives a break of the same length.
+- **Tested:** early cycles ≤ 5 minutes; fresh windows ≥ grow times; nothing
+  takes longer than 8 hours.
+
+### 6. Idle progress never needs the game open
+
+Every timer is a timestamp (income, crops, construction, shipments, energy),
+so the town is up to date the moment it loads, with nothing simulated. The
+calendar (taxes, running costs) runs on play time, so being away never costs
+anything. See [ARCHITECTURE.md](ARCHITECTURE.md#two-kinds-of-time).
+
+### 7. No pay-to-win
+
+There's no real money anywhere. Everything that can be bought (materials,
+shipments, land, buildings) is bought with coins earned in the game, and
+nothing can skip a timer.
+
+## What changed in the balance pass
+
+The first version of this worksheet showed several problems:
+
+| Problem | Fix |
+|---|---|
+| Level 2 unlocked shops, utilities and storage at once, and the Bakery needed construction too | The unlock schedule above; the Bakery is built instantly |
+| Utility shortages started around level 2–3, before plants were affordable | The county supplies more (water 20, power 16, trash 16), so shortages start around level 4, when plants unlock |
+| Three cottages used energy 12× faster than it refilled | Energy refills 1 a minute (was 1 per 2), and the bar starts at 20 (was 15) |
+| A town with no earners and no coins was stuck forever | The county grant |
+| Upgrades came at level 3, crowded in with construction | Upgrades start at level 7 (★★) and 10 (★★★) |
+| Land could be bought at level 2 | The first lot needs level 8; the starting land holds a town until then |
+
+## Worksheet
+
+<!-- generated:start -->
+
+_Generated by `npm run balance` from the game's catalogs. Assumptions: income collected as soon as it's ready, full utilities, no location bonus, before tax; a shop's goods valued at 5 coins each (the cheapest shipment); shops get 10 per good._
+
+### Levels and what each one introduces
+
+| Level | Total XP | New mechanic | Unlocks | Quests needing this level |
+|---|---|---|---|---|
+| 1 | 0 | homes, farming, decorations, roads | Cottage, Farm Plot, Oak Tree, Pine Tree, Road, 🍓 Strawberries | Welcome to Hearthvale, A Growing Town, Paving the Way, Treasure Hunter, Good Citizen |
+| 2 | 10 | shops | Bakery, 🌾 Wheat | Open for Business |
+| 3 | 30 | construction | Townhouse, Planter | Master Builder |
+| 4 | 60 | utilities | Water Tower, Power Plant, Recycling Center | Keep the Taps Running |
+| 5 | 100 | storage | Barn, 🎃 Pumpkins | Room for the Harvest |
+| 6 | 150 | community | Family House, Park | Community Spirit |
+| 7 | 210 | upgrades | 🌽 Corn | Renovator |
+| 8 | 280 | land | General Store | Room to Grow, Tycoon |
+| 9 | 360 | shipping | Dock, Fire Station, 🌻 Sunflowers | Harbor Town |
+| 10 | 450 | — | Warehouse, School, 🥔 Potatoes | — |
+| 11 | 550 | — | Modern House, Solar Farm | — |
+| 12 | 660 | — | — | — |
+
+### Buildings that earn
+
+| Building | Role | Level | Size | Cost | Materials | Build | Cycle | Per cycle | Goods | Net | XP | Residents | Payback | Coins/min | Upgrades | Quests |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Cottage | early | 1 | 2×2 | 100 | — | instant | 0.5 min | 15 | — | 15 | 1 (+5 to build) | 2 | 6.7 cycles · 3.3 min | 30 | ★★ at level 7, ★★★ at 10 | — |
+| Townhouse | early | 3 | 2×2 | 250 | 🪵 3 (36) | 1 min | 1 min | 35 | — | 35 | 2 (+17 to build) | 3 | 8.2 cycles · 9.2 min | 35 | ★★ at level 7, ★★★ at 10 | Master Builder |
+| Family House | middle | 6 | 2×2 | 400 | 🧱 4 🪵 4 (108) | 2 min | 1.5 min | 50 | — | 50 | 3 (+28 to build) | 4 | 10.2 cycles · 17.2 min | 33.3 | ★★ at level 8, ★★★ at 10 | — |
+| Modern House | late | 11 | 2×2 | 600 | 🧱 4 🪟 4 🔩 2 (190) | 3 min | 2 min | 80 | — | 80 | 5 (+42 to build) | 4 | 9.9 cycles · 22.8 min | 40 | ★★ at level 13, ★★★ at 15 | — |
+| Bakery | early | 2 | 2×2 | 300 | — | instant | 0.8 min | 40 | 4 | 20 | 3 (+15 to build) | — | 15 cycles · 11.3 min | 26.7 | ★★ at level 7, ★★★ at 10 | Open for Business |
+| General Store | late | 8 | 3×2 | 500 | 🪵 4 🪟 2 (88) | 2 min | 1.5 min | 75 | 7 | 40 | 5 (+35 to build) | — | 14.7 cycles · 24.1 min | 26.7 | ★★ at level 10, ★★★ at 12 | — |
+
+Payback cycles = (coins + materials) ÷ net coins per cycle. Payback minutes adds the build time. No building needs a road; homes and shops beside one earn +5%.
+
+### Buildings that support the town
+
+| Building | Role | Level | Size | Cost | Materials | Build | Effect | Uses | Runs per month | XP to build | Quests |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| Farm Plot | early | 1 | 2×2 | 50 | — | instant | grows crops | 💧2 | — | 2 | — |
+| Oak Tree | early | 1 | 1×1 | 20 | — | instant | looks nice | — | — | 1 | — |
+| Pine Tree | early | 1 | 1×1 | 15 | — | instant | looks nice | — | — | 0 | — |
+| Planter | early | 3 | 1×1 | 30 | — | instant | looks nice | — | — | 1 | — |
+| Water Tower | middle | 4 | 2×2 | 250 | 🔩 4 (100) | 1.5 min | supplies 💧 20 | — | 15 | 17 | Keep the Taps Running |
+| Power Plant | middle | 4 | 3×2 | 500 | 🧱 4 🔩 6 (210) | 3 min | supplies 🔌 30 | — | 30 | 35 | — |
+| Recycling Center | middle | 4 | 2×2 | 300 | 🧱 3 🔩 3 (120) | 2 min | supplies 🗑️ 20 | — | 20 | 21 | — |
+| Solar Farm | late | 11 | 3×3 | 1,200 | 🪟 8 🔩 4 (260) | 4 min | supplies 🔌 25 | — | 5 | 84 | — |
+| Barn | middle | 5 | 2×2 | 150 | 🪵 6 (72) | 1 min | stores 📦 150 | — | — | 10 | Room for the Harvest |
+| Warehouse | late | 10 | 3×2 | 500 | 🪵 4 🔩 6 (198) | 3 min | stores 📦 400 | 🔌1 | — | 35 | — |
+| Dock | late | 9 | 3×2 | 800 | 🪵 10 🔩 4 (220) | 3 min | stores 📦 100 | 🔌1 🗑️1 | 10 | 56 | Harbor Town |
+| Road | early | 1 | 1×1 | 10 | — | instant | +5% for homes and shops beside it | — | — | 0 | — |
+| Park | middle | 6 | 2×2 | 200 | 🪵 3 (36) | 1 min | +10% within 4 tiles | 💧1 | 5 | 14 | Community Spirit |
+| Fire Station | late | 9 | 2×2 | 600 | 🧱 8 🔩 2 (170) | 3 min | +10% within 6 tiles | 💧2 🔌2 🗑️1 | 20 | 42 | — |
+| School | late | 10 | 3×2 | 900 | 🧱 10 🪵 6 🪟 4 (302) | 4 min | +15% within 6 tiles | 💧3 🔌3 🗑️2 | 30 | 63 | — |
+
+### Crops
+
+| Crop | Role | Level | Seeds | Grows | Fresh for | Market price | Or goods | Profit | Profit/min | XP | Coins/energy | Plot paid back in |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Strawberries | early | 1 | 10 | 1 min | 3 min | 40 | 📦 6 (worth 60 in shops) | 30 | 30 | 1 | 15 | 1.67 harvests |
+| Wheat | early | 2 | 15 | 5 min | 15 min | 120 | 📦 18 (worth 180 in shops) | 105 | 21 | 2 | 52.5 | 0.48 harvests |
+| Pumpkins | middle | 5 | 30 | 20 min | 1 h | 360 | 📦 54 (worth 540 in shops) | 330 | 16.5 | 4 | 165 | 0.15 harvests |
+| Corn | middle | 7 | 40 | 1 h | 3 h | 750 | 📦 110 (worth 1,100 in shops) | 710 | 11.8 | 7 | 355 | 0.07 harvests |
+| Sunflowers | late | 9 | 60 | 4 h | 8 h | 2,000 | 📦 300 (worth 3,000 in shops) | 1,940 | 8.1 | 12 | 970 | 0.03 harvests |
+| Potatoes | late | 10 | 80 | 8 h | 16 h | 3,000 | 📦 450 (worth 4,500 in shops) | 2,920 | 6.1 | 16 | 1,460 | 0.02 harvests |
+
+### Energy
+
+A full bar at level 1 is 20 ⚡ and refills 1 a minute. Collecting from three cottages and tending a strawberry plot uses about 7 a minute, so a full bar lasts about 3.3 minutes of nonstop tapping, and early level-ups refill it.
+
+<!-- generated:end -->

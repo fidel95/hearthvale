@@ -288,7 +288,9 @@ contest prize, a game-show win or a raffle. They go on the return as "other
 income".
 
 **In the game:** the coins you get for reaching a level, finishing a quest or
-handing in a collection are prize money. They
+handing in a collection are prize money. The county grant offered to a town
+with nothing left that earns is taxable too: grants to a business are
+generally income. They
 appear on the return as "Prizes (level-up rewards)" and are part of gross
 income, so they're taxed at your marginal rate like everything else. Reaching
 level 10 pays 250 coins; at a 12% marginal rate, 30 of those go to income tax.

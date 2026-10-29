@@ -1,0 +1,22 @@
+id,name,category,role,unlockLevel,quests,footprint,tiles,cost,materials,materialsValue,totalCost,buildSeconds,cycleSeconds,coinsPerCycle,goodsPerCycle,netPerCycle,xpPerCycle,buildXp,residents,needs,upkeepPerMonth,effect,paybackCycles,paybackMinutes,coinsPerMinute,coinsPerEnergy,roads,upgrades
+cottage,Cottage,home,early,1,,2×2,4,100,,0,100,0,30,15,0,15,1,5,2,💧2 🔌2 🗑️2,0,,6.666666666666667,3.3333333333333335,30,15,not required; +5% beside one,"★★ at level 7, ★★★ at 10"
+townhouse,Townhouse,home,early,3,Master Builder,2×2,4,250,🪵 3,36,286,60,60,35,0,35,2,17,3,💧3 🔌3 🗑️3,0,,8.17142857142857,9.17142857142857,35,35,not required; +5% beside one,"★★ at level 7, ★★★ at 10"
+family-house,Family House,home,middle,6,,2×2,4,400,🧱 4 🪵 4,108,508,120,90,50,0,50,3,28,4,💧4 🔌4 🗑️4,0,,10.16,17.240000000000002,33.333333333333336,50,not required; +5% beside one,"★★ at level 8, ★★★ at 10"
+modern-house,Modern House,home,late,11,,2×2,4,600,🧱 4 🪟 4 🔩 2,190,790,180,120,80,0,80,5,42,4,💧4 🔌5 🗑️3,0,,9.875,22.75,40,80,not required; +5% beside one,"★★ at level 13, ★★★ at 15"
+bakery,Bakery,business,early,2,Open for Business,2×2,4,300,,0,300,0,45,40,4,20,3,15,0,💧2 🔌3 🗑️2,0,,15,11.25,26.666666666666668,20,not required; +5% beside one,"★★ at level 7, ★★★ at 10"
+general-store,General Store,business,late,8,,3×2,6,500,🪵 4 🪟 2,88,588,120,90,75,7,40,5,35,0,💧2 🔌4 🗑️3,0,,14.7,24.05,26.666666666666668,40,not required; +5% beside one,"★★ at level 10, ★★★ at 12"
+farm-plot,Farm Plot,farm,early,1,,2×2,4,50,,0,50,0,,,0,,,2,0,💧2,0,grows crops,,,,,—,—
+oak-tree,Oak Tree,decoration,early,1,,1×1,1,20,,0,20,0,,,0,,,1,0,,0,looks nice,,,,,—,—
+pine-tree,Pine Tree,decoration,early,1,,1×1,1,15,,0,15,0,,,0,,,0,0,,0,looks nice,,,,,—,—
+planter,Planter,decoration,early,3,,1×1,1,30,,0,30,0,,,0,,,1,0,,0,looks nice,,,,,—,—
+water-tower,Water Tower,utility,middle,4,Keep the Taps Running,2×2,4,250,🔩 4,100,350,90,,,0,,,17,0,,15,supplies 💧 20,,,,,—,—
+power-plant,Power Plant,utility,middle,4,,3×2,6,500,🧱 4 🔩 6,210,710,180,,,0,,,35,0,,30,supplies 🔌 30,,,,,—,—
+recycling-center,Recycling Center,utility,middle,4,,2×2,4,300,🧱 3 🔩 3,120,420,120,,,0,,,21,0,,20,supplies 🗑️ 20,,,,,—,—
+solar-farm,Solar Farm,utility,late,11,,3×3,9,1200,🪟 8 🔩 4,260,1460,240,,,0,,,84,0,,5,supplies 🔌 25,,,,,—,—
+barn,Barn,storage,middle,5,Room for the Harvest,2×2,4,150,🪵 6,72,222,60,,,0,,,10,0,,0,stores 📦 150,,,,,—,—
+warehouse,Warehouse,storage,late,10,,3×2,6,500,🪵 4 🔩 6,198,698,180,,,0,,,35,0,🔌1,0,stores 📦 400,,,,,—,—
+dock,Dock,port,late,9,Harbor Town,3×2,6,800,🪵 10 🔩 4,220,1020,180,,,0,,,56,0,🔌1 🗑️1,10,stores 📦 100,,,,,—,—
+road,Road,road,early,1,,1×1,1,10,,0,10,0,,,0,,,0,0,,0,+5% for homes and shops beside it,,,,,—,—
+park,Park,community,middle,6,Community Spirit,2×2,4,200,🪵 3,36,236,60,,,0,,,14,0,💧1,5,+10% within 4 tiles,,,,,—,—
+fire-station,Fire Station,community,late,9,,2×2,4,600,🧱 8 🔩 2,170,770,180,,,0,,,42,0,💧2 🔌2 🗑️1,20,+10% within 6 tiles,,,,,—,—
+school,School,community,late,10,,3×2,6,900,🧱 10 🪵 6 🪟 4,302,1202,240,,,0,,,63,0,💧3 🔌3 🗑️2,30,+15% within 6 tiles,,,,,—,—

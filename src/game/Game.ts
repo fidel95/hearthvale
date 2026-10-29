@@ -28,6 +28,7 @@ import { Inventory } from './Inventory'
 import { MATERIAL_IDS, materialsText } from './items'
 import { finishConstruction, upgradeBuilding, type ProjectResult } from './projects'
 import { Quests } from './quests'
+import { GRANT, canClaimGrant } from './safetyNet'
 import { CROPS_BY_ID } from './crops'
 import { Docks } from './Docks'
 import { GameClock, MONTH_NAMES } from './GameClock'
@@ -179,8 +180,10 @@ export class Game {
       inventory: this.inventory.toSave(),
       collections: this.collections.toSave(),
       quests: this.quests.toSave(),
+      lastGrantAt: this.lastGrantAt,
     }))
     const leftAt = this.loadOrSeed()
+    this.setUpSafetyNet(container)
     this.setUpWelcomeBack(container, builder, leftAt)
     // Save shortly after anything changes.
     this.city.onChange(() => this.saver.requestSave())
@@ -239,6 +242,7 @@ export class Game {
       // Saves from before Stage 9 have no inventory: start them with the new-town materials.
       if (save.collections) this.collections.load(save.collections)
       if (save.quests) this.quests.load(save.quests)
+      this.lastGrantAt = save.lastGrantAt ?? null
       if (save.inventory) this.inventory.load(save.inventory)
       else for (const id of MATERIAL_IDS) this.inventory.add(id, STARTING_MATERIALS[id] ?? 0)
       return save.savedAt
@@ -378,6 +382,40 @@ export class Game {
   }
 
   private landPanel: LandPanel | null = null
+  private lastGrantAt: number | null = null
+
+  // The safety net (safetyNet.ts): if the town has nothing that earns and
+  // can't afford anything that would, offer the county grant.
+  private setUpSafetyNet(container: HTMLElement) {
+    const modal = new Modal(container)
+    let offered = false
+    const check = () => {
+      const now = Date.now()
+      if (!canClaimGrant(this.city, this.lastGrantAt, now)) {
+        offered = false
+        return
+      }
+      if (offered) return
+      offered = true
+      modal.body.replaceChildren(
+        el('p', '', `Your town has nothing left that earns coins, and not enough to build something that would. The county offers a ${GRANT}-coin grant to get you going again.`),
+        el('p', 'muted', 'Grants to a business are taxable income, so it will show on your return like other prizes.'),
+      )
+      modal.show(
+        '🤝 A helping hand',
+        button(`Accept 🪙 ${GRANT}`, () => {
+          modal.close()
+          this.lastGrantAt = Date.now()
+          this.city.awardCoins(GRANT, 'County grant')
+        }),
+      )
+    }
+    // After the event that caused it has finished, so the town is in its final state.
+    this.city.onChange((e) => {
+      if (e.kind === 'coins' || e.kind === 'removed' || e.kind === 'stored') queueMicrotask(check)
+    })
+    check()
+  }
 
   private showQuestEvents() {
     const badge = () => this.hud.setBadge('Quests', this.quests.readyCount())

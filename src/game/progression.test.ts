@@ -17,8 +17,7 @@ describe('levels', () => {
   })
 
   it('adds one maximum energy per level', () => {
-    expect(maxEnergy(1)).toBe(15)
-    expect(maxEnergy(10)).toBe(24)
+    expect(maxEnergy(10) - maxEnergy(1)).toBe(9)
   })
 })
 

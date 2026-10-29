@@ -15,6 +15,7 @@ ideas behind them.
 |---|---|
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | How the code fits together: state vs. views, events, the frame loop, saving |
 | [docs/TAXES.md](docs/TAXES.md) | The tax system: each tax, the real rule behind it, worked examples, simplifications |
+| [docs/BALANCE.md](docs/BALANCE.md) | Balance principles, the unlock schedule, and a worksheet of every building and crop (generated) |
 | [docs/LEARNING.md](docs/LEARNING.md) | Stage-by-stage journal of the concepts each part teaches, with exercises |
 
 ## Running it
@@ -33,6 +34,7 @@ npm run dev      # then open http://localhost:5173
 | `npm test` | Unit tests for the game rules (Vitest) |
 | `npm run test:watch` | Re-run tests as you edit |
 | `npm run typecheck` | TypeScript type check |
+| `npm run balance` | Regenerate the balancing worksheet in docs/BALANCE.md (and its JSON and CSV) |
 | `npm run build` | Production build into `dist/` |
 | `npm run preview` | Serve the production build locally |
 
@@ -78,7 +80,7 @@ the right on a wide screen) so the town stays in view.
 - **Upgrades:** homes and shops go up to ★★★: +50% and then +100% income, residents and shelf space, for coins, materials and a player level.
 - **Storing:** put a building away in your Inventory and place it again later for free. While stored it pays no property tax and isn't depreciated.
 - **Levels and XP:** building, collecting, harvesting, finishing and upgrading earn XP (⭐). Each level pays a reward, refills energy, raises its maximum and unlocks more.
-- **Energy (⚡):** collecting, harvesting, planting, clearing and unloading use 1. It refills by 1 every 2 minutes in real time, even while the game is closed.
+- **Energy (⚡):** collecting, harvesting, planting, clearing and unloading use 1. It refills by 1 a minute in real time, even while the game is closed.
 - **Farming:** tap an empty plot (🌱) to choose seeds. Crops sprout, grow and ripen; harvest before they wither (🥀). Quick crops earn the most per minute; slow ones can be left overnight.
 - **Goods and storage (📦):** once you have a shop, harvests go into storage as goods; what doesn't fit is sold at the market. A Barn, Warehouse or Dock adds space.
 - **Land and the coast:** the world is 60×60 tiles in 10×10 lots, with the sea along the south. Tap a 🏷️ sign (or a lot on the Map) to buy the land next to yours.
@@ -87,6 +89,7 @@ the right on a wide screen) so the town stays in view.
 - **Roads and community:** homes and shops beside a road earn +5%; near a Park, Fire Station or School, +10–15% (up to +40%), which also raises their assessed value.
 - **People:** residents walk between homes, shops and parks, preferring roads.
 - **Taxes:** see below and [docs/TAXES.md](docs/TAXES.md).
+- **Never stuck:** if nothing in your town earns coins and you can't afford a Cottage, the county offers a grant (once an hour).
 - **New town:** ⚙️ → Start a new town.
 
 ### Time
@@ -127,6 +130,8 @@ src/
     Inventory.ts          materials and collectibles, with what they cost
     collections.ts        collectible sets, drops and rewards
     quests.ts             quests, achievements and the stats behind them
+    balance.ts            the balancing worksheet, computed from the catalogs
+    safetyNet.ts          the county grant for a town that would otherwise be stuck
     ContextMenu.ts        the menu over a selected building
     utilityRules.ts       water, power and trash: demand, supply, effect on income (pure functions)
     communityRules.ts     location bonuses (parks, schools, roads) and road shapes (pure functions)
@@ -168,6 +173,7 @@ src/
     CollectionsPanel.ts   collection sets and rewards
     MapPanel.ts           the world map
     dom.ts                small DOM helpers
+scripts/                  generators run with Vitest (npm run balance)
 public/models/            3D models served as-is (Kenney City Kit, CC0)
 assets-src/               raw downloaded asset packs (git-ignored)
 docs/                     the docs linked above

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { BUILDINGS_BY_ID } from './buildings'
 import { City, type CityEvent } from './City'
 import { Services, type ServicesEvent } from './Services'
+import { COUNTY_SUPPLY } from './utilityRules'
 
 const cottage = BUILDINGS_BY_ID.get('cottage')! // pays 15, needs 2 of each
 const tower = BUILDINGS_BY_ID.get('water-tower')!
@@ -13,16 +14,17 @@ describe('Services', () => {
     const services = new Services(city)
     const events: ServicesEvent['kind'][] = []
     services.onChange((e) => events.push(e.kind))
-    const homes = [0, 2, 4, 6, 8].map((x) => city.place(cottage, at(x, 0), { now: 0, free: true })!)
-    // The 5th cottage pushes demand to 10 against the county's 8.
-    expect(events.filter((k) => k === 'shortage')).toHaveLength(1) // one warning for water, power and trash
-    expect(city.collect(homes[0].id, 30_000)).toBe(Math.round(15 * 0.8 * 0.8 * 0.95))
+    // Ten cottages need 20 of each utility: more power and trash pickup than the county supplies.
+    const homes = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18].map((x) => city.place(cottage, at(x, 0), { now: 0, free: true })!)
+    expect(events.filter((k) => k === 'shortage')).toHaveLength(1) // one warning, however many run short
+    const share = (u: keyof typeof COUNTY_SUPPLY) => Math.min(1, COUNTY_SUPPLY[u] / 20)
+    expect(city.collect(homes[0].id, 30_000)).toBe(Math.round(15 * share('water') * share('power') * (0.75 + 0.25 * share('trash'))))
   })
 
   it('restores full income once a plant is built', () => {
     const city = new City()
     new Services(city)
-    const homes = [0, 2, 4, 6, 8].map((x) => city.place(cottage, at(x, 0), { now: 0, free: true })!)
+    const homes = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18].map((x) => city.place(cottage, at(x, 0), { now: 0, free: true })!)
     city.place(tower, at(0, 4), { free: true })
     city.place(BUILDINGS_BY_ID.get('power-plant')!, at(4, 4), { free: true })
     city.place(BUILDINGS_BY_ID.get('recycling-center')!, at(0, 8), { free: true })

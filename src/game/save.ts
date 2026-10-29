@@ -26,6 +26,7 @@ export interface SaveData {
   inventory?: [string, Stack][] // missing in saves from before Stage 9
   collections?: [string, number][] // times each collection was completed
   quests?: QuestsSave
+  lastGrantAt?: number | null // when the county grant was last taken (safetyNet.ts)
 }
 
 export function readSave(): SaveData | null {

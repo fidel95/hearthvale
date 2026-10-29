@@ -106,6 +106,16 @@ loaded.
   at the town. Up to three quests are active; finished ones wait to be claimed.
   **Achievements** are tiers on the same stats.
 
+## Balance
+
+Prices, timers, unlock levels and rewards live in the catalogs
+(`buildings.ts`, `crops.ts`) and the rule modules. `balance.ts` works out a
+worksheet from them (payback, coins per minute and per energy, the mechanic
+each level introduces), which `npm run balance` writes into
+[BALANCE.md](BALANCE.md), and `balance.test.ts` checks the design principles
+against it. `safetyNet.ts` is the one rule that exists only for balance: the
+county grant for a town that couldn't otherwise recover.
+
 ## Events
 
 State objects use a tiny observer pattern: `onChange(listener)` registers a

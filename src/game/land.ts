@@ -21,6 +21,8 @@ export function expansionPrice(n: number): number {
   return 500 * n
 }
 
+// The first expansion comes at level 8: the starting 20×20 tiles hold a town
+// comfortably until then, and buying land is that level's new mechanic.
 export function expansionLevel(n: number): number {
-  return n + 1
+  return 7 + n
 }

@@ -440,6 +440,46 @@ the `*.test.ts` files, and [TAXES.md](TAXES.md)
 
 ---
 
+## Stage 9.5: balancing
+
+**Files:** `balance.ts`, `balance.test.ts`, `scripts/balance.gen.ts`,
+`safetyNet.ts`, [BALANCE.md](BALANCE.md)
+
+- **Principles before numbers.** "Early actions are quick", "nobody gets stuck",
+  "one mechanic per level": written down first, they turn a vague "does it
+  feel right?" into questions with answers.
+- **A worksheet generated from the code.** A spreadsheet typed by hand drifts
+  the day someone changes a price. `balance.ts` computes the worksheet from
+  the same catalogs the game uses, and `npm run balance` writes it out as
+  Markdown, JSON and CSV.
+- **Principles as tests.** Each principle is a test over the worksheet:
+  payback times, timer lengths, one new mechanic per level, bigger buildings
+  paying more. A price change that breaks a principle now fails `npm test`.
+- **Payback.** `initial cost ÷ coins per cycle` (with materials counted at
+  their price, and a shop's goods at what they'd cost to ship in). It's the
+  simplest way to compare investments, and the same idea as a real business's
+  payback period.
+- **Finding the dead end.** Listing every resource and how it recovers showed
+  exactly one state with no way out: nothing that earns, and too little to
+  build something that does. One small rule (the county grant) fixes it, and
+  a test proves the stuck state can be escaped.
+- **Writing tests that survive rebalancing.** The first tests had numbers
+  like "15 energy" baked in, so changing the energy rules broke eleven of
+  them. They now ask the game (`maxEnergy(1)`, `COUNTY_SUPPLY`) instead.
+- **Running TypeScript tools with the test runner.** The generator imports
+  game code that uses Vite features (`import.meta.env`), so it runs under
+  Vitest with its own config rather than plain Node.
+
+**Try it:**
+
+1. Change the Cottage's rent to 25 and run `npm test`. Which principle fails, and why?
+2. Add a "per tile per minute" column to the worksheet. Which building is
+   the best use of land?
+3. Write a principle of your own (e.g. "no crop is better than another at
+   everything") and a test for it.
+
+---
+
 ## Coming next
 
 - **Stage 10:** decorations that boost payouts, and more buildings and models.

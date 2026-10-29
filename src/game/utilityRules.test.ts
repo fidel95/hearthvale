@@ -10,14 +10,14 @@ describe('serviceReport', () => {
     const r = serviceReport(['cottage', 'cottage', 'bakery', 'water-tower'].map((id) => ({ type: b(id) })))
     expect(r.population).toBe(4)
     expect(r.utilities.water).toEqual({ supply: COUNTY_SUPPLY.water + 20, demand: 6, level: 1 })
-    expect(r.utilities.power).toEqual({ supply: 8, demand: 7, level: 1 })
+    expect(r.utilities.power).toEqual({ supply: COUNTY_SUPPLY.power, demand: 7, level: 1 })
     expect(r.upkeep).toBe(15)
   })
 
   it('reports the share of demand met when supply falls short', () => {
-    // 5 cottages need 10 power; the county supplies 8.
-    const r = serviceReport(Array(5).fill({ type: b('cottage') }))
-    expect(r.utilities.power.level).toBeCloseTo(0.8)
+    // 10 cottages need 20 power.
+    const r = serviceReport(Array(10).fill({ type: b('cottage') }))
+    expect(r.utilities.power.level).toBeCloseTo(Math.min(1, COUNTY_SUPPLY.power / 20))
   })
 
   it('is fully served when nothing needs anything', () => {
@@ -33,9 +33,10 @@ describe('incomeMultiplier', () => {
   })
 
   it('scales homes and shops with water and power, and trims up to a quarter for trash', () => {
-    const r = town(Array(5).fill('cottage')) // 10 of everything needed, 8 supplied: 80% each
-    expect(incomeMultiplier(r, 'home')).toBeCloseTo(0.8 * 0.8 * (0.75 + 0.25 * 0.8))
-    expect(incomeMultiplier(r, 'farm')).toBeCloseTo(0.8) // farms only need water
+    const r = town(Array(12).fill('cottage')) // 24 of everything needed
+    const share = (u: keyof typeof COUNTY_SUPPLY) => Math.min(1, COUNTY_SUPPLY[u] / 24)
+    expect(incomeMultiplier(r, 'home')).toBeCloseTo(share('water') * share('power') * (0.75 + 0.25 * share('trash')))
+    expect(incomeMultiplier(r, 'farm')).toBeCloseTo(share('water')) // farms only need water
     expect(incomeMultiplier(r, 'decoration')).toBe(1)
   })
 })

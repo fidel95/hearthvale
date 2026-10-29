@@ -5,7 +5,7 @@ import { CROPS_BY_ID } from './crops'
 import { Docks } from './Docks'
 import { awaySummary } from './offline'
 import { Player } from './Player'
-import { ENERGY_REGEN_MS } from './progression'
+import { ENERGY_REGEN_MS, maxEnergy } from './progression'
 
 const at = (x: number, z: number) => ({ x: 20 + x, z: 20 + z })
 const cottage = BUILDINGS_BY_ID.get('cottage')! // 15 every 30 s
@@ -22,12 +22,12 @@ describe('awaySummary', () => {
     const a = city.place(plot, at(0, 3), { free: true })!
     const b = city.place(plot, at(3, 3), { free: true })!
     const c = city.place(plot, at(6, 3), { free: true })!
-    // All plantings happen at time 0 by the player's clock: energy 12 of 15.
+    // All plantings happen at time 0 by the player's clock: 3 energy used.
     city.plant(a.id, strawberries, { now: 0 }) // ripe at 1 min, withers at 4 min
     city.plant(b.id, potatoes, { now: 0 }) // still growing
     city.plant(c.id, strawberries, { now: 150_000 }) // ripe at 3.5 min, still fresh at return
     const leftAt = 1000
-    const back = 2 * ENERGY_REGEN_MS + 1000 // just over 4 minutes later
+    const back = 241_000 // just over 4 minutes later
 
     const s = awaySummary(city, player, new Docks(city), leftAt, back)
     expect(s.readyBuildings).toBe(2)
@@ -35,7 +35,9 @@ describe('awaySummary', () => {
     expect(s.ripeCrops).toBe(1)
     expect(s.ripeValue).toBe(40)
     expect(s.witheredCrops).toBe(1)
-    expect(s.energyGained).toBe(2)
+    // Energy refills one per period, but never past the maximum.
+    const atLeave = maxEnergy(1) - 3
+    expect(s.energyGained).toBe(Math.min(maxEnergy(1), atLeave + Math.floor(back / ENERGY_REGEN_MS)) - atLeave)
   })
 
   it("doesn't count crops that had already withered before you left", () => {

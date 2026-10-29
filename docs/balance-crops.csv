@@ -1,0 +1,7 @@
+id,name,role,unlockLevel,quests,seedCost,growSeconds,freshSeconds,marketPrice,goods,goodsValue,profitPerCycle,profitPerMinute,xp,energyPerCycle,coinsPerEnergy,plotPaybackHarvests
+strawberries,Strawberries,early,1,,10,60,180,40,6,60,30,30,1,2,15,1.6666666666666667
+wheat,Wheat,early,2,,15,300,900,120,18,180,105,21,2,2,52.5,0.47619047619047616
+pumpkins,Pumpkins,middle,5,,30,1200,3600,360,54,540,330,16.5,4,2,165,0.15151515151515152
+corn,Corn,middle,7,,40,3600,10800,750,110,1100,710,11.833333333333334,7,2,355,0.07042253521126761
+sunflowers,Sunflowers,late,9,,60,14400,28800,2000,300,3000,1940,8.083333333333334,12,2,970,0.02577319587628866
+potatoes,Potatoes,late,10,,80,28800,57600,3000,450,4500,2920,6.083333333333333,16,2,1460,0.017123287671232876

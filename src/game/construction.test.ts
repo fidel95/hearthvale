@@ -5,6 +5,7 @@ import { levelFactor, upgradeCost } from './construction'
 import { GameClock, MONTH_MS } from './GameClock'
 import { Inventory } from './Inventory'
 import { Player } from './Player'
+import { xpForLevel } from './progression'
 import { finishConstruction, upgradeBuilding } from './projects'
 import { Taxes } from './Taxes'
 
@@ -80,10 +81,10 @@ describe('upgrades', () => {
   it('needs the level, coins and materials, then pays more', () => {
     const { city, inventory, player } = town()
     const cottage = city.place(b('cottage'), at(0, 0), { now: 0, free: true })!
-    const cost = upgradeCost(cottage.type, 2) // 75 coins, 4 lumber + 2 bricks, level 3
+    const cost = upgradeCost(cottage.type, 2) // 75 coins, 4 lumber + 2 bricks, and a player level
     expect(upgradeBuilding(city, inventory, player, cottage)).toEqual({ ok: false, reason: 'level' })
     city.adjustCoins(10_000)
-    city.place(b('modern-house'), at(4, 0)) // 30 XP: level 3
+    player.grantXp(xpForLevel(cost.playerLevel))
     expect(upgradeBuilding(city, inventory, player, cottage)).toMatchObject({ ok: false, reason: 'materials' })
     inventory.buy(cost.materials)
     const coins = city.coins

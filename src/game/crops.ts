@@ -64,7 +64,7 @@ export const CROP_TYPES: CropType[] = [
     sellPrice: 360,
     goods: 54,
     xp: 4,
-    unlockLevel: 4,
+    unlockLevel: 5,
     freshSeconds: 1 * HOUR,
     look: { shape: 'vine', leaf: '#4f9a3c', fruit: '#e9822f', height: 0.25, perTile: 1 },
   },

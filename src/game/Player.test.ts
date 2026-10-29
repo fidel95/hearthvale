@@ -3,7 +3,7 @@ import { BUILDINGS_BY_ID } from './buildings'
 import { City } from './City'
 import { CROPS_BY_ID } from './crops'
 import { Player, type PlayerEvent } from './Player'
-import { ENERGY_REGEN_MS } from './progression'
+import { ENERGY_REGEN_MS, maxEnergy } from './progression'
 
 // Tests use tiles relative to the starting land, which begins at tile 20 on both axes.
 const at = (x: number, z: number) => ({ x: 20 + x, z: 20 + z })
@@ -53,9 +53,9 @@ describe('Player XP', () => {
     expect(awards).toEqual([50])
     expect(city.coins).toBe(coinsBefore - 200 + 50)
     const levelUp = events.find((e) => e.kind === 'levelUp')
-    expect(levelUp).toMatchObject({ level: 2, reward: 50, maxEnergy: 16 })
+    expect(levelUp).toMatchObject({ level: 2, reward: 50, maxEnergy: maxEnergy(2) })
     expect(levelUp && 'buildings' in levelUp && levelUp.buildings.map((b) => b.id)).toContain('bakery')
-    expect(player.energy(Date.now())).toBe(16)
+    expect(player.energy(Date.now())).toBe(maxEnergy(2))
   })
 
   it('rewards every level when one action jumps several', () => {
@@ -86,35 +86,37 @@ describe('Player energy', () => {
 
   it('starts full and uses 1 per collect, harvest, planting or clearing', () => {
     const { city, player, now } = setup()
-    expect(player.energy(now())).toBe(15)
+    const full = maxEnergy(1)
+    expect(player.energy(now())).toBe(full)
     const plot = city.place(plotType, at(0, 0), { free: true })!
     city.plant(plot.id, strawberries, { now: now() }) // −1
     city.harvest(plot.id, now() + 60_000) // −1
     city.plant(plot.id, strawberries, { now: now() }) // −1
     city.clearPlot(plot.id, now() + 10 * 60 * 60_000) // −1 (long withered)
-    expect(player.energy(now())).toBe(11)
+    expect(player.energy(now())).toBe(full - 4)
   })
 
   it("doesn't use energy for free starter crops", () => {
     const { city, player, now } = setup()
     const plot = city.place(plotType, at(0, 0), { free: true })!
     city.plant(plot.id, strawberries, { now: now(), free: true })
-    expect(player.energy(now())).toBe(15)
+    expect(player.energy(now())).toBe(maxEnergy(1))
   })
 
   it('refills one point per period, keeping progress toward the next', () => {
     const { city, player, now, setTime } = setup()
     const collect = spender(city, now)
     const start = now()
-    collect() // 14, regen clock starts at `start`
-    collect() // 13
+    const full = maxEnergy(1)
+    collect() // full − 1, regen clock starts at `start`
+    collect() // full − 2
     setTime(start + ENERGY_REGEN_MS * 1.5)
-    expect(player.energy(now())).toBe(14)
+    expect(player.energy(now())).toBe(full - 1)
     expect(player.nextEnergyAt(now())).toBe(start + ENERGY_REGEN_MS * 2)
-    collect() // 13, but the half period already waited still counts
+    collect() // full − 2, but the half period already waited still counts
     expect(player.nextEnergyAt(now())).toBe(start + ENERGY_REGEN_MS * 2)
     setTime(start + ENERGY_REGEN_MS * 100)
-    expect(player.energy(now())).toBe(15) // never above the maximum
+    expect(player.energy(now())).toBe(full) // never above the maximum
     expect(player.nextEnergyAt(now())).toBeNull()
   })
 

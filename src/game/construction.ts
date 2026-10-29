@@ -23,13 +23,17 @@ export interface UpgradeCost {
   playerLevel: number // the player level needed
 }
 
+// Upgrades are level 7's new mechanic (★★), with ★★★ from level 10, and never
+// sooner than two levels after the building itself unlocks.
+const UPGRADE_LEVELS: Record<number, number> = { 2: 7, 3: 10 }
+
 // Upgrading to `toLevel`: three quarters of the building's price per level,
-// some materials, and a higher player level each time.
+// some materials, and a player level.
 export function upgradeCost(type: BuildingType, toLevel: number): UpgradeCost {
   return {
     coins: Math.round(type.cost * 0.75 * (toLevel - 1)),
     materials: toLevel === 2 ? { lumber: 2 + type.size.x, bricks: 2 } : { bricks: 4, glass: 3, steel: 1 },
-    playerLevel: type.unlockLevel + 2 * (toLevel - 1),
+    playerLevel: Math.max(UPGRADE_LEVELS[toLevel], type.unlockLevel + 2 * (toLevel - 1)),
   }
 }
 
