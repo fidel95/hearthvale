@@ -1,4 +1,4 @@
-import type { GameState } from './GameState'
+import { GameState } from './GameState'
 import { citySave, readSave, type SaveData } from './save'
 
 // Turns the whole game state into a save and back. save.ts handles storage
@@ -13,6 +13,18 @@ export class SaveSystem {
 
   constructor(state: GameState) {
     this.state = state
+  }
+
+  // Can this save be loaded? Tried on a throwaway game first, so a damaged
+  // save can't leave the real one half-loaded or stop the game from starting.
+  static canLoad(save: SaveContents): boolean {
+    try {
+      new SaveSystem(new GameState()).load(structuredClone(save))
+      return true
+    } catch (err) {
+      console.warn("Save couldn't be loaded", err)
+      return false
+    }
   }
 
   toSave(): SaveContents {
@@ -58,7 +70,7 @@ export class SaveSystem {
   // Load the town saved in this browser, or start a new one. Returns when it
   // was saved (null for a new town) and anything the player should be told.
   restoreOrStart(): { savedAt: number | null; problem: string | null } {
-    const result = readSave()
+    const result = readSave(SaveSystem.canLoad)
     if (result.save) {
       this.load(result.save)
       return { savedAt: result.save.savedAt, problem: null }

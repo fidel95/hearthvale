@@ -1,4 +1,5 @@
 import { clearSave, downloadText, importSave, unreadableBackup, type AutoSaver } from '../game/save'
+import { SaveSystem } from '../game/SaveSystem'
 import { SETTING_LABELS, type SettingsStore, type SwitchSetting } from '../game/settings'
 import { el } from './dom'
 import { Sheet, button } from './Sheet'
@@ -64,7 +65,7 @@ export class SettingsPanel {
       const chosen = file.files?.[0]
       if (!chosen) return
       if (!confirm('Replace your current town with the imported one?')) return
-      const problem = importSave(await chosen.text())
+      const problem = importSave(await chosen.text(), SaveSystem.canLoad)
       if (problem) this.toast(problem, 'warn')
       else {
         this.saver.disable() // don't overwrite the import on the way out

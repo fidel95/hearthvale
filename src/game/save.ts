@@ -62,7 +62,9 @@ const BACKUP_KEY = 'hearthvale.save.unreadable'
 // couldn't be read, kept aside as a backup instead of being thrown away.
 export type ReadResult = { save: SaveData } | { save: null; problem: string | null }
 
-export function readSave(): ReadResult {
+// canLoad: a last check that the game can actually load it (SaveSystem.canLoad),
+// so a save with the right version but missing parts is set aside, not a crash.
+export function readSave(canLoad: (save: SaveData) => boolean = () => true): ReadResult {
   let raw: string | null = null
   try {
     // localStorage can be missing or blocked (private windows, strict settings).
@@ -77,7 +79,7 @@ export function readSave(): ReadResult {
   } catch {
     // Not valid JSON: handled below.
   }
-  if (save) return { save }
+  if (save && canLoad(save)) return { save }
   // Corrupt, or from a newer version of the game: keep it, so nothing is lost for good.
   try {
     localStorage.setItem(BACKUP_KEY, raw)
@@ -99,14 +101,14 @@ export function unreadableBackup(): string | null {
 
 // Check a save file someone is importing, and store it as the current save.
 // Returns an error message, or null on success.
-export function importSave(text: string): string | null {
+export function importSave(text: string, canLoad: (save: SaveData) => boolean = () => true): string | null {
   let save: SaveData | null = null
   try {
     save = upgradeSave(JSON.parse(text))
   } catch {
     return "That file isn't a Hearthvale save."
   }
-  if (!save) return 'That save is from a newer version of the game, or is damaged.'
+  if (!save || !canLoad(save)) return 'That save is from a newer version of the game, or is damaged.'
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(save))
   } catch {

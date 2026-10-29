@@ -626,6 +626,23 @@ the `*.test.ts` files, and [TAXES.md](TAXES.md)
   DOM, so a test can build a town, save it, load it into a fresh one and check
   the two saves match exactly.
 
+## The test plan
+
+**Files:** [TESTING.md](TESTING.md), `src/tests/`, `scripts/offline-check.mjs`
+
+- **Write the plan as tests, named after its lines.** Each item in the plan
+  is a test with the same wording, so "is this covered?" is a search.
+- **Compare the whole state.** "Invalid actions don't change anything" is one
+  assertion: the full save before equals the full save after. It catches
+  changes nobody thought to check.
+- **Plans find bugs.** Two items failed when first written down: a "have 3
+  homes" objective could un-complete if a home was removed before claiming,
+  and a save with the right version but missing sections would crash on
+  start. Both are fixed, and each test was checked to fail without its fix.
+- **Prove offline by blocking the network**, not by reading the code: the
+  browser check refuses every outside request and then goes fully offline
+  while playing and saving.
+
 ---
 
 ## Coming next

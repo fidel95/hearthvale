@@ -15,6 +15,7 @@ ideas behind them.
 |---|---|
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | How the code fits together: state vs. views, events, the frame loop, saving |
 | [docs/TAXES.md](docs/TAXES.md) | The tax system: each tax, the real rule behind it, worked examples, simplifications |
+| [docs/TESTING.md](docs/TESTING.md) | The test plan, and which test checks each item |
 | [docs/FEATURES.md](docs/FEATURES.md) | The design pillars and every feature in the spec: status and where it lives |
 | [docs/DATA_MODEL.md](docs/DATA_MODEL.md) | Building definitions vs. placed buildings, and every field of the save file |
 | [docs/BALANCE.md](docs/BALANCE.md) | Balance principles, the unlock schedule, and a worksheet of every building and crop (generated) |

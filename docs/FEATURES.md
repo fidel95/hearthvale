@@ -12,7 +12,7 @@ Every item in the design spec, with its status and where it lives.
 | 3. Resource trade-offs | Coins vs. materials vs. energy vs. land; quick vs. slow crops; power plant vs. solar; stocking shops vs. selling at market; decorations vs. community buildings |
 | 4. Low-friction offline play | No server or account; everything is in the browser. ⏳ Installing it to work with no connection at all (a service worker) is part of Stage 12 |
 | 5. Recoverable progress | Autosave on every change and when the page is hidden; versioned saves with upgrades; unreadable saves kept as a backup; export and import |
-| 6. Modular implementation | One home per responsibility: Grid, PlacementSystem, Economy, ProductionSystem, quests, progression, UnlockSystem, SaveSystem, typed events, and UI panels that only show and ask ([ARCHITECTURE.md](ARCHITECTURE.md#systems-and-who-owns-what)); 180 tests, including a full save round trip |
+| 6. Modular implementation | One home per responsibility: Grid, PlacementSystem, Economy, ProductionSystem, quests, progression, UnlockSystem, SaveSystem, typed events, and UI panels that only show and ask ([ARCHITECTURE.md](ARCHITECTURE.md#systems-and-who-owns-what)); 215 tests, including the full test plan ([TESTING.md](TESTING.md)) |
 
 ## 4.1 City map and camera
 

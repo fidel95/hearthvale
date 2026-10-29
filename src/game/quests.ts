@@ -107,6 +107,7 @@ export interface QuestsSave {
   active: [string, Partial<Record<StatId, number>>][] // quest id and its starting stats
   claimed: string[]
   tiers: [string, number][] // achievement id and tiers reached
+  done?: [string, number[]][] // quest id and the tasks already completed (older saves: none)
 }
 
 export type QuestsEvent =
@@ -120,6 +121,9 @@ export class Quests {
   private active = new Map<string, Partial<Record<StatId, number>>>()
   private claimed = new Set<string>()
   private tiers = new Map<string, number>()
+  // Tasks that have reached their count. They stay done: a "have 3 homes" task
+  // isn't undone by removing a home before claiming the reward.
+  private done = new Map<string, Set<number>>()
   private announced = new Set<string>() // quests already reported as done this session
   private world: World
   private inventory: Inventory
@@ -199,6 +203,11 @@ export class Quests {
 
   // How far along a task is, from 0 up to its count.
   progress(quest: Quest, task: Task): number {
+    if (this.done.get(quest.id)?.has(quest.tasks.indexOf(task))) return task.count
+    return this.measureTask(quest, task)
+  }
+
+  private measureTask(quest: Quest, task: Task): number {
     const value = task.stat ? this.stat(task.stat) - (this.active.get(quest.id)?.[task.stat] ?? 0) : measure(this.world, task.have!)
     return Math.min(task.count, value)
   }
@@ -214,6 +223,7 @@ export class Quests {
   claim(quest: Quest): boolean {
     if (!this.isDone(quest)) return false
     this.active.delete(quest.id)
+    this.done.delete(quest.id)
     this.claimed.add(quest.id)
     const { coins = 0, xp = 0, materials = {} } = quest.reward
     // Quest rewards are prizes, so taxable, like the other rewards.
@@ -235,6 +245,7 @@ export class Quests {
       active: [...this.active.entries()].map(([id, base]) => [id, { ...base }]),
       claimed: [...this.claimed],
       tiers: [...this.tiers.entries()],
+      done: [...this.done.entries()].map(([id, tasks]) => [id, [...tasks]]),
     }
   }
 
@@ -243,6 +254,7 @@ export class Quests {
     this.active = new Map(save.active)
     this.claimed = new Set(save.claimed)
     this.tiers = new Map(save.tiers)
+    this.done = new Map((save.done ?? []).map(([id, tasks]) => [id, new Set(tasks)]))
     this.announced = new Set(this.activeQuests().filter((q) => this.isDone(q)).map((q) => q.id))
     this.refresh()
   }
@@ -273,9 +285,15 @@ export class Quests {
     this.check()
   }
 
-  // Announce quests that have just become ready to claim.
+  // Mark tasks that have reached their count, and announce quests that have
+  // just become ready to claim.
   private check() {
     for (const q of this.activeQuests()) {
+      q.tasks.forEach((t, i) => {
+        if (this.measureTask(q, t) < t.count) return
+        if (!this.done.has(q.id)) this.done.set(q.id, new Set())
+        this.done.get(q.id)!.add(i)
+      })
       if (!this.announced.has(q.id) && this.isDone(q)) {
         this.announced.add(q.id)
         this.emit({ kind: 'questDone', quest: q })
