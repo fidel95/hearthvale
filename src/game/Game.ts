@@ -624,7 +624,8 @@ export class Game {
   }
 
   private addLights() {
-    this.scene.add(new THREE.HemisphereLight('#ffffff', '#6b8e4e', 1.2))
+    // Sky-blue light from above and warm green bounce from below keep shadows colorful, not gray.
+    this.scene.add(new THREE.HemisphereLight('#e8f4ff', '#8fbf6a', 1.3))
 
     // Shadows are drawn into a square texture covering the sun's "shadow
     // camera" box. Covering the whole 60×60 world would make them blurry, so
@@ -632,6 +633,10 @@ export class Game {
     const sun = this.sun
     sun.castShadow = true
     sun.shadow.mapSize.set(2048, 2048)
+    // Nudge shadow tests off each surface, or surfaces shadow themselves in
+    // a speckled pattern ("shadow acne") that grays out their colors.
+    sun.shadow.bias = -0.0005
+    sun.shadow.normalBias = 0.03
     const s = 24
     Object.assign(sun.shadow.camera, { left: -s, right: s, top: s, bottom: -s })
     this.scene.add(sun, sun.target)

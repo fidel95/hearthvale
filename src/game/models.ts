@@ -35,12 +35,105 @@ function loadModel(url: string): Promise<THREE.Object3D> {
   return model
 }
 
+// ---- Colorful homes
+//
+// The model pack paints every house the same way: pale gray walls and a green
+// roof, two swatches of its shared palette texture (colormap.png: a grid of
+// color swatches, 16 across and 4 down; each surface of a model samples one).
+// To give every home its own colors, we make copies of the texture with those
+// two swatches repainted, one per scheme, and pick a scheme from the
+// building's id, so a house keeps its colors for good. Each copy keeps the
+// swatch's light-to-dark shading, only the color changes.
+
+// Found by measuring how much of each model's surface samples each swatch
+// (walls and roofs are big faces with few vertices, so area, not vertex count).
+const ROOF_SWATCH = { column: 1, row: 1 }
+const WALL_SWATCH = { column: 7, row: 2 }
+
+export const HOME_SCHEMES: { roof: string; walls: string }[] = [
+  { roof: '#e0533f', walls: '#ffe9b0' }, // red roof, butter walls
+  { roof: '#3b7fe0', walls: '#fffaf0' }, // blue, white
+  { roof: '#8a56d6', walls: '#ffd9a8' }, // purple, apricot
+  { roof: '#2fae8f', walls: '#ffcfc0' }, // teal, coral
+  { roof: '#f08a24', walls: '#c9e4ff' }, // orange, sky blue
+  { roof: '#d84f8f', walls: '#e6dcff' }, // pink, lavender
+  { roof: '#4fae4a', walls: '#fff09a' }, // green, lemon
+  { roof: '#7a4b34', walls: '#c8f0d4' }, // brown, mint
+]
+
+const schemeMaterials = new Map<string, THREE.Material>()
+
+// The material for a home's colors: a copy of the model's material using a
+// repainted texture. One per scheme (and original material), shared by every home using it.
+function schemeMaterial(original: THREE.MeshStandardMaterial, scheme: number): THREE.Material {
+  const key = `${original.uuid}:${scheme}`
+  let material = schemeMaterials.get(key)
+  if (!material) {
+    const copy = original.clone()
+    copy.map = repaintTexture(original.map!, HOME_SCHEMES[scheme])
+    schemeMaterials.set(key, copy)
+    material = copy
+  }
+  return material
+}
+
+function repaintTexture(base: THREE.Texture, colors: { roof: string; walls: string }): THREE.Texture {
+  const image = base.image as CanvasImageSource & { width: number; height: number }
+  const canvas = document.createElement('canvas')
+  canvas.width = image.width
+  canvas.height = image.height
+  const ctx = canvas.getContext('2d', { willReadFrequently: true })!
+  ctx.drawImage(image, 0, 0)
+  const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height)
+  // The top quarter of the palette is black. Some browsers hand the loader
+  // the picture upside down; if the top isn't black, rows count from the bottom.
+  const flipped = pixels.data[(4 * canvas.width + 4) * 4] > 16
+  // Roofs keep the swatch's shading; walls get one flat color, since they
+  // sample its gradient in steps that read as speckle up close.
+  repaintSwatch(pixels, ROOF_SWATCH, new THREE.Color(colors.roof), flipped, true)
+  repaintSwatch(pixels, WALL_SWATCH, new THREE.Color(colors.walls), flipped, false)
+  ctx.putImageData(pixels, 0, 0)
+  const texture = new THREE.CanvasTexture(canvas)
+  texture.flipY = base.flipY
+  texture.colorSpace = base.colorSpace
+  texture.magFilter = base.magFilter
+  texture.minFilter = base.minFilter
+  texture.wrapS = base.wrapS
+  texture.wrapT = base.wrapT
+  return texture
+}
+
+// Recolor one swatch. Keeping its shading, each pixel gets the new color
+// scaled by how light that pixel was compared with the swatch's average.
+function repaintSwatch(pixels: ImageData, swatch: { column: number; row: number }, color: THREE.Color, flipped: boolean, shading: boolean) {
+  const w = pixels.width / 16
+  const h = pixels.height / 4
+  const x0 = swatch.column * w
+  const y0 = flipped ? pixels.height - (swatch.row + 1) * h : swatch.row * h
+  const target = color.clone().convertLinearToSRGB() // THREE.Color holds linear values; pixels are sRGB
+  const lightness = (i: number) => (pixels.data[i] + pixels.data[i + 1] + pixels.data[i + 2]) / 3
+  let total = 0
+  for (let y = y0; y < y0 + h; y++) for (let x = x0; x < x0 + w; x++) total += lightness((y * pixels.width + x) * 4)
+  const average = total / (w * h) || 1
+  for (let y = y0; y < y0 + h; y++) {
+    for (let x = x0; x < x0 + w; x++) {
+      const i = (y * pixels.width + x) * 4
+      const shade = shading ? lightness(i) / average : 1
+      pixels.data[i] = Math.min(255, target.r * 255 * shade)
+      pixels.data[i + 1] = Math.min(255, target.g * 255 * shade)
+      pixels.data[i + 2] = Math.min(255, target.b * 255 * shade)
+    }
+  }
+}
+
 // Builds the 3D object for a building. Its origin is the center of the
 // footprint at ground level. Models load in the background, so this returns
 // an empty group right away and fills it in once the model is ready.
 // overrideMaterial replaces every material, used for the see-through placement ghost.
-export function createBuildingObject(type: BuildingType, overrideMaterial?: THREE.Material): THREE.Group {
+// colorKey picks a home's color scheme (the building's id), so homes differ.
+export function createBuildingObject(type: BuildingType, overrideMaterial?: THREE.Material, colorKey = 0): THREE.Group {
   const group = new THREE.Group()
+  const scheme = type.category === 'home' ? colorKey % HOME_SCHEMES.length : null
 
   const fill = (content: THREE.Object3D) => {
     content.traverse((obj) => {
@@ -48,6 +141,9 @@ export function createBuildingObject(type: BuildingType, overrideMaterial?: THRE
       obj.castShadow = !overrideMaterial
       obj.receiveShadow = !overrideMaterial
       if (overrideMaterial) obj.material = overrideMaterial
+      else if (scheme !== null && obj.material instanceof THREE.MeshStandardMaterial && obj.material.map) {
+        obj.material = schemeMaterial(obj.material, scheme)
+      }
     })
     group.add(content)
   }

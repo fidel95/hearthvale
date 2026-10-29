@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import type { BuildingType } from '../game/buildings'
+import { BUILDING_TYPES, type BuildingType } from '../game/buildings'
 import { createBuildingObject } from '../game/models'
 
 // Pictures of buildings for the build menu, drawn by three.js itself: one
@@ -36,7 +36,8 @@ export function thumbnail(type: BuildingType): Promise<string> {
 
 async function draw(type: BuildingType): Promise<string> {
   if (!renderer) setUp()
-  const object = createBuildingObject(type)
+  // Each home's card shows a different color scheme, as in town.
+  const object = createBuildingObject(type, undefined, BUILDING_TYPES.indexOf(type))
   await object.userData.ready
 
   // Frame the object: an orthographic camera looking from the game's angle,

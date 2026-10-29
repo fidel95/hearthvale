@@ -13,6 +13,7 @@ import {
   tileToWorld,
   type Lot,
 } from './grid'
+import { Scenery } from './scenery'
 import { coastZ, isWater } from './terrain'
 
 // Draws the ground: the whole world as muted land, the lots the town owns as
@@ -20,7 +21,9 @@ import { coastZ, isWater } from './terrain'
 // gentle waves, and a "for sale" sign on every lot you could buy next. The
 // land is rebuilt whenever it changes (rare), so it can be simple.
 
-const COLORS = { owned: '#7cc46a', unowned: '#a3b98c', grid: '#5a9a4c', sand: '#e9d9a6', sea: '#3d8fc6' }
+// Owned grass alternates two greens tile by tile, like a mown lawn; land
+// beyond the town is a paler green, still clearly not yours.
+const COLORS = { owned: ['#7bd163', '#71c75a'], unowned: '#a8dc8c', grid: '#5aa24a', sand: '#f6e3a4', sea: '#2fa3e0' }
 // How far the sea reaches past the edges of the world, so it fades into the distance.
 const SEA_BEYOND = 40
 
@@ -39,6 +42,7 @@ export class LandView {
   calmSea = false
 
   private showSigns: boolean
+  private scenery: Scenery
 
   // showSigns: false for a neighbor's town, where there's nothing for you to buy.
   constructor(scene: THREE.Scene, city: City, { showSigns = true } = {}) {
@@ -53,6 +57,7 @@ export class LandView {
     )
     world.receiveShadow = true
     scene.add(world)
+    this.scenery = new Scenery(scene)
     this.sea = this.createSea()
     scene.add(this.sea, this.createBeach())
 
@@ -72,19 +77,24 @@ export class LandView {
       obj.geometry.dispose()
     }
 
-    // Owned land: one merged mesh of grass squares, just above the world plane.
+    // Owned land: one merged mesh of grass squares, just above the world
+    // plane, each tile colored by vertex colors in one of two greens.
     const squares: THREE.BufferGeometry[] = []
     const lines: number[] = []
+    const shades = COLORS.owned.map((c) => new THREE.Color(c))
     for (const { lot } of this.city.ownedLots()) {
       const center = footprintCenter(lotCorner(lot), LOT_FOOTPRINT)
-      // Grass up to the shore in each column of the lot (the sea covers the rest).
+      // Grass up to the shore (the sea covers the rest).
       for (let i = 0; i < LOT_SIZE; i++) {
-        const x = lotCorner(lot).x + i
-        const z0 = lotCorner(lot).z
-        const dry = Math.min(LOT_SIZE, coastZ(x) - z0)
-        if (dry <= 0) continue
-        const strip = tileToWorld({ x, z: z0 })
-        squares.push(new THREE.PlaneGeometry(1, dry).rotateX(-Math.PI / 2).translate(strip.x, 0.005, strip.z - 0.5 + dry / 2))
+        for (let j = 0; j < LOT_SIZE; j++) {
+          const tile = { x: lotCorner(lot).x + i, z: lotCorner(lot).z + j }
+          if (tile.z >= coastZ(tile.x)) continue
+          const c = tileToWorld(tile)
+          const square = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2).translate(c.x, 0.005, c.z)
+          const shade = shades[(tile.x + tile.z) % 2]
+          square.setAttribute('color', new THREE.Float32BufferAttribute(Array.from({ length: 4 }, () => shade.toArray()).flat(), 3))
+          squares.push(square)
+        }
       }
       // Tile grid lines for this lot, as pairs of points.
       const x0 = center.x - LOT_SIZE / 2
@@ -94,7 +104,7 @@ export class LandView {
         lines.push(x0, 0.01, z0 + i, x0 + LOT_SIZE, 0.01, z0 + i)
       }
     }
-    this.owned = new THREE.Mesh(mergeGeometries(squares), new THREE.MeshStandardMaterial({ color: COLORS.owned }))
+    this.owned = new THREE.Mesh(mergeGeometries(squares), new THREE.MeshStandardMaterial({ vertexColors: true }))
     this.owned.receiveShadow = true
     for (const g of squares) g.dispose()
     const lineGeometry = new THREE.BufferGeometry()
@@ -102,6 +112,8 @@ export class LandView {
     this.grid = new THREE.LineSegments(lineGeometry, new THREE.LineBasicMaterial({ color: COLORS.grid }))
     this.grid.visible = this.gridVisible
     this.scene.add(this.owned, this.grid)
+    // Scenery everywhere that isn't the town's, the sea or the beach.
+    this.scenery.rebuild((t) => !this.city.ownsTile(t) && t.z < coastZ(t.x) - 2)
 
     // A sign on every lot that could be bought next.
     for (const sign of this.signs.values()) sign.removeFromParent()

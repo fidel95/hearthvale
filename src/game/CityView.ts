@@ -97,7 +97,7 @@ export class CityView {
   private create(b: PlacedBuilding, pop = false) {
     // Roads are drawn together by RoadView; here they only get an empty placeholder.
     const obj =
-      b.type.category === 'road' ? new THREE.Group() : b.construction ? createConstructionSite(b.type) : createBuildingObject(b.type)
+      b.type.category === 'road' ? new THREE.Group() : b.construction ? createConstructionSite(b.type) : createBuildingObject(b.type, undefined, b.id)
     // Upgraded buildings stand a little taller: 8% per level.
     const scale = 1 + 0.08 * (b.level - 1)
     obj.scale.setScalar(scale)

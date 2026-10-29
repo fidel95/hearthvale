@@ -260,6 +260,15 @@ months in one frame, and has a development-only `speed` multiplier (`?speed=60`)
 
 ## 3D rendering
 
+- **Color:** every home gets one of eight color schemes (`HOME_SCHEMES` in
+  `models.ts`), picked from its id so it never changes. The model pack paints
+  all houses from one palette texture; for each scheme we copy the texture and
+  repaint the roof and wall swatches, so the models are untouched and each
+  scheme costs one small texture. Owned grass alternates two greens (vertex
+  colors), and `scenery.ts` scatters trees, bushes and flowers over land the
+  town doesn't own, drawn with instancing so hundreds cost about one draw each.
+- **Shadow bias:** without `shadow.bias` and `normalBias`, surfaces shadow
+  themselves in a speckled pattern ("shadow acne") that grays out colors.
 - **Camera:** an `OrthographicCamera` at `(20, 20, 20)` relative to its target,
   looking at it. Orthographic means no perspective, so this angle gives the
   classic isometric look. `CameraController` moves the *target* to pan and

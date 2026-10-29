@@ -44,11 +44,15 @@ export class Visit {
     this.neighbors = neighbors
     this.controls = controls
     this.scene.background = new THREE.Color('#9fd4f0')
-    this.scene.add(new THREE.HemisphereLight('#ffffff', '#6b8e4e', 1.2))
+    this.scene.add(new THREE.HemisphereLight('#e8f4ff', '#8fbf6a', 1.3))
     const sun = new THREE.DirectionalLight('#fff4e0', 2)
     sun.position.set(15, 25, 10)
     sun.castShadow = true
     sun.shadow.mapSize.set(2048, 2048)
+    // Nudge shadow tests off each surface, or surfaces shadow themselves in
+    // a speckled pattern ("shadow acne") that grays out their colors.
+    sun.shadow.bias = -0.0005
+    sun.shadow.normalBias = 0.03
     Object.assign(sun.shadow.camera, { left: -24, right: 24, top: 24, bottom: -24 })
     this.scene.add(sun, sun.target)
 

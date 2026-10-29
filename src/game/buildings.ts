@@ -238,7 +238,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     goodsPerSale: 4,
     stockCapacity: 40,
     needs: { water: 2, power: 3, trash: 2 },
-    placeholder: { shape: 'shop', color: '#f6e7c8', accent: '#d9822b', height: 1 },
+    placeholder: { shape: 'shop', color: '#ffe3a8', accent: '#ff7a2f', height: 1 },
   },
   {
     id: 'general-store',
@@ -253,7 +253,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     goodsPerSale: 7,
     stockCapacity: 70,
     needs: { water: 2, power: 4, trash: 3 },
-    placeholder: { shape: 'shop', color: '#e3e3e3', accent: '#3a8f5c', height: 1.2 },
+    placeholder: { shape: 'shop', color: '#dff0ff', accent: '#22a85a', height: 1.2 },
   },  {
     id: 'cafe',
     name: 'Café',
@@ -267,7 +267,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     goodsPerSale: 5,
     stockCapacity: 40,
     needs: { water: 3, power: 2, trash: 2 },
-    placeholder: { shape: 'shop', color: '#e9d3c0', accent: '#8a4f2c', height: 0.9 },
+    placeholder: { shape: 'shop', color: '#ffd9c4', accent: '#b8432f', height: 0.9 },
   },
   {
     id: 'flower-shop',
@@ -282,7 +282,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     goodsPerSale: 6,
     stockCapacity: 48,
     needs: { water: 4, power: 2, trash: 1 },
-    placeholder: { shape: 'shop', color: '#f6e3ec', accent: '#c2457a', height: 1 },
+    placeholder: { shape: 'shop', color: '#ffd6ea', accent: '#e8408f', height: 1 },
   },
   {
     id: 'restaurant',
@@ -297,7 +297,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     goodsPerSale: 10,
     stockCapacity: 80,
     needs: { water: 5, power: 4, trash: 4 },
-    placeholder: { shape: 'shop', color: '#f2e6d0', accent: '#a0302a', height: 1.2 },
+    placeholder: { shape: 'shop', color: '#fff0c4', accent: '#d62f2f', height: 1.2 },
   },
   {
     id: 'supermarket',
@@ -312,7 +312,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     goodsPerSale: 14,
     stockCapacity: 120,
     needs: { water: 4, power: 8, trash: 6 },
-    placeholder: { shape: 'shop', color: '#e8eef2', accent: '#2f7a4f', height: 1.3 },
+    placeholder: { shape: 'shop', color: '#d8f4ff', accent: '#1f7fe0', height: 1.3 },
   },
 
   {
@@ -500,7 +500,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     build: { seconds: 180, materials: { steel: 6, lumber: 4 } },
     storage: 400,
     needs: { power: 1 },
-    placeholder: { shape: 'warehouse', color: '#9aa3ad', accent: '#5b6570', height: 1 },
+    placeholder: { shape: 'warehouse', color: '#a8c8e6', accent: '#3a6ea8', height: 1 },
   },
   {
     // Built on the shore. Order shipments of goods here; a cargo ship brings them (Docks.ts).
@@ -570,7 +570,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     upkeep: 30,
     amenity: { bonus: 0.15, radius: 6 },
     populationCapacity: 50,
-    placeholder: { shape: 'school', color: '#e2c08d', accent: '#a0473b', height: 1.2 },
+    placeholder: { shape: 'school', color: '#ffd27a', accent: '#d9482b', height: 1.2 },
   },  {
     id: 'library',
     name: 'Library',
@@ -584,7 +584,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     amenity: { bonus: 0.05, radius: 8 },
     populationCapacity: 20,
     attractsVisitors: { lingerSeconds: 6 },
-    placeholder: { shape: 'library', color: '#d8c7a5', accent: '#6b4a2f', height: 1.1 },
+    placeholder: { shape: 'library', color: '#e9dcff', accent: '#6b3fc0', height: 1.1 },
   },
   {
     id: 'town-hall',
@@ -598,7 +598,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     upkeep: 40,
     amenity: { bonus: 0.05, radius: 12 },
     populationCapacity: 80,
-    placeholder: { shape: 'townhall', color: '#ece6da', accent: '#3b4a6b', height: 1.6 },
+    placeholder: { shape: 'townhall', color: '#f8f1df', accent: '#2f5fc4', height: 1.6 },
   },
 
   // ---- Landmarks: long-term goals, one of each, with a town-wide effect.
@@ -615,7 +615,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     townBonus: 0.05,
     populationCapacity: 30,
     attractsVisitors: { lingerSeconds: 5 },
-    placeholder: { shape: 'clocktower', color: '#d8c7a5', accent: '#3b4a6b', height: 3 },
+    placeholder: { shape: 'clocktower', color: '#f2dfb0', accent: '#2f5fc4', height: 3 },
   },
   {
     id: 'lighthouse',
