@@ -34,12 +34,16 @@ export interface HudCallbacks {
   onOpenTaxes: () => void
   onOpenTown: () => void
   onOpenSettings: () => void
+  onOpenHelp: () => void
+  onRecenter: () => void
+  onOpenDebug?: () => void // development builds only
 }
 
 // A top-bar stat: an icon, a value, and an optional extra shown on wider screens.
 function chip(icon: string, label: string, onClick: () => void) {
   const button = el('button', 'chip')
   button.setAttribute('aria-label', label)
+  button.title = label
   const value = el('span', 'chip-value')
   const extra = el('span', 'chip-extra')
   button.append(el('span', 'chip-icon', icon), value, extra)
@@ -88,15 +92,27 @@ export class Hud {
     const month = el('div', 'chip-bar')
     month.append(this.monthBar)
     this.date.button.append(month)
-    const settings = el('button', 'chip chip-settings', '⚙️')
-    settings.setAttribute('aria-label', 'Settings')
-    settings.addEventListener('click', callbacks.onOpenSettings)
+    // Small icon buttons, each with a label for screen readers and a tooltip.
+    const iconButton = (icon: string, label: string, onClick: () => void) => {
+      const b = el('button', 'chip chip-settings', icon)
+      b.setAttribute('aria-label', label)
+      b.title = label
+      b.addEventListener('click', onClick)
+      return b
+    }
+    const recenter = iconButton('🎯', 'Back to my town (Home key)', callbacks.onRecenter)
+    const help = iconButton('❓', 'Help', callbacks.onOpenHelp)
+    const settings = iconButton('⚙️', 'Settings', callbacks.onOpenSettings)
+    const debug = callbacks.onOpenDebug ? iconButton('🐞', 'Debug tools (development only)', callbacks.onOpenDebug) : null
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Home' && !(e.target instanceof HTMLInputElement)) callbacks.onRecenter()
+    })
 
     const topbar = el('div', 'topbar')
     const stats = el('div', 'topbar-stats')
     stats.append(this.coins.button, this.goods.button, this.people.button, this.energy.button, this.level.button)
     const right = el('div', 'topbar-right')
-    right.append(this.date.button, settings)
+    right.append(this.date.button, recenter, help, settings, ...(debug ? [debug] : []))
     topbar.append(stats, right)
 
     // ---- Under the top bar: what the current tool does (with a way out on

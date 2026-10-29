@@ -43,6 +43,13 @@ export class GameClock {
     return (this.playedMs % MONTH_MS) / MONTH_MS
   }
 
+  // Jump to the start of next month (the debug panel). Returns the month that ended.
+  skipMonth(): number[] {
+    const before = this.monthIndex
+    this.playedMs += MONTH_MS - (this.playedMs % MONTH_MS)
+    return this.monthIndex > before ? [before] : []
+  }
+
   // Move time forward by `realMs` of real time. Returns the month indexes that
   // just finished, oldest first (usually none, sometimes one).
   advance(realMs: number): number[] {

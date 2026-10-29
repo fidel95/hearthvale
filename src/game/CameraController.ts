@@ -21,6 +21,8 @@ export class CameraController {
 
   // Called when the user clicks or taps (presses and releases without dragging).
   onClick?: (clientX: number, clientY: number) => void
+  // Called when the view pans or zooms (the tutorial watches for it).
+  onMove?: () => void
   // When set, a one-finger drag paints (e.g. roads) instead of panning:
   // called with each pointer position, first = true at the start of a drag.
   // Pinching still zooms.
@@ -50,6 +52,27 @@ export class CameraController {
     canvas.addEventListener('pointercancel', (e) => this.onPointerUp(e, false))
     // passive: false lets us call preventDefault so the page itself doesn't scroll
     canvas.addEventListener('wheel', (e) => this.onWheel(e), { passive: false })
+    // Keyboard: arrows or WASD pan, + and − zoom (unless typing in a field).
+    window.addEventListener('keydown', (e) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
+      const step = 2 / this.camera.zoom
+      // Screen directions on the isometric map: "up" is toward −x −z.
+      const moves: Record<string, [number, number]> = {
+        ArrowUp: [-step, -step], w: [-step, -step],
+        ArrowDown: [step, step], s: [step, step],
+        ArrowLeft: [-step, step], a: [-step, step],
+        ArrowRight: [step, -step], d: [step, -step],
+      }
+      const move = moves[e.key]
+      if (move) {
+        this.target.x += move[0] * 0.7
+        this.target.z += move[1] * 0.7
+        this.apply()
+        this.onMove?.()
+        e.preventDefault()
+      } else if (e.key === '+' || e.key === '=') this.setZoom(this.camera.zoom * 1.15)
+      else if (e.key === '-' || e.key === '_') this.setZoom(this.camera.zoom / 1.15)
+    })
 
     this.apply()
   }
@@ -159,6 +182,14 @@ export class CameraController {
     if (!now) return
     this.target.add(this.grabPoint.clone().sub(now))
     this.apply()
+    this.onMove?.()
+  }
+
+  // Back to the default zoom, looking at a point (the recenter button).
+  reset(point: THREE.Vector3) {
+    this.camera.zoom = 1
+    this.camera.updateProjectionMatrix()
+    this.centerOn(point)
   }
 
   // Jump the view to look at a point on the ground.
@@ -170,6 +201,7 @@ export class CameraController {
   private setZoom(zoom: number) {
     this.camera.zoom = THREE.MathUtils.clamp(zoom, MIN_ZOOM, MAX_ZOOM)
     this.camera.updateProjectionMatrix()
+    this.onMove?.()
   }
 
   // Keep the view over the world, then move the camera to match the target.

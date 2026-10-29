@@ -11,7 +11,7 @@ export class Coach {
   constructor(container: HTMLElement, tutorial: Tutorial) {
     const skip = el('button', 'coach-skip', 'Skip tutorial')
     skip.addEventListener('click', () => tutorial.skip())
-    this.next.addEventListener('click', () => tutorial.complete('done'))
+    this.next.addEventListener('click', () => tutorial.current && tutorial.complete(tutorial.current.id))
     const buttons = el('div', 'coach-buttons')
     buttons.append(skip, this.next)
     this.card.append(this.text, buttons)
@@ -21,7 +21,7 @@ export class Coach {
       this.card.hidden = step === null
       if (!step) return
       this.text.textContent = step.text
-      this.next.hidden = step.id !== 'done' // the last step has nothing to do but read
+      this.next.hidden = !step.info // steps that only explain something need a "Got it"
     }
     tutorial.onChange(show)
     show()

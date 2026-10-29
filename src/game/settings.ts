@@ -7,20 +7,28 @@ export interface Settings {
   showPeople: boolean // residents walking around town
   confirmPurchases: boolean // the ✓ step before buying a building
   reduceMotion: boolean // no bobbing bubbles, floating pop-ups or waves
+  music: boolean // gentle background music
+  soundVolume: number // 0 (muted) to 1
 }
+
+// The settings that are on/off switches, for the checkbox rows.
+export type SwitchSetting = { [K in keyof Settings]: Settings[K] extends boolean ? K : never }[keyof Settings]
 
 export const DEFAULT_SETTINGS: Settings = {
   showGrid: true,
   showPeople: true,
   confirmPurchases: true,
   reduceMotion: false,
+  music: false,
+  soundVolume: 0.6,
 }
 
-export const SETTING_LABELS: Record<keyof Settings, string> = {
+export const SETTING_LABELS: Record<SwitchSetting, string> = {
   showGrid: 'Show the tile grid',
   showPeople: 'Show residents walking around',
   confirmPurchases: 'Confirm (✓) before buying a building',
   reduceMotion: 'Reduce motion',
+  music: 'Background music',
 }
 
 export class SettingsStore {

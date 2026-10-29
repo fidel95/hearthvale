@@ -11,6 +11,8 @@ describe('Tutorial', () => {
   it('moves on when the player does what each step asks', () => {
     const city = new City()
     const tutorial = new Tutorial(city)
+    expect(tutorial.current?.id).toBe('camera')
+    tutorial.complete('camera') // the game reports a pan or zoom
     expect(tutorial.current?.id).toBe('collect')
     const home = city.place(BUILDINGS_BY_ID.get('cottage')!, at(0, 0), { now: 0, free: true })!
     city.collect(home.id, 30_000)
@@ -27,9 +29,22 @@ describe('Tutorial', () => {
     tutorial.complete('build') // not the current step: ignored
     expect(tutorial.current?.id).toBe('quests')
     tutorial.complete('quests')
+    expect(tutorial.current?.id).toBe('land')
+    tutorial.complete('land') // "Got it"
     expect(tutorial.current?.id).toBe('done')
     tutorial.skip()
     expect(tutorial.current).toBeNull()
+  })
+})
+
+describe('Tutorial (continued)', () => {
+  it('skips a step already done some other way', () => {
+    const city = new City()
+    const tutorial = new Tutorial(city)
+    for (const x of [0, 3]) city.place(BUILDINGS_BY_ID.get('cottage')!, at(x, 0), { free: true }) // two homes already
+    tutorial.load({ step: TUTORIAL.findIndex((s) => s.id === 'select'), skipped: false })
+    tutorial.complete('select')
+    expect(tutorial.current?.id).toBe('quests') // "build a cottage" was skipped
   })
 })
 

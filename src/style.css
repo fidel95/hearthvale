@@ -1556,3 +1556,39 @@ button {
 .bracket-fill.partial {
   background: #e3a91a;
 }
+
+/* ---- Help and debug ---- */
+
+.help-topic {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.help-topic summary {
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.help-topic p {
+  margin: 6px 0 2px;
+}
+
+.debug-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.debug-grid .panel-button {
+  margin: 0;
+}
+
+.setting-row input[type='range'] {
+  width: 140px;
+}
+
+/* ---- Keyboard focus: a clear ring on whatever has focus (not on mouse clicks). */
+:focus-visible {
+  outline: 3px solid #3f7fe0;
+  outline-offset: 2px;
+}

@@ -56,17 +56,73 @@ export function citySave(save: SaveData): CitySave {
   }
 }
 
-export function readSave(): SaveData | null {
-  // localStorage can be missing or blocked (private windows, strict settings),
-  // and the stored text could be corrupt, so every step is guarded.
+const BACKUP_KEY = 'hearthvale.save.unreadable'
+
+// What reading the save found: a town, nothing (a new game), or a save that
+// couldn't be read, kept aside as a backup instead of being thrown away.
+export type ReadResult = { save: SaveData } | { save: null; problem: string | null }
+
+export function readSave(): ReadResult {
+  let raw: string | null = null
   try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) return null
-    return upgradeSave(JSON.parse(raw))
-  } catch (err) {
-    console.warn("Couldn't read the save; starting fresh", err)
+    // localStorage can be missing or blocked (private windows, strict settings).
+    raw = localStorage.getItem(STORAGE_KEY)
+  } catch {
+    return { save: null, problem: "This browser isn't allowing the game to save (private browsing or strict settings), so progress won't be kept." }
+  }
+  if (!raw) return { save: null, problem: null }
+  let save: SaveData | null = null
+  try {
+    save = upgradeSave(JSON.parse(raw))
+  } catch {
+    // Not valid JSON: handled below.
+  }
+  if (save) return { save }
+  // Corrupt, or from a newer version of the game: keep it, so nothing is lost for good.
+  try {
+    localStorage.setItem(BACKUP_KEY, raw)
+    localStorage.removeItem(STORAGE_KEY)
+  } catch {
+    // Nowhere to keep it; the problem message still explains.
+  }
+  return { save: null, problem: "Your saved town couldn't be read, so a new town was started. The unreadable save was kept: you can download it from Settings." }
+}
+
+// The unreadable save kept by readSave, if there is one.
+export function unreadableBackup(): string | null {
+  try {
+    return localStorage.getItem(BACKUP_KEY)
+  } catch {
     return null
   }
+}
+
+// Check a save file someone is importing, and store it as the current save.
+// Returns an error message, or null on success.
+export function importSave(text: string): string | null {
+  let save: SaveData | null = null
+  try {
+    save = upgradeSave(JSON.parse(text))
+  } catch {
+    return "That file isn't a Hearthvale save."
+  }
+  if (!save) return 'That save is from a newer version of the game, or is damaged.'
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(save))
+  } catch {
+    return "The browser wouldn't store the save."
+  }
+  return null
+}
+
+// Offer text as a file to download (export a save, keep a backup).
+export function downloadText(name: string, text: string) {
+  const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }))
+  const a = document.createElement('a')
+  a.href = url
+  a.download = name
+  a.click()
+  URL.revokeObjectURL(url)
 }
 
 // Bring a save from any older version up to the current one, one version at a
@@ -159,15 +215,22 @@ export class AutoSaver {
     this.timer = window.setTimeout(() => this.saveNow(), AUTOSAVE_DELAY_MS)
   }
 
-  saveNow() {
+  // Returns false if the browser wouldn't store it.
+  saveNow(): boolean {
     window.clearTimeout(this.timer)
-    if (!this.enabled) return
-    const data: SaveData = { version: SAVE_VERSION, savedAt: Date.now(), ...this.collect() }
+    if (!this.enabled) return false
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(this.snapshot()))
+      return true
     } catch (err) {
       console.warn("Couldn't save the game", err)
+      return false
     }
+  }
+
+  // The save as it would be written now (also used to export it).
+  snapshot(): SaveData {
+    return { version: SAVE_VERSION, savedAt: Date.now(), ...this.collect() }
   }
 
   // Used when starting a new town, so the old town isn't saved again on the way out.

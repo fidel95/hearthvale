@@ -8,6 +8,9 @@ import { CropPicker } from '../ui/CropPicker'
 import { InventoryPanel } from '../ui/InventoryPanel'
 import { MapPanel } from '../ui/MapPanel'
 import { neighborsList } from '../ui/NeighborsList'
+import { DebugPanel } from '../ui/DebugPanel'
+import { HelpPanel } from '../ui/HelpPanel'
+import { Sound } from '../ui/sound'
 import { QuestsPanel } from '../ui/QuestsPanel'
 import { el } from '../ui/dom'
 import { Modal, Sheet, button } from '../ui/Sheet'
@@ -37,7 +40,7 @@ import { GRANT, canClaimGrant } from './safetyNet'
 import { CROPS_BY_ID } from './crops'
 import { Docks } from './Docks'
 import { GameClock, MONTH_NAMES } from './GameClock'
-import { tileToWorld, worldToTile, type Lot } from './grid'
+import { LOT_FOOTPRINT, footprintCenter, lotCorner, tileToWorld, worldToTile, type Lot } from './grid'
 import { IncomeView } from './IncomeView'
 import { LandView } from './LandView'
 import { WELCOME_BACK_AFTER_MS, awaySummary } from './offline'
@@ -47,8 +50,8 @@ import { ShipView } from './ShipView'
 import { Player } from './Player'
 import { Services } from './Services'
 import { STARTING_TOWN } from './land'
-import { AutoSaver, citySave, clearSave, readSave } from './save'
-import { SETTING_LABELS, SettingsStore, type Settings } from './settings'
+import { AutoSaver, citySave, clearSave, downloadText, importSave, readSave, unreadableBackup } from './save'
+import { SETTING_LABELS, SettingsStore, type SwitchSetting } from './settings'
 import { Tutorial } from './tutorial'
 import { Taxes } from './Taxes'
 import { UTILITY_INFO } from './utilityRules'
@@ -146,6 +149,7 @@ export class Game {
 
     const taxPanel = new TaxPanel(container, this.city, this.taxes, this.clock)
     const townPanel = new TownPanel(container, this.city, this.services)
+    const help = new HelpPanel(container, () => this.tutorial.load({ step: 0, skipped: false }))
     const buildMenu = new BuildMenu(container, this.city, this.player, this.services, (type) => builder.setMode({ kind: 'build', type }))
     const notice = (message: string) => this.hud.toast(message)
     const inventoryPanel = new InventoryPanel(container, this.city, this.inventory, (b) => builder.setMode({ kind: 'restore', building: b }), notice)
@@ -190,14 +194,20 @@ export class Game {
       onOpenTaxes: () => taxPanel.open(),
       onOpenTown: () => townPanel.open(),
       onOpenSettings: () => this.openSettings(container),
+      onOpenHelp: () => help.open(),
+      onRecenter: () => this.recenter(),
+      onOpenDebug: import.meta.env.DEV ? () => this.debugPanel(container).open() : undefined,
     })
     this.setUpSelection(container, builder)
     new Coach(container, this.tutorial)
+    this.controls.onMove = () => this.tutorial.complete('camera')
     this.hud.onGoHome = () => this.endVisit()
     this.neighbors.onChange(() => this.saver.requestSave())
     this.tutorial.onChange(() => this.saver.requestSave())
     // Apply settings now and whenever they change.
     this.settings.onChange((s) => {
+      this.sound.setVolume(s.soundVolume)
+      this.sound.setMusic(s.music)
       landView.setGridVisible(s.showGrid)
       landView.calmSea = s.reduceMotion
       this.peopleView.setVisible(s.showPeople)
@@ -242,6 +252,12 @@ export class Game {
       }
     })
     const leftAt = this.loadOrSeed()
+    this.setUpSounds(builder)
+    if (this.loadProblem) {
+      const notice = new Modal(container)
+      notice.body.append(el('p', '', this.loadProblem))
+      notice.show('💾 About your save', button('OK', () => notice.close()))
+    }
     this.setUpSafetyNet(container)
     this.setUpWelcomeBack(container, builder, leftAt)
     // Save shortly after anything changes.
@@ -295,7 +311,9 @@ export class Game {
 
   // Returns when the player last left (the save's time), or null for a new town.
   private loadOrSeed(): number | null {
-    const save = readSave()
+    const result = readSave()
+    this.loadProblem = result.save ? null : result.problem
+    const save = result.save
     if (save) {
       // Order matters: the clock first (Taxes reads it), then the town, then
       // the tax books, which replace the records City's 'added' events created.
@@ -423,7 +441,10 @@ export class Game {
       { icon: '🎒', label: 'Store', run: store, when: (b) => canStore(b, this.city, this.docks) },
       { icon: '🗑️', label: 'Remove', run: remove },
     ])
-    builder.onSelect = (b) => this.contextMenu.show(b)
+    builder.onSelect = (b) => {
+      this.contextMenu.show(b)
+      if (b) this.tutorial.complete('select')
+    }
     // A tap on the map while a sheet is open just closes the sheet.
     builder.interceptClick = (x, y) => {
       if (Sheet.closeCurrent()) return true
@@ -434,15 +455,16 @@ export class Game {
   }
 
   private settingsSheet: Sheet | null = null
+  private loadProblem: string | null = null
+  private sound = new Sound()
 
   private openSettings(container: HTMLElement) {
     if (!this.settingsSheet) {
       const sheet = new Sheet(container, '⚙️ Settings')
-      for (const key of Object.keys(SETTING_LABELS) as (keyof Settings)[]) {
+      for (const key of Object.keys(SETTING_LABELS) as SwitchSetting[]) {
         const row = el('label', 'setting-row')
         const box = el('input', '')
         box.type = 'checkbox'
-        box.checked = this.settings.values[key]
         box.addEventListener('change', () => {
           this.settings.set(key, box.checked)
           this.saver.requestSave()
@@ -451,15 +473,59 @@ export class Game {
         row.append(el('span', '', SETTING_LABELS[key]), box)
         sheet.body.append(row)
       }
-      const replay = button('Replay the tutorial', () => {
-        this.tutorial.load({ step: 0, skipped: false })
-        sheet.close()
+      // Volume: 0 mutes; the game is fully playable without sound.
+      const volumeRow = el('label', 'setting-row')
+      const volume = el('input', '')
+      volume.type = 'range'
+      volume.min = '0'
+      volume.max = '1'
+      volume.step = '0.1'
+      volume.setAttribute('aria-label', 'Sound volume')
+      volume.addEventListener('input', () => {
+        this.settings.set('soundVolume', Number(volume.value))
+        this.saver.requestSave()
+      })
+      this.settings.onChange((s) => (volume.value = String(s.soundVolume)))
+      volumeRow.append(el('span', '', '🔊 Sound volume (left = mute)'), volume)
+      sheet.body.append(volumeRow)
+
+      // Saving: manual save, export and import.
+      const saveNow = button('💾 Save now', () => this.hud.toast(this.saver.saveNow() ? 'Saved.' : "Couldn't save: the browser isn't allowing it.", 'info'), 'panel-button secondary')
+      const exportSave = button('⬇️ Export', () => {
+        const day = new Date().toISOString().slice(0, 10)
+        downloadText(`hearthvale-${day}.json`, JSON.stringify(this.saver.snapshot(), null, 2))
       }, 'panel-button secondary')
+      const file = el('input', '')
+      file.type = 'file'
+      file.accept = 'application/json,.json'
+      file.hidden = true
+      file.addEventListener('change', async () => {
+        const chosen = file.files?.[0]
+        if (!chosen) return
+        if (!confirm('Replace your current town with the imported one?')) return
+        const problem = importSave(await chosen.text())
+        if (problem) this.hud.toast(problem, 'warn')
+        else {
+          this.saver.disable() // don't overwrite the import on the way out
+          location.reload()
+        }
+      })
+      const importButton = button('⬆️ Import', () => file.click(), 'panel-button secondary')
+      const tools = el('div', 'panel-buttons')
+      tools.append(saveNow, exportSave, importButton, file)
+      const backup = unreadableBackup()
       sheet.body.append(
-        el('p', '', 'Hearthvale saves your town on this device automatically. Nothing is sent anywhere.'),
-        el('p', 'muted', 'Models: City Kit (Suburban) by Kenney, CC0. Built with three.js.'),
+        el('h3', 'level-subtitle', 'Your save'),
+        el(
+          'p',
+          'muted',
+          'Your town saves itself in this browser, on this device; nothing is sent anywhere. Clearing site data or private browsing deletes it, so export a copy to keep it safe.',
+        ),
+        tools,
+        ...(backup ? [button('Download the unreadable save that was set aside', () => downloadText('hearthvale-unreadable.json', backup), 'panel-button secondary')] : []),
+        el('p', 'muted', 'Models: City Kit (Suburban) by Kenney, CC0. Sounds are made by the game. Built with three.js.'),
       )
-      sheet.setButtons(replay, button('Start a new town', () => this.newTown(), 'panel-button danger'))
+      sheet.setButtons(button('Start a new town', () => this.newTown(), 'panel-button danger'))
       this.settingsSheet = sheet
     }
     this.settingsSheet.open()
@@ -473,6 +539,70 @@ export class Game {
   }
 
   private landPanel: LandPanel | null = null
+
+  // Sounds for what happens in the game, and a soft click for buttons.
+  private setUpSounds(builder: Builder) {
+    this.city.onChange((e) => {
+      if (e.kind === 'collected') this.sound.play('collect')
+      if (e.kind === 'harvested') this.sound.play('harvest')
+      if (e.kind === 'added' && e.paid > 0) this.sound.play('place')
+      if (e.kind === 'finished' || e.kind === 'upgraded') this.sound.play('place')
+      if (e.kind === 'goodsIn') this.sound.play('ship')
+    })
+    this.player.onChange((e) => e.kind === 'levelUp' && this.sound.play('levelup'))
+    const notice = builder.onNotice
+    builder.onNotice = (message) => {
+      notice?.(message)
+      this.sound.play('error') // builder notices explain why something didn't happen
+    }
+    document.addEventListener('click', (e) => {
+      if (e.target instanceof Element && e.target.closest('button')) this.sound.play('click')
+    })
+  }
+
+  // Back to the middle of your own land at the normal zoom.
+  private recenter() {
+    const lots = [...this.city.ownedLots()]
+    const middle = lots
+      .map(({ lot }) => footprintCenter(lotCorner(lot), LOT_FOOTPRINT))
+      .reduce((sum, p) => sum.add(p), new THREE.Vector3())
+      .divideScalar(Math.max(1, lots.length))
+    this.controls.reset(middle)
+  }
+
+  private debug: DebugPanel | null = null
+
+  private debugPanel(container: HTMLElement): DebugPanel {
+    this.debug ??= new DebugPanel(container, {
+      coins: () => this.city.adjustCoins(1000),
+      xp: () => this.player.grantXp(100),
+      materials: () => {
+        for (const id of MATERIAL_IDS) this.inventory.add(id, 10)
+      },
+      goods: () => this.city.addGoods(100, 0),
+      energy: () => this.player.grantEnergy(this.player.maxEnergy),
+      finishTimers: () => {
+        const now = Date.now()
+        for (const b of this.city.all()) {
+          if (b.construction) b.construction.endsAt = now
+          if (b.type.income) b.readyAt = now
+          if (b.crop) {
+            const crop = CROPS_BY_ID.get(b.crop.cropId)
+            if (crop) b.crop.plantedAt = now - crop.growSeconds * 1000
+          }
+        }
+        for (const s of this.docks.all()) s.arrivesAt = now
+        this.saver.requestSave()
+      },
+      nextMonth: () => {
+        for (const month of this.clock.skipMonth()) {
+          this.services.endOfMonth()
+          this.taxes.endOfMonth(month)
+        }
+      },
+    })
+    return this.debug
+  }
 
   private startVisit(container: HTMLElement, builder: Builder, n: Neighbor) {
     if (this.visit) this.endVisit()
