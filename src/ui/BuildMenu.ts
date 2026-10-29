@@ -162,7 +162,8 @@ export class BuildMenu {
     const check = this.placement.check(type)
     const list = el('ul', 'build-details')
     for (const line of details(type)) list.append(el('li', '', line))
-    const place = button(check.problems[0] ?? `Place for 🪙 ${type.cost.toLocaleString()}`, () => {
+    const price = this.placement.freeBuild ? 'Place (free: admin)' : `Place for 🪙 ${type.cost.toLocaleString()}`
+    const place = button(check.problems[0] ?? price, () => {
       this.sheet.close()
       this.onPlace(type)
     })

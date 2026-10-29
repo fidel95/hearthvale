@@ -8,7 +8,7 @@ import { CropPicker } from '../ui/CropPicker'
 import { InventoryPanel } from '../ui/InventoryPanel'
 import { MapPanel } from '../ui/MapPanel'
 import { neighborsList } from '../ui/NeighborsList'
-import { DebugPanel } from '../ui/DebugPanel'
+import { AdminPanel } from '../ui/AdminPanel'
 import { HelpPanel } from '../ui/HelpPanel'
 import { SettingsPanel } from '../ui/SettingsPanel'
 import { Sound } from '../ui/sound'
@@ -32,8 +32,11 @@ import { finishConstruction, upgradeBuilding, type ProjectResult } from './proje
 import type { Neighbor } from './neighborData'
 import { Visit } from './Visit'
 import { GRANT, canClaimGrant } from './safetyNet'
-import { CROPS_BY_ID } from './crops'
+import { CROPS_BY_ID, CROP_TYPES } from './crops'
+import { BUILDING_TYPES } from './buildings'
+import { FEATURE_LEVELS } from './UnlockSystem'
 import { MONTH_NAMES } from './GameClock'
+import { xpForLevel } from './progression'
 import { QualityGovernor, type QualityLevel } from './quality'
 import { GameState } from './GameState'
 import { SaveSystem } from './SaveSystem'
@@ -46,6 +49,9 @@ import { RoadView } from './RoadView'
 import { ShipView } from './ShipView'
 import { AutoSaver } from './save'
 import { UTILITY_INFO } from './utilityRules'
+
+// Admin "max level": the level where the last content unlocks.
+const MAX_CONTENT_LEVEL = Math.max(...BUILDING_TYPES.map((t) => t.unlockLevel), ...CROP_TYPES.map((c) => c.unlockLevel), ...Object.values(FEATURE_LEVELS))
 
 // In development, ?speed=60 makes a game month last one second.
 function devSpeed(): number {
@@ -189,7 +195,7 @@ export class Game {
       onOpenSettings: () => this.settingsPanel.open(),
       onOpenHelp: () => help.open(),
       onRecenter: () => this.recenter(),
-      onOpenDebug: import.meta.env.DEV ? () => this.debugPanel(container).open() : undefined,
+      onOpenAdmin: () => this.adminPanel(container).open(),
     })
     this.setUpSelection(container, builder)
     new Coach(container, this.tutorial)
@@ -205,7 +211,13 @@ export class Game {
       builder.confirmPurchases = s.confirmPurchases
       document.body.classList.toggle('reduce-motion', s.reduceMotion)
       this.cityView.popIn = this.loaded && !s.reduceMotion
+      // Admin tools (only while they're switched on).
+      const admin = s.admin.enabled ? s.admin : null
+      this.hud.setAdminVisible(s.admin.enabled)
+      this.placement.freeBuild = admin?.freeBuild ?? false
+      this.clock.speed = devSpeed() !== 1 ? devSpeed() : (admin?.calendarSpeed ?? 1)
     })
+    window.setInterval(() => this.applyPowers(), 500)
     this.showTaxEvents(taxPanel)
     const cropPicker = new CropPicker(container, this.city, this.player, (message) => this.hud.toast(message))
     builder.onPlantRequest = (plot) => cropPicker.open(plot)
@@ -453,30 +465,19 @@ export class Game {
     this.controls.reset(middle)
   }
 
-  private debug: DebugPanel | null = null
+  private admin: AdminPanel | null = null
 
-  private debugPanel(container: HTMLElement): DebugPanel {
-    this.debug ??= new DebugPanel(container, {
-      coins: () => this.city.economy.adjust(1000),
-      xp: () => this.player.grantXp(100),
+  private adminPanel(container: HTMLElement): AdminPanel {
+    this.admin ??= new AdminPanel(container, this.settings, {
+      coins: (amount) => this.city.economy.adjust(amount),
+      levelUp: () => this.player.grantXp(xpForLevel(this.player.level + 1) - this.player.xp),
+      maxLevel: () => this.player.grantXp(Math.max(0, xpForLevel(MAX_CONTENT_LEVEL) - this.player.xp)),
       materials: () => {
         for (const id of MATERIAL_IDS) this.inventory.add(id, 10)
       },
       goods: () => this.city.economy.addGoods(100, 0),
-      energy: () => this.player.grantEnergy(this.player.maxEnergy),
-      finishTimers: () => {
-        const now = Date.now()
-        for (const b of this.city.all()) {
-          if (b.construction) b.construction.endsAt = now
-          if (b.type.income) b.readyAt = now
-          if (b.crop) {
-            const crop = CROPS_BY_ID.get(b.crop.cropId)
-            if (crop) b.crop.plantedAt = now - crop.growSeconds * 1000
-          }
-        }
-        for (const s of this.docks.all()) s.arrivesAt = now
-        this.saver.requestSave()
-      },
+      energy: () => this.fillEnergy(),
+      finishTimers: () => this.finishTimers(),
       nextMonth: () => {
         for (const month of this.clock.skipMonth()) {
           this.services.endOfMonth()
@@ -484,7 +485,34 @@ export class Game {
         }
       },
     })
-    return this.debug
+    return this.admin
+  }
+
+  // Make everything that's waiting ready now: construction, income, crops, ships.
+  private finishTimers() {
+    const now = Date.now()
+    let changed = false
+    for (const b of this.city.all()) {
+      if (b.construction && b.construction.endsAt > now) (b.construction.endsAt = now), (changed = true)
+      if (b.type.income && b.readyAt > now) (b.readyAt = now), (changed = true)
+      const crop = b.crop && CROPS_BY_ID.get(b.crop.cropId)
+      if (b.crop && crop && b.crop.plantedAt > now - crop.growSeconds * 1000) (b.crop.plantedAt = now - crop.growSeconds * 1000), (changed = true)
+    }
+    for (const s of this.docks.all()) if (s.arrivesAt > now) (s.arrivesAt = now), (changed = true)
+    if (changed) this.saver.requestSave()
+  }
+
+  private fillEnergy() {
+    const missing = this.player.maxEnergy - this.player.energy(Date.now())
+    if (missing > 0) this.player.grantEnergy(missing)
+  }
+
+  // Admin powers that work continuously (checked twice a second).
+  private applyPowers() {
+    const admin = this.settings.values.admin
+    if (!admin.enabled) return
+    if (admin.infiniteEnergy) this.fillEnergy()
+    if (admin.instantTimers) this.finishTimers()
   }
 
   private startVisit(container: HTMLElement, builder: Builder, n: Neighbor) {

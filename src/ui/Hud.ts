@@ -36,7 +36,7 @@ export interface HudCallbacks {
   onOpenSettings: () => void
   onOpenHelp: () => void
   onRecenter: () => void
-  onOpenDebug?: () => void // development builds only
+  onOpenAdmin: () => void // shown when admin tools are on (always in development builds)
 }
 
 // A top-bar stat: an icon, a value, and an optional extra shown on wider screens.
@@ -52,6 +52,7 @@ function chip(icon: string, label: string, onClick: () => void) {
 }
 
 export class Hud {
+  private adminButton: HTMLButtonElement
   private coins
   private goods
   private people
@@ -103,7 +104,8 @@ export class Hud {
     const recenter = iconButton('🎯', 'Back to my town (Home key)', callbacks.onRecenter)
     const help = iconButton('❓', 'Help', callbacks.onOpenHelp)
     const settings = iconButton('⚙️', 'Settings', callbacks.onOpenSettings)
-    const debug = callbacks.onOpenDebug ? iconButton('🐞', 'Debug tools (development only)', callbacks.onOpenDebug) : null
+    this.adminButton = iconButton('🛠️', 'Admin tools', callbacks.onOpenAdmin)
+    this.adminButton.hidden = !import.meta.env.DEV
     window.addEventListener('keydown', (e) => {
       if (e.key === 'Home' && !(e.target instanceof HTMLInputElement)) callbacks.onRecenter()
     })
@@ -112,7 +114,7 @@ export class Hud {
     const stats = el('div', 'topbar-stats')
     stats.append(this.coins.button, this.goods.button, this.people.button, this.energy.button, this.level.button)
     const right = el('div', 'topbar-right')
-    right.append(this.date.button, recenter, help, settings, ...(debug ? [debug] : []))
+    right.append(this.date.button, recenter, help, settings, this.adminButton)
     topbar.append(stats, right)
 
     // ---- Under the top bar: what the current tool does (with a way out on
@@ -253,6 +255,11 @@ export class Hud {
   }
 
   // A message that shows for a few seconds under the top bar.
+  // The 🛠️ button: shown while admin tools are on, and always in development.
+  setAdminVisible(visible: boolean) {
+    this.adminButton.hidden = !visible && !import.meta.env.DEV
+  }
+
   toast(message: string, tone: 'info' | 'warn' = 'info') {
     const toast = el('div', `toast toast-${tone}`, message)
     this.toasts.append(toast)

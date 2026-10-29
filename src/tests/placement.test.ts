@@ -91,4 +91,13 @@ describe('Placement', () => {
     expect(moved.tile).toEqual(at(10, 10))
     expect(loaded.city.buildingAt(at(11, 12))).toBe(moved)
   })
+
+  it('lets the admin free-build power place anything, at any level, for nothing', () => {
+    const state = new GameState()
+    state.city.economy.bill(state.city.coins) // no coins, level 1
+    state.placement.freeBuild = true
+    expect(state.placement.check(b('manor'), { tile: at(0, 0), rotation: 0 }).ok).toBe(true)
+    state.placement.freeBuild = false
+    expect(state.placement.check(b('manor'), { tile: at(0, 0), rotation: 0 }).ok).toBe(false)
+  })
 })

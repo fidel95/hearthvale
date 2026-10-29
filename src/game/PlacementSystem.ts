@@ -28,6 +28,8 @@ export interface Spot {
 }
 
 export class PlacementSystem {
+  // Admin power: build anything, at any level, for free.
+  freeBuild = false
   private city: City
   private services: Services
   private unlocks: UnlockSystem
@@ -43,7 +45,7 @@ export class PlacementSystem {
   check(type: BuildingType, spot?: Spot, { free = false } = {}): PlacementCheck {
     const problems: string[] = []
     const warnings: string[] = []
-    if (!free) {
+    if (!free && !this.freeBuild) {
       if (!this.unlocks.isUnlocked(type)) problems.push(`🔒 Reach level ${type.unlockLevel}`)
       else if (!this.city.economy.canAfford(type.cost)) problems.push(`Need 🪙 ${(type.cost - this.city.coins).toLocaleString()} more`)
       const blocker = this.blocker(type)

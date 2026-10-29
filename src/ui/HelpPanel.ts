@@ -17,6 +17,7 @@ const TOPICS: [string, string][] = [
   ['🧾 Taxes', 'Tap 🪙 for your books. Taxes follow real US rules: sales tax each quarter, property and income tax on Tax Day after December. Unpaid bills become debt, paid from income first.'],
   ['💾 Saving', 'Your town saves itself in this browser. Clearing site data (or private browsing) deletes it, so use Settings → Export to keep a copy, and Import to bring it back.'],
   ['📲 Install and play offline', "Once the game has opened, it keeps a copy of itself and plays with no connection. To keep it like an app: on iPhone or iPad, Share → Add to Home Screen; on Android or a computer, the browser's Install option. When a new version arrives, the game asks before updating."],
+  ['🛠️ Admin tools', 'Settings → Admin tools adds a 🛠️ button to the top bar: give yourself coins, levels, materials and energy, finish every timer, speed up the calendar, or switch on powers like building anything for free. They change your saved town; switch them off any time.'],
   ['🕐 Time', "Timers use your device's clock, so they keep running while the game is closed. This is a local game with no server: changing the device clock changes the timers too."],
 ]
 

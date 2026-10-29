@@ -11,6 +11,16 @@ export interface Settings {
   reduceMotion: boolean // no bobbing bubbles, floating pop-ups or waves
   music: boolean // gentle background music
   soundVolume: number // 0 (muted) to 1
+  admin: AdminSettings
+}
+
+// Admin tools (cheats), off unless turned on in Settings.
+export interface AdminSettings {
+  enabled: boolean // show the 🛠️ button
+  freeBuild: boolean // build anything for free, instantly, at any level
+  infiniteEnergy: boolean
+  instantTimers: boolean // everything is ready the moment it starts
+  calendarSpeed: number // 1, 10 or 60 times as fast
 }
 
 // The settings that are on/off switches, for the checkbox rows.
@@ -23,6 +33,7 @@ export const DEFAULT_SETTINGS: Settings = {
   reduceMotion: false,
   music: false,
   soundVolume: 0.6,
+  admin: { enabled: false, freeBuild: false, infiniteEnergy: false, instantTimers: false, calendarSpeed: 1 },
 }
 
 export const SETTING_LABELS: Record<SwitchSetting, string> = {
@@ -49,7 +60,7 @@ export class SettingsStore {
 
   load(saved: Partial<Settings>) {
     // Unknown or missing keys fall back to the defaults, so old saves and new settings both work.
-    this.values = { ...DEFAULT_SETTINGS, ...saved }
+    this.values = { ...DEFAULT_SETTINGS, ...saved, admin: { ...DEFAULT_SETTINGS.admin, ...saved.admin } }
     this.events.emit(this.values)
   }
 }

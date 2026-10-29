@@ -301,11 +301,11 @@ export class Builder {
     while (z !== tile.z) steps.push({ x, z: (z += Math.sign(tile.z - z)) })
     for (const t of steps) {
       if (!this.city.canPlace(type, t)) continue
-      if (!this.city.canAfford(type)) {
+      if (!this.placement.freeBuild && !this.city.canAfford(type)) {
         if (first) this.onNotice?.(`Not enough coins for a ${type.name}`)
         break
       }
-      this.city.place(type, t)
+      this.city.place(type, t, { free: this.placement.freeBuild })
     }
     this.lastPainted = tile
     this.hoverTile = tile
@@ -398,7 +398,7 @@ export class Builder {
         const anchor = anchorFor(mode.type, tile, this.rotation)
         const check = this.placement.check(mode.type, { tile: anchor, rotation: this.rotation })
         if (!check.ok) this.onNotice?.(check.problems[0])
-        else if (mode.type.category === 'road' || !this.confirmPurchases) this.city.place(mode.type, anchor, { rotation: this.rotation })
+        else if (mode.type.category === 'road' || !this.confirmPurchases) this.city.place(mode.type, anchor, { rotation: this.rotation, free: this.placement.freeBuild })
         else this.setPending(anchor)
         break
       }
@@ -446,7 +446,7 @@ export class Builder {
       return
     }
     if (this.mode.kind !== 'build' || !this.pending) return
-    if (!this.city.place(this.mode.type, this.pending, { rotation: this.rotation })) {
+    if (!this.city.place(this.mode.type, this.pending, { rotation: this.rotation, free: this.placement.freeBuild })) {
       this.onNotice?.(this.city.canAfford(this.mode.type) ? "It doesn't fit there" : `Not enough coins for a ${this.mode.type.name}`)
     }
     this.setPending(null)

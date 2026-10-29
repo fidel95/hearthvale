@@ -1585,6 +1585,21 @@ button {
   margin: 0;
 }
 
+.speed-buttons {
+  display: flex;
+  gap: 4px;
+}
+
+.speed-buttons .panel-button {
+  margin: 0;
+  padding: 4px 10px;
+}
+
+.speed-buttons .panel-button.chosen {
+  background: var(--accent);
+  color: #fff;
+}
+
 .setting-row input[type='range'] {
   width: 140px;
 }

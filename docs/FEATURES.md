@@ -84,7 +84,7 @@ Every item in the design spec, with its status and where it lives.
 | No negative balances | ✅ | Coins never go below 0; unpaid bills are a separate debt paid from income first. Goods and items can't go below 0 |
 | Show costs before confirming | ✅ | |
 | Central economy, balancing tables | ✅ | `Economy.ts` applies every cost, income and reward; formulas live in rule modules (`taxRules`, `utilityRules`, `communityRules`, `progression`) and the balancing worksheet is generated from them ([BALANCE.md](BALANCE.md)) |
-| Debug tools | ✅ | 🐞 in development builds |
+| Debug tools | ✅ | 🛠️ Admin tools: Settings → Admin tools (always on in development): gifts, finish timers, calendar speed, free building, unlimited energy, instant timers |
 
 ## 4.6 Production timers
 

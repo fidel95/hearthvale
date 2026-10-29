@@ -51,6 +51,15 @@ export class SettingsPanel {
     volumeRow.append(el('span', '', '🔊 Sound volume (left = mute)'), volume)
     sheet.body.append(volumeRow)
 
+    // Admin tools: cheats, behind a switch so nobody turns them on by accident.
+    const adminRow = el('label', 'setting-row')
+    const adminBox = el('input', '')
+    adminBox.type = 'checkbox'
+    adminBox.addEventListener('change', () => this.settings.set('admin', { ...this.settings.values.admin, enabled: adminBox.checked }))
+    this.settings.onChange((s) => (adminBox.checked = s.admin.enabled))
+    adminRow.append(el('span', '', '🛠️ Admin tools (cheats): money, levels, speed, free building'), adminBox)
+    sheet.body.append(adminRow)
+
     // Saving: manual save, export and import.
     const saveNow = button('💾 Save now', () => this.toast(this.saver.saveNow() ? 'Saved.' : "Couldn't save: the browser isn't allowing it.", 'info'), 'panel-button secondary')
     const exportSave = button('⬇️ Export', () => {
