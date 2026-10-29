@@ -4,6 +4,9 @@ import { cropState } from './crops'
 import { footprintCenter } from './grid'
 import { createBuildingObject, createConstructionSite, createCropObject, cropLookFor, disposeCropObject } from './models'
 
+const POP_MS = 350
+const POP_FROM = 0.3 // starting size, as a share of full size
+
 // Keeps the 3D scene in sync with the City. It only reacts to City events;
 // it never decides anything about the game itself.
 export class CityView {
@@ -13,6 +16,11 @@ export class CityView {
   private crops = new Map<number, { key: string; object: THREE.Object3D }>()
   private scene: THREE.Scene
   private city: City
+  // Buildings springing into place: when it started (performance.now) and the size to settle at.
+  private pops = new Map<number, { start: number; scale: number }>()
+  // Set once the saved town has loaded (so loading doesn't pop every building)
+  // and turned off by Reduce motion.
+  popIn = false
 
   constructor(scene: THREE.Scene, city: City) {
     this.scene = scene
@@ -21,12 +29,12 @@ export class CityView {
       switch (event.kind) {
         case 'added':
         case 'restored':
-          this.create(event.building)
+          this.create(event.building, true)
           break
         case 'finished': // the construction site becomes the real building
         case 'upgraded': // it grows a little
           this.destroy(event.building.id)
-          this.create(event.building)
+          this.create(event.building, true)
           break
         case 'moved':
           this.position(event.building)
@@ -43,6 +51,7 @@ export class CityView {
   // which depends only on the time, so we check each plot's look and rebuild
   // its crop model only when the look actually changes (a few times per crop).
   update(now: number) {
+    this.animatePops()
     for (const b of this.city.all()) {
       if (b.type.category !== 'farm') continue
       const state = cropState(b.crop, now)
@@ -85,18 +94,40 @@ export class CityView {
     return box.max.y
   }
 
-  private create(b: PlacedBuilding) {
+  private create(b: PlacedBuilding, pop = false) {
     // Roads are drawn together by RoadView; here they only get an empty placeholder.
     const obj =
       b.type.category === 'road' ? new THREE.Group() : b.construction ? createConstructionSite(b.type) : createBuildingObject(b.type)
     // Upgraded buildings stand a little taller: 8% per level.
-    obj.scale.setScalar(1 + 0.08 * (b.level - 1))
+    const scale = 1 + 0.08 * (b.level - 1)
+    obj.scale.setScalar(scale)
+    if (pop && this.popIn && b.type.category !== 'road') {
+      this.pops.set(b.id, { start: performance.now(), scale })
+      obj.scale.setScalar(scale * POP_FROM)
+    }
     this.objects.set(b.id, obj)
     this.scene.add(obj)
     this.position(b)
   }
 
+  // A quick spring: grow past full size a little, then settle ("ease out back").
+  private animatePops() {
+    const now = performance.now()
+    for (const [id, pop] of this.pops) {
+      const obj = this.objects.get(id)
+      const t = Math.min(1, (now - pop.start) / POP_MS)
+      if (!obj || t >= 1) {
+        obj?.scale.setScalar(pop.scale)
+        this.pops.delete(id)
+        continue
+      }
+      const s = 2.70158 * (t - 1) ** 3 + 1.70158 * (t - 1) ** 2 + 1 // 0 → overshoots ~10% → 1
+      obj.scale.setScalar(pop.scale * (POP_FROM + (1 - POP_FROM) * s))
+    }
+  }
+
   private destroy(id: number) {
+    this.pops.delete(id)
     const obj = this.objects.get(id)
     if (obj) this.scene.remove(obj)
     this.objects.delete(id)

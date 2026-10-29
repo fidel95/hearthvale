@@ -645,6 +645,36 @@ the `*.test.ts` files, and [TAXES.md](TAXES.md)
 
 ---
 
-## Coming next
+## Stage 12: polish and deploy
 
-- **Stage 12:** polish (animation, sound) and deploying the game online.
+**Files:** `scripts/serviceWorker.ts`, `scripts/sw-template.js`,
+`src/serviceWorker.ts`, `public/manifest.webmanifest`, `src/game/quality.ts`,
+`.github/workflows/deploy.yml`
+
+- **A service worker is a tiny proxy in the browser.** It sees every request
+  the page makes and can answer from its own cache. Ours downloads every file
+  on install, answers from the cache, and so the game opens with no network.
+- **Generate it at build time.** File names contain content hashes
+  (`index-DxwPZerQ.js`), so the list of files to cache must come from the
+  build. A 30-line Vite plugin writes it, plus a version made from the files'
+  contents: change any file and the browser sees a new service worker.
+- **Never update under the player's feet.** A new version installs and waits.
+  The game saves, asks, and only then tells it to take over (`skipWaiting`)
+  and reloads.
+- **Relative paths make a build portable.** With `base: './'` the same files
+  work at a domain's root or in a GitHub Pages project folder.
+- **Measure, then adapt.** `QualityGovernor` watches the frame rate and lowers
+  resolution, then shadows, a step at a time, and never steps back up mid-game
+  so the picture doesn't flicker between settings. It's a pure class with tests.
+- **Animate only what's new.** Buildings spring into place when built, but not
+  while a saved town loads, and not with Reduce motion on.
+- **Ship through CI.** The deploy workflow runs the tests before building, so a
+  failing test blocks a release.
+
+---
+
+## Ideas for later
+
+- Seasons and weather that change what crops grow best
+- More model packs (a commercial district, a harbor town)
+- State taxes alongside federal ones, or a second country's tax rules

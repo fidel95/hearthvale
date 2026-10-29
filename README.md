@@ -41,6 +41,24 @@ npm run dev      # then open http://localhost:5173
 | `npm run build` | Production build into `dist/` |
 | `npm run preview` | Serve the production build locally |
 
+### Installing and offline play
+
+The production build is a Progressive Web App. A small Vite plugin
+(`scripts/serviceWorker.ts`) writes `dist/sw.js` from `scripts/sw-template.js`,
+listing every file in the build. After the first visit the service worker
+keeps them all, so the game opens and plays with no connection, and it can be
+installed (Add to Home Screen on iPhone and iPad, Install on Android and
+desktop). A new version downloads in the background and the game asks before
+switching. The service worker only runs in the production build, never in
+`npm run dev`.
+
+### Publishing
+
+The build uses relative paths (`base: './'`), so `dist/` works from any
+address. `.github/workflows/deploy.yml` tests, builds and publishes to GitHub
+Pages on every push to `main` (turn it on in the repository's Settings → Pages →
+Source: GitHub Actions).
+
 **Development tip:** add `?speed=60` to the URL (`http://localhost:5173/?speed=60`)
 to make each in-game month last one second, so you can watch a whole tax year in
 12 seconds. It only works in development.
@@ -237,7 +255,7 @@ docs/                     the docs linked above
 | 11.5 | ✅ | Design spec: shops need roads, production states, coins never negative (debt instead), land needs materials, city rating, 3 landmarks, quests as data, sound and music, help, save export / import and damaged-save backup, keyboard camera and accessibility, debug tools ([FEATURES.md](docs/FEATURES.md)) |
 | 11.6 | ✅ | Systems refactor: Economy, ProductionSystem, PlacementSystem, UnlockSystem, GameState, SaveSystem; panels show the rules' answers instead of re-checking them |
 | 11.7 | ✅ | Test plan: placement, economy, production, quests, saves and offline suites (215 tests); fixed quest tasks un-completing and damaged saves crashing ([TESTING.md](docs/TESTING.md)) |
-| 12 | ⏳ | Polish and deploy: installable and fully offline (service worker), animation polish, performance on phones, publish online |
+| 12 | ✅ | Polish and deploy: installable and fully offline (service worker, manifest, app icon), update prompt, buildings spring into place, automatic quality on slow phones, GitHub Pages workflow |
 
 ## Credits
 

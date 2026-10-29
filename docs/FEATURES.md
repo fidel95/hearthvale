@@ -10,7 +10,7 @@ Every item in the design spec, with its status and where it lives.
 | 1. Readable city | Bubbles for every ready or blocked state, a context menu and details for any building, placement shown in words as well as color, 🚧 for cut-off shops, the city rating explained part by part |
 | 2. Meaningful progression | One new mechanic per level, quests that introduce each one, achievements, unlock previews (Quests → Progress), landmarks as long goals ([BALANCE.md](BALANCE.md)) |
 | 3. Resource trade-offs | Coins vs. materials vs. energy vs. land; quick vs. slow crops; power plant vs. solar; stocking shops vs. selling at market; decorations vs. community buildings |
-| 4. Low-friction offline play | No server or account; everything is in the browser. ⏳ Installing it to work with no connection at all (a service worker) is part of Stage 12 |
+| 4. Low-friction offline play | No server or account; a service worker keeps every file, so after the first visit the game opens and plays with no connection, and it installs like an app |
 | 5. Recoverable progress | Autosave on every change and when the page is hidden; versioned saves with upgrades; unreadable saves kept as a backup; export and import |
 | 6. Modular implementation | One home per responsibility: Grid, PlacementSystem, Economy, ProductionSystem, quests, progression, UnlockSystem, SaveSystem, typed events, and UI panels that only show and ask ([ARCHITECTURE.md](ARCHITECTURE.md#systems-and-who-owns-what)); 215 tests, including the full test plan ([TESTING.md](TESTING.md)) |
 

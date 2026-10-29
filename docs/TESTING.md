@@ -96,6 +96,9 @@ The built files mention three outside addresses, none of which is ever
 requested: SVG namespace names (`w3.org`), a citation in a three.js comment,
 and the license link in the model pack's `License.txt`.
 
-**Not yet:** opening the game with no server at all (installed, like an app)
-needs a service worker, planned for Stage 12. Today the page itself comes
-from wherever it's hosted; after that, nothing needs the network.
+**Fully offline (Stage 12):** the production build was served from a
+subfolder (as GitHub Pages does), opened once, then the browser was taken
+completely offline and reloaded: the service worker served all 50 files and the
+town loaded, including with `?options` in the address. Publishing a changed
+`sw.js` showed the "Update ready" prompt; Update now switched versions and the
+old cache was deleted.

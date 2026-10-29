@@ -34,6 +34,7 @@ import { Visit } from './Visit'
 import { GRANT, canClaimGrant } from './safetyNet'
 import { CROPS_BY_ID } from './crops'
 import { MONTH_NAMES } from './GameClock'
+import { QualityGovernor, type QualityLevel } from './quality'
 import { GameState } from './GameState'
 import { SaveSystem } from './SaveSystem'
 import { LOT_FOOTPRINT, footprintCenter, lotCorner, tileToWorld, worldToTile, type Lot } from './grid'
@@ -102,6 +103,8 @@ export class Game {
   private hud: Hud
   private saver: AutoSaver
   private lastFrame = performance.now()
+  private loaded = false
+  private quality = new QualityGovernor()
 
   constructor(container: HTMLElement) {
     this.container = container
@@ -201,6 +204,7 @@ export class Game {
       this.peopleView.setVisible(s.showPeople)
       builder.confirmPurchases = s.confirmPurchases
       document.body.classList.toggle('reduce-motion', s.reduceMotion)
+      this.cityView.popIn = this.loaded && !s.reduceMotion
     })
     this.showTaxEvents(taxPanel)
     const cropPicker = new CropPicker(container, this.city, this.player, (message) => this.hud.toast(message))
@@ -222,6 +226,9 @@ export class Game {
     this.saver = new AutoSaver(() => this.saves.toSave())
     this.settingsPanel = new SettingsPanel(container, this.settings, this.saver, (message, kind) => this.hud.toast(message, kind))
     const { savedAt: leftAt, problem } = this.saves.restoreOrStart()
+    // From now on new buildings spring into place (unless motion is reduced).
+    this.loaded = true
+    this.cityView.popIn = !this.settings.values.reduceMotion
     this.loadProblem = problem
     this.setUpSounds(builder)
     if (this.loadProblem) {
@@ -238,6 +245,21 @@ export class Game {
     this.resize()
   }
 
+  // A new version of the game has downloaded (main.ts). Ask before switching,
+  // saving first so nothing is lost.
+  offerUpdate(apply: () => void) {
+    const modal = new Modal(this.container)
+    modal.body.append(el('p', '', 'A new version of Hearthvale is ready. Your town is saved and will be right where you left it.'))
+    modal.show(
+      '✨ Update ready',
+      button('Update now', () => {
+        this.saver.saveNow()
+        apply()
+      }),
+      button('Later', () => modal.close(), 'panel-button secondary'),
+    )
+  }
+
   start() {
     this.renderer.setAnimationLoop(() => this.tick())
   }
@@ -247,6 +269,8 @@ export class Game {
     const frameTime = performance.now()
     const dt = frameTime - this.lastFrame
     this.lastFrame = frameTime
+    const quality = this.quality.frame(dt)
+    if (quality) this.applyQuality(quality)
 
     for (const month of this.clock.advance(dt)) {
       // Utility bills first, so December's land on this year's return.
@@ -566,6 +590,19 @@ export class Game {
           break
       }
     })
+  }
+
+  // Lower the drawing quality (quality.ts decides when).
+  private applyQuality(level: QualityLevel) {
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, level.maxPixelRatio))
+    this.sun.castShadow = level.shadowMapSize > 0
+    if (level.shadowMapSize > 0 && level.shadowMapSize !== this.sun.shadow.mapSize.x) {
+      this.sun.shadow.mapSize.set(level.shadowMapSize, level.shadowMapSize)
+      this.sun.shadow.map?.dispose()
+      this.sun.shadow.map = null // three.js makes a new one at the new size
+    }
+    this.resize()
+    if (import.meta.env.DEV) console.info(`Drawing quality: ${level.name}`)
   }
 
   private resize() {
