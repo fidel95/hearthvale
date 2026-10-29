@@ -3,6 +3,7 @@ import { CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js'
 import { BuildMenu } from '../ui/BuildMenu'
 import { BuildingPanel, canStore } from '../ui/BuildingPanel'
 import { CollectionsPanel } from '../ui/CollectionsPanel'
+import { Coach } from '../ui/Coach'
 import { CropPicker } from '../ui/CropPicker'
 import { InventoryPanel } from '../ui/InventoryPanel'
 import { MapPanel } from '../ui/MapPanel'
@@ -41,7 +42,10 @@ import { RoadView } from './RoadView'
 import { ShipView } from './ShipView'
 import { Player } from './Player'
 import { Services } from './Services'
-import { AutoSaver, clearSave, readSave } from './save'
+import { STARTING_TOWN } from './land'
+import { AutoSaver, citySave, clearSave, readSave } from './save'
+import { SETTING_LABELS, SettingsStore, type Settings } from './settings'
+import { Tutorial } from './tutorial'
 import { Taxes } from './Taxes'
 import { UTILITY_INFO } from './utilityRules'
 
@@ -71,6 +75,8 @@ export class Game {
   private inventory = new Inventory(this.city)
   private collections = new Collections(this.city, this.inventory, this.player)
   private quests!: Quests
+  private settings = new SettingsStore()
+  private tutorial = new Tutorial(this.city)
   private clock: GameClock
   private taxes: Taxes
 
@@ -127,7 +133,7 @@ export class Game {
 
     const taxPanel = new TaxPanel(container, this.city, this.taxes, this.clock)
     const townPanel = new TownPanel(container, this.city, this.services)
-    const buildMenu = new BuildMenu(container, this.city, this.player, (type) => builder.setMode({ kind: 'build', type }))
+    const buildMenu = new BuildMenu(container, this.city, this.player, this.services, (type) => builder.setMode({ kind: 'build', type }))
     const notice = (message: string) => this.hud.toast(message)
     const inventoryPanel = new InventoryPanel(container, this.city, this.inventory, (b) => builder.setMode({ kind: 'restore', building: b }), notice)
     const collectionsPanel = new CollectionsPanel(container, this.collections, this.inventory)
@@ -145,7 +151,10 @@ export class Game {
         builder.setMode({ kind: 'select' })
         buildMenu.open()
       },
-      onOpenQuests: () => questsPanel.open(),
+      onOpenQuests: () => {
+        questsPanel.open()
+        this.tutorial.complete('quests')
+      },
       onOpenInventory: () => inventoryPanel.open(),
       onOpenCollections: () => collectionsPanel.open(),
       onOpenMap: () => mapPanel.open(),
@@ -154,6 +163,16 @@ export class Game {
       onOpenSettings: () => this.openSettings(container),
     })
     this.setUpSelection(container, builder)
+    new Coach(container, this.tutorial)
+    this.tutorial.onChange(() => this.saver.requestSave())
+    // Apply settings now and whenever they change.
+    this.settings.onChange((s) => {
+      landView.setGridVisible(s.showGrid)
+      landView.calmSea = s.reduceMotion
+      this.peopleView.setVisible(s.showPeople)
+      builder.confirmPurchases = s.confirmPurchases
+      document.body.classList.toggle('reduce-motion', s.reduceMotion)
+    })
     this.showTaxEvents(taxPanel)
     const cropPicker = new CropPicker(container, this.city, this.player, (message) => this.hud.toast(message))
     builder.onPlantRequest = (plot) => cropPicker.open(plot)
@@ -171,17 +190,25 @@ export class Game {
     const dockPanel = new DockPanel(container, this.city, this.docks, (message) => this.hud.toast(message))
     builder.onDockRequest = (dock) => dockPanel.open(dock)
 
-    this.saver = new AutoSaver(() => ({
-      city: this.city.toSave(),
-      clock: { playedMs: this.clock.playedMs },
-      taxes: this.taxes.toSave(),
-      player: this.player.toSave(),
-      shipments: this.docks.toSave(),
-      inventory: this.inventory.toSave(),
-      collections: this.collections.toSave(),
-      quests: this.quests.toSave(),
-      lastGrantAt: this.lastGrantAt,
-    }))
+    this.saver = new AutoSaver(() => {
+      const city = this.city.toSave()
+      const report = this.services.report
+      return {
+        player: { ...this.player.toSave(), level: this.player.level },
+        resources: { coins: city.coins, goods: city.goods ?? 0 },
+        population: { current: report.population, capacity: report.capacity },
+        land: { parcels: city.lots },
+        buildings: { nextId: city.nextId, list: city.buildings },
+        quests: this.quests.toSave(),
+        inventory: { items: this.inventory.toSave(), collections: this.collections.toSave() },
+        shipments: this.docks.toSave(),
+        taxes: this.taxes.toSave(),
+        calendar: { playedMs: this.clock.playedMs },
+        settings: this.settings.values,
+        tutorial: this.tutorial.toSave(),
+        safetyNet: { lastGrantAt: this.lastGrantAt },
+      }
+    })
     const leftAt = this.loadOrSeed()
     this.setUpSafetyNet(container)
     this.setUpWelcomeBack(container, builder, leftAt)
@@ -234,32 +261,25 @@ export class Game {
     if (save) {
       // Order matters: the clock first (Taxes reads it), then the town, then
       // the tax books, which replace the records City's 'added' events created.
-      this.clock.playedMs = save.clock.playedMs
-      this.city.load(save.city)
+      this.clock.playedMs = save.calendar.playedMs
+      this.city.load(citySave(save))
       this.taxes.load(save.taxes)
-      if (save.player) this.player.load(save.player)
-      if (save.shipments) this.docks.load(save.shipments)
-      // Saves from before Stage 9 have no inventory: start them with the new-town materials.
-      if (save.collections) this.collections.load(save.collections)
+      this.player.load(save.player)
+      this.docks.load(save.shipments)
+      this.collections.load(save.inventory.collections)
       if (save.quests) this.quests.load(save.quests)
-      this.lastGrantAt = save.lastGrantAt ?? null
-      if (save.inventory) this.inventory.load(save.inventory)
-      else for (const id of MATERIAL_IDS) this.inventory.add(id, STARTING_MATERIALS[id] ?? 0)
+      this.inventory.load(save.inventory.items)
+      this.settings.load(save.settings)
+      this.tutorial.load(save.tutorial)
+      this.lastGrantAt = save.safetyNet.lastGrantAt
       return save.savedAt
     }
-    // A small starting town so a new game isn't an empty field.
-    // (Tiles 20–39 are the starting land in the middle of the world.)
-    const start: [string, number, number][] = [
-      ['cottage', 29, 29],
-      ['farm-plot', 32, 29],
-      ['oak-tree', 28, 32],
-      ['oak-tree', 31, 32],
-      ['oak-tree', 27, 28],
-    ]
-    for (const [id, x, z] of start) this.city.place(BUILDINGS_BY_ID.get(id)!, { x, z }, { free: true })
-    // Strawberries already 40 s in on the starting plot, so the first harvest comes quickly.
-    const plot = this.city.buildingAt({ x: 32, z: 29 })!
-    this.city.plant(plot.id, CROPS_BY_ID.get('strawberries')!, { now: Date.now() - 40_000, free: true })
+    // A new town: the starting buildings and materials (land.ts, construction.ts).
+    const now = Date.now()
+    for (const start of STARTING_TOWN) {
+      const b = this.city.place(BUILDINGS_BY_ID.get(start.typeId)!, start.tile, { free: true })!
+      if (start.crop) this.city.plant(b.id, CROPS_BY_ID.get(start.crop.cropId)!, { now: now - start.crop.secondsIn * 1000, free: true })
+    }
     for (const id of MATERIAL_IDS) this.inventory.add(id, STARTING_MATERIALS[id] ?? 0)
     return null
   }
@@ -317,6 +337,7 @@ export class Game {
       if (r.reason === 'materials') this.hud.toast(`${what} needs ${materialsText(r.missing)} more. Buy them in Details.`, 'warn')
       if (r.reason === 'coins') this.hud.toast(`Not enough coins to ${what.toLowerCase()}`, 'warn')
       if (r.reason === 'level') this.hud.toast(`Reach a higher level to ${what.toLowerCase()}`, 'warn')
+      if (r.reason === 'room') this.hud.toast('No room for more residents: build a Park, Fire Station or School first', 'warn')
     }
     const finish = (b: PlacedBuilding) => {
       const result = finishConstruction(this.city, this.inventory, b, Date.now())
@@ -324,6 +345,7 @@ export class Game {
       if (!result.ok && result.reason === 'materials') this.buildingPanel.open(b)
     }
     builder.onFinishRequest = finish
+    builder.roomFor = (n) => this.services.roomFor(n)
     this.buildingPanel = new BuildingPanel(
       container,
       {
@@ -340,7 +362,7 @@ export class Game {
         restock: (b) => {
           if (this.city.restock(b.id) === 0) this.hud.toast('Nothing to restock: storage is empty or the shelves are full')
         },
-        upgrade: (b) => explain(upgradeBuilding(this.city, this.inventory, this.player, b), 'Upgrade'),
+        upgrade: (b) => explain(upgradeBuilding(this.city, this.inventory, this.player, b, (n) => this.services.roomFor(n)), 'Upgrade'),
         buyMaterials: (m) => {
           if (!this.inventory.buy(m)) this.hud.toast('Not enough coins for those materials', 'warn')
         },
@@ -352,6 +374,7 @@ export class Game {
     this.contextMenu = new ContextMenu(this.scene, this.cityView, this.incomeView, [
       { icon: 'ℹ️', label: 'Details', run: (b) => this.buildingPanel.open(b) },
       { icon: '✋', label: 'Move', run: move },
+      { icon: '⟳', label: 'Turn', run: (b) => builder.turnPlaced(b), when: (b) => b.type.category !== 'road' },
       { icon: '🎒', label: 'Store', run: store, when: (b) => canStore(b, this.city, this.docks) },
       { icon: '🗑️', label: 'Remove', run: remove },
     ])
@@ -360,18 +383,36 @@ export class Game {
     builder.interceptClick = () => Sheet.closeCurrent()
   }
 
-  private settings: Sheet | null = null
+  private settingsSheet: Sheet | null = null
 
   private openSettings(container: HTMLElement) {
-    if (!this.settings) {
-      this.settings = new Sheet(container, '⚙️ Settings')
-      this.settings.body.append(
+    if (!this.settingsSheet) {
+      const sheet = new Sheet(container, '⚙️ Settings')
+      for (const key of Object.keys(SETTING_LABELS) as (keyof Settings)[]) {
+        const row = el('label', 'setting-row')
+        const box = el('input', '')
+        box.type = 'checkbox'
+        box.checked = this.settings.values[key]
+        box.addEventListener('change', () => {
+          this.settings.set(key, box.checked)
+          this.saver.requestSave()
+        })
+        this.settings.onChange((s) => (box.checked = s[key]))
+        row.append(el('span', '', SETTING_LABELS[key]), box)
+        sheet.body.append(row)
+      }
+      const replay = button('Replay the tutorial', () => {
+        this.tutorial.load({ step: 0, skipped: false })
+        sheet.close()
+      }, 'panel-button secondary')
+      sheet.body.append(
         el('p', '', 'Hearthvale saves your town on this device automatically. Nothing is sent anywhere.'),
         el('p', 'muted', 'Models: City Kit (Suburban) by Kenney, CC0. Built with three.js.'),
       )
-      this.settings.setButtons(button('Start a new town', () => this.newTown(), 'panel-button danger'))
+      sheet.setButtons(replay, button('Start a new town', () => this.newTown(), 'panel-button danger'))
+      this.settingsSheet = sheet
     }
-    this.settings.open()
+    this.settingsSheet.open()
   }
 
   private newTown() {

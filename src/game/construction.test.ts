@@ -137,3 +137,32 @@ describe('storing buildings', () => {
     expect([...loaded.all()]).toHaveLength(0)
   })
 })
+
+describe('turning buildings', () => {
+  it('swaps a turned building’s footprint', () => {
+    const { city } = town()
+    const store = b('general-store') // 3×2
+    const shop = city.place(store, at(0, 0), { free: true, rotation: 1 })!
+    expect(city.buildingAt(at(1, 2))).toBe(shop) // 2 wide, 3 deep when turned
+    expect(city.buildingAt(at(2, 0))).toBeUndefined()
+  })
+
+  it('turns a building in place only where it fits, and keeps the turn in saves', () => {
+    const { city } = town()
+    const shop = city.place(b('general-store'), at(0, 0), { free: true })!
+    city.place(b('cottage'), at(0, 2), { free: true }) // right behind it
+    expect(city.move(shop.id, shop.tile, 1)).toBe(false) // turned, it would need that space
+    expect(city.move(shop.id, at(10, 10), 1)).toBe(true)
+    const loaded = new City()
+    loaded.load(JSON.parse(JSON.stringify(city.toSave())))
+    expect(loaded.get(shop.id)!.rotation).toBe(1)
+  })
+
+  it('remembers when income was last collected', () => {
+    const { city } = town()
+    const home = city.place(b('cottage'), at(0, 0), { now: 0, free: true })!
+    expect(home.lastCollectedAt).toBeNull()
+    city.collect(home.id, 30_000)
+    expect(home.lastCollectedAt).toBe(30_000)
+  })
+})

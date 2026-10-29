@@ -34,6 +34,9 @@ export class LandView {
   private grid: THREE.LineSegments | null = null
   private signs = new Map<string, CSS2DObject>()
   private sea: THREE.Mesh<THREE.BufferGeometry, THREE.MeshStandardMaterial>
+  private gridVisible = true
+  // With reduced motion the sea holds still.
+  calmSea = false
 
   constructor(scene: THREE.Scene, city: City) {
     this.scene = scene
@@ -93,6 +96,7 @@ export class LandView {
     const lineGeometry = new THREE.BufferGeometry()
     lineGeometry.setAttribute('position', new THREE.Float32BufferAttribute(lines, 3))
     this.grid = new THREE.LineSegments(lineGeometry, new THREE.LineBasicMaterial({ color: COLORS.grid }))
+    this.grid.visible = this.gridVisible
     this.scene.add(this.owned, this.grid)
 
     // A sign on every lot that could be bought next.
@@ -107,8 +111,14 @@ export class LandView {
     this.refreshSigns()
   }
 
+  setGridVisible(visible: boolean) {
+    this.gridVisible = visible
+    if (this.grid) this.grid.visible = visible
+  }
+
   // Called every frame: a slow swell across the sea.
   update(seconds: number) {
+    if (this.calmSea) seconds = 0
     const pos = this.sea.geometry.getAttribute('position') as THREE.BufferAttribute
     for (let i = 0; i < pos.count; i++) {
       const x = pos.getX(i)

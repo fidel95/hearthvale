@@ -1,6 +1,6 @@
 import * as THREE from 'three'
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
-import type { PlacedBuilding } from './City'
+import { sizeOf, type PlacedBuilding } from './City'
 import type { CityView } from './CityView'
 import { footprintCenter } from './grid'
 import type { IncomeView } from './IncomeView'
@@ -63,7 +63,7 @@ export class ContextMenu {
   update(now: number) {
     const b = this.building
     if (!b) return
-    this.label.position.copy(footprintCenter(b.tile, b.type.size)).setY(this.cityView.topOf(b.id) + 0.3)
+    this.label.position.copy(footprintCenter(b.tile, sizeOf(b))).setY(this.cityView.topOf(b.id) + 0.3)
     const [title, status] = this.incomeView.describe(b, now)
     if (this.title.textContent !== title) this.title.textContent = title
     if (this.status.textContent !== status) this.status.textContent = status

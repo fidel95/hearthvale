@@ -143,9 +143,10 @@ export class Hud {
       this.goods.button.classList.toggle('bad', city.goods >= city.storageCapacity)
     }
     const showPeople = () => {
-      this.people.value.textContent = services.report.population.toLocaleString()
-      const short = shortIcons(services.report)
-      this.people.extra.textContent = short ? ` short ${short}` : ''
+      const r = services.report
+      this.people.value.textContent = r.population.toLocaleString()
+      const short = shortIcons(r)
+      this.people.extra.textContent = `/${r.capacity}${short ? ` short ${short}` : ''}`
       this.people.button.classList.toggle('bad', short !== '')
     }
     const showLevel = () => {

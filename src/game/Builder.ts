@@ -1,9 +1,9 @@
 import * as THREE from 'three'
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
-import type { BuildingType } from './buildings'
+import { footprint, type BuildingType, type Rotation } from './buildings'
 import type { CameraController } from './CameraController'
 import { duration, outOfEnergyMessage } from '../ui/dom'
-import type { City, PlacedBuilding } from './City'
+import { sizeOf, type City, type PlacedBuilding } from './City'
 import type { CityView } from './CityView'
 import { cropState } from './crops'
 import type { Docks } from './Docks'
@@ -22,8 +22,9 @@ const COLORS = { hover: '#ffffff', ok: '#4ade80', blocked: '#ef4444' }
 
 // The pointer's tile should sit near the middle of a big footprint, not at its
 // corner, so shift the footprint back by half its size.
-function anchorFor(type: BuildingType, tile: Tile): Tile {
-  return { x: tile.x - Math.floor(type.size.x / 2), z: tile.z - Math.floor(type.size.z / 2) }
+function anchorFor(type: BuildingType, tile: Tile, rotation: Rotation): Tile {
+  const size = footprint(type, rotation)
+  return { x: tile.x - Math.floor(size.x / 2), z: tile.z - Math.floor(size.z / 2) }
 }
 
 // Handles taps on the map: collecting and tending buildings, selecting one
@@ -54,6 +55,10 @@ export class Builder {
   private city: City
   private player: Player
   private docks: Docks
+  // Settings: when false, a tap buys and places right away, without the ✓ step.
+  confirmPurchases = true
+  // Asked before placing a home: is there room for its residents? (Game wires it to Services.)
+  roomFor: (residents: number) => boolean = () => true
   private cityView: CityView
   private controls: CameraController
   private hoverTile: Tile | null = null
@@ -65,6 +70,8 @@ export class Builder {
   private lastPainted: Tile | null = null
   // Where a new building would go, waiting for ✓ (buy) or ✗ (cancel).
   private pending: Tile | null = null
+  // How the building being placed or moved is turned (⟳ or the R key).
+  private rotation: Rotation = 0
   private confirm: CSS2DObject
   // An outline around the selected building.
   private selection: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>
@@ -119,7 +126,12 @@ export class Builder {
     no.textContent = '✕'
     no.title = 'Cancel'
     no.addEventListener('click', () => this.setPending(null))
-    confirmEl.append(no, yes)
+    const turn = document.createElement('button')
+    turn.className = 'place-turn'
+    turn.textContent = '⟳'
+    turn.title = 'Turn (R)'
+    turn.addEventListener('click', () => this.turn())
+    confirmEl.append(no, turn, yes)
     this.confirm = new CSS2DObject(confirmEl)
     this.confirm.center.set(0.5, 1)
     this.confirm.visible = false
@@ -136,6 +148,7 @@ export class Builder {
     })
     window.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') this.setMode({ kind: 'select' })
+      if (e.key === 'r' || e.key === 'R') this.turn()
     })
     controls.onClick = (x, y) => this.onClick(x, y)
     city.onChange((e) => {
@@ -160,12 +173,28 @@ export class Builder {
       this.ghost = createBuildingObject(type, this.ghostMaterial)
       this.scene.add(this.ghost)
     }
+    // A moved building keeps its turn; new ones start facing the default way.
+    this.rotation = mode.kind === 'move' ? mode.carrying.rotation : 0
     if (mode.kind === 'move') this.cityView.setVisible(mode.carrying.id, false)
     // Roads are drawn by dragging; everything else drags the camera.
     this.controls.paint = mode.kind === 'build' && mode.type.category === 'road' ? (x, y, first) => this.paintRoad(x, y, first) : null
 
     this.refresh()
     this.onModeChange?.(mode)
+  }
+
+  // Turn the building being placed or moved a quarter turn.
+  turn() {
+    if (!this.placingType()) return
+    this.rotation = ((this.rotation + 1) % 4) as Rotation
+    // A building waiting for ✓ turns where it stands, if it still fits.
+    if (this.pending) this.setPending(this.pending)
+    this.refresh()
+  }
+
+  // Turn a placed building in place, if it fits turned.
+  turnPlaced(b: PlacedBuilding) {
+    if (!this.city.move(b.id, b.tile, ((b.rotation + 1) % 4) as Rotation)) this.onNotice?.("There isn't room to turn it here")
   }
 
   select(building: PlacedBuilding | null) {
@@ -316,21 +345,24 @@ export class Builder {
       case 'build': {
         // Two steps: tap to put the building down, then ✓ to buy it (or tap
         // somewhere else to try another spot). Roads skip this: they're drawn.
-        const anchor = anchorFor(mode.type, tile)
+        const anchor = anchorFor(mode.type, tile, this.rotation)
         if (!this.player.isUnlocked(mode.type)) this.onNotice?.(`${mode.type.name} unlocks at level ${mode.type.unlockLevel}`)
         else if (!this.city.canAfford(mode.type)) this.onNotice?.(`Not enough coins for a ${mode.type.name}`)
-        else if (!this.city.canPlace(mode.type, anchor)) this.onNotice?.(mode.type.onShore ? 'It must stand on the shore, next to the sea' : "It doesn't fit there")
-        else if (mode.type.category === 'road') this.city.place(mode.type, anchor)
+        else if (!this.roomFor(mode.type.residents ?? 0)) this.onNotice?.('No room for more residents: build a Park, Fire Station or School to grow the town')
+        else if (!this.city.canPlace(mode.type, anchor, undefined, this.rotation)) this.onNotice?.(mode.type.onShore ? 'It must stand on the shore, next to the sea' : "It doesn't fit there")
+        else if (mode.type.category === 'road' || !this.confirmPurchases) this.city.place(mode.type, anchor, { rotation: this.rotation })
         else this.setPending(anchor)
         break
       }
-      case 'restore':
-        if (this.city.canPlace(mode.building.type, anchorFor(mode.building.type, tile))) this.setPending(anchorFor(mode.building.type, tile))
+      case 'restore': {
+        const anchor = anchorFor(mode.building.type, tile, this.rotation)
+        if (this.city.canPlace(mode.building.type, anchor, undefined, this.rotation)) this.setPending(anchor)
         else this.onNotice?.("It doesn't fit there")
         break
+      }
       case 'move': {
         const moved = mode.carrying
-        if (this.city.move(moved.id, anchorFor(moved.type, tile))) {
+        if (this.city.move(moved.id, anchorFor(moved.type, tile, this.rotation), this.rotation)) {
           this.setMode({ kind: 'select' })
           this.select(moved)
         } else {
@@ -347,8 +379,8 @@ export class Builder {
     this.confirm.visible = tile !== null
     const type = this.placingType()
     if (tile && type) {
-      const { size } = type
-      this.confirm.position.copy(footprintCenter(tile, size)).setY(Math.max(size.x, size.z) * 1.2 + 0.4)
+      const size = footprint(type, this.rotation)
+      this.confirm.position.copy(footprintCenter(tile, size)).setY(Math.max(size.x, size.z) * 0.6 + 0.6)
     }
     this.refresh()
   }
@@ -358,14 +390,16 @@ export class Builder {
   private confirmPlacement() {
     if (this.mode.kind === 'restore' && this.pending) {
       const b = this.mode.building
-      if (this.city.restore(b.id, this.pending)) {
+      if (this.city.restore(b.id, this.pending, Date.now(), this.rotation)) {
         this.setMode({ kind: 'select' })
         this.select(b)
       }
       return
     }
     if (this.mode.kind !== 'build' || !this.pending) return
-    if (!this.city.place(this.mode.type, this.pending)) this.onNotice?.(`Not enough coins for a ${this.mode.type.name}`)
+    if (!this.city.place(this.mode.type, this.pending, { rotation: this.rotation })) {
+      this.onNotice?.(this.city.canAfford(this.mode.type) ? "It doesn't fit there" : `Not enough coins for a ${this.mode.type.name}`)
+    }
     this.setPending(null)
   }
 
@@ -376,9 +410,9 @@ export class Builder {
     if (this.ghost) this.ghost.visible = false
     this.selection.visible = this.selected !== null
     if (this.selected) {
-      const { tile, type } = this.selected
-      this.selection.position.copy(footprintCenter(tile, type.size)).setY(0.025)
-      this.selection.scale.set(type.size.x + 0.3, 1, type.size.z + 0.3)
+      const size = sizeOf(this.selected)
+      this.selection.position.copy(footprintCenter(this.selected.tile, size)).setY(0.025)
+      this.selection.scale.set(size.x + 0.3, 1, size.z + 0.3)
     }
     // A building waiting for ✓ stays put; otherwise placing follows the pointer.
     const tile = this.pending ?? this.hoverTile
@@ -388,20 +422,22 @@ export class Builder {
 
     const type = this.placingType()
     if (type) {
-      const anchor = this.pending ?? anchorFor(type, tile)
+      const size = footprint(type, this.rotation)
+      const anchor = this.pending ?? anchorFor(type, tile, this.rotation)
       const ignoreId = this.mode.kind === 'move' ? this.mode.carrying.id : undefined
       // Moving and restoring are free; building new needs the coins.
       const affordable = this.mode.kind !== 'build' || this.city.canAfford(type)
-      const color = affordable && this.city.canPlace(type, anchor, ignoreId) ? COLORS.ok : COLORS.blocked
-      this.showFootprint(anchor, type.size, color)
+      const color = affordable && this.city.canPlace(type, anchor, ignoreId, this.rotation) ? COLORS.ok : COLORS.blocked
+      this.showFootprint(anchor, size, color)
       this.ghostMaterial.color.set(color)
-      this.ghost!.position.copy(footprintCenter(anchor, type.size))
+      this.ghost!.position.copy(footprintCenter(anchor, size))
+      this.ghost!.rotation.y = (-this.rotation * Math.PI) / 2
       this.ghost!.visible = true
       if (type.amenity) {
         // Show the reach: the footprint grown by the radius on every side.
         const r = type.amenity.radius
-        this.area.position.copy(footprintCenter(anchor, type.size)).setY(0.015)
-        this.area.scale.set(type.size.x + 2 * r, 1, type.size.z + 2 * r)
+        this.area.position.copy(footprintCenter(anchor, size)).setY(0.015)
+        this.area.scale.set(size.x + 2 * r, 1, size.z + 2 * r)
         this.area.visible = true
       }
       return

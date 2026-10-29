@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
 import { duration } from '../ui/dom'
-import type { City, PlacedBuilding } from './City'
+import { sizeOf, type City, type PlacedBuilding } from './City'
 import type { CityView } from './CityView'
 import type { Docks } from './Docks'
 import { cropState } from './crops'
@@ -222,7 +222,7 @@ export class IncomeView {
 
   private abovePoint(b: PlacedBuilding): THREE.Vector3 {
     const top = b.type.category === 'farm' ? FARM_LABEL_HEIGHT : this.cityView.topOf(b.id) + 0.3
-    return footprintCenter(b.tile, b.type.size).setY(top)
+    return footprintCenter(b.tile, sizeOf(b)).setY(top)
   }
 
   private addBubble(building: PlacedBuilding, kind: BubbleKind, icon: string) {

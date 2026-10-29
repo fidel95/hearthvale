@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import type { City, PlacedBuilding } from './City'
+import { sizeOf, type City, type PlacedBuilding } from './City'
 import { cropState } from './crops'
 import { footprintCenter } from './grid'
 import { createBuildingObject, createConstructionSite, createCropObject, cropLookFor, disposeCropObject } from './models'
@@ -55,7 +55,7 @@ export class CityView {
       if (this.crops.get(b.id)?.key === key) continue
 
       this.removeCrop(b.id)
-      const object = createCropObject(state.crop, look, b.type.size)
+      const object = createCropObject(state.crop, look, sizeOf(b))
       // A child of the plot, so it moves (and hides) with it.
       this.objects.get(b.id)!.add(object)
       this.crops.set(b.id, { key, object })
@@ -113,6 +113,9 @@ export class CityView {
   }
 
   private position(b: PlacedBuilding) {
-    this.objects.get(b.id)!.position.copy(footprintCenter(b.tile, b.type.size))
+    const obj = this.objects.get(b.id)!
+    obj.position.copy(footprintCenter(b.tile, sizeOf(b)))
+    // A quarter turn each; the model is centered, so turning it in place fits the turned footprint.
+    obj.rotation.y = (-b.rotation * Math.PI) / 2
   }
 }

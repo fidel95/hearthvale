@@ -109,7 +109,7 @@ export function buildingRow(type: BuildingType): BuildingRow {
     goodsPerCycle: goods,
     netPerCycle: net,
     xpPerCycle: income ? collectXp(income.coins) : null,
-    buildXp: buildXp(type.cost) + (type.build ? Math.max(2, Math.floor(type.cost / 50)) : 0),
+    buildXp: buildXp(type.cost, type.xpReward) + (type.build ? Math.max(2, Math.floor(type.cost / 50)) : 0),
     residents: type.residents ?? 0,
     needs: UTILITIES.filter((u) => type.needs?.[u]).map((u) => `${UTILITY_INFO[u].icon}${type.needs![u]}`).join(' '),
     upkeepPerMonth: type.upkeep ?? 0,

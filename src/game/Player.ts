@@ -48,7 +48,7 @@ export class Player {
       const now = this.now()
       switch (event.kind) {
         case 'added':
-          this.addXp(buildXp(event.paid), now, event.building)
+          this.addXp(buildXp(event.paid, event.building.type.xpReward), now, event.building)
           break
         case 'collected':
           this.spendEnergy(now)

@@ -1,4 +1,4 @@
-import type { BuildingType } from './buildings'
+import { footprint, type BuildingType, type Rotation } from './buildings'
 import type { Tile } from './grid'
 
 // How a building's location changes what it earns. Homes and shops earn more
@@ -14,6 +14,7 @@ export const MAX_LOCATION_BONUS = 0.4
 interface Placed {
   type: BuildingType
   tile: Tile
+  rotation?: Rotation
 }
 
 export interface LocationBonus {
@@ -26,15 +27,17 @@ const NONE: LocationBonus = { total: 0, sources: [] }
 // The number of tiles between two footprints (0 if they touch or overlap),
 // counting diagonal steps as one: a square "radius" around a building.
 export function footprintGap(a: Placed, b: Placed): number {
-  const gapX = Math.max(0, b.tile.x - (a.tile.x + a.type.size.x - 1), a.tile.x - (b.tile.x + b.type.size.x - 1)) - 1
-  const gapZ = Math.max(0, b.tile.z - (a.tile.z + a.type.size.z - 1), a.tile.z - (b.tile.z + b.type.size.z - 1)) - 1
+  const sa = footprint(a.type, a.rotation)
+  const sb = footprint(b.type, b.rotation)
+  const gapX = Math.max(0, b.tile.x - (a.tile.x + sa.x - 1), a.tile.x - (b.tile.x + sb.x - 1)) - 1
+  const gapZ = Math.max(0, b.tile.z - (a.tile.z + sa.z - 1), a.tile.z - (b.tile.z + sb.z - 1)) - 1
   return Math.max(0, gapX, gapZ)
 }
 
 // The tiles directly around a footprint's edges (not the corners).
 export function edgeTiles(p: Placed): Tile[] {
   const { x, z } = p.tile
-  const { x: w, z: d } = p.type.size
+  const { x: w, z: d } = footprint(p.type, p.rotation)
   const ring: Tile[] = []
   for (let i = 0; i < w; i++) ring.push({ x: x + i, z: z - 1 }, { x: x + i, z: z + d })
   for (let i = 0; i < d; i++) ring.push({ x: x - 1, z: z + i }, { x: x + w, z: z + i })

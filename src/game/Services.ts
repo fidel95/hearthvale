@@ -1,6 +1,6 @@
 import type { City, PlacedBuilding } from './City'
 import { locationBonus, type LocationBonus } from './communityRules'
-import { UTILITIES, incomeMultiplier, serviceReport, type ServiceReport, type Utility } from './utilityRules'
+import { UTILITIES, incomeMultiplier, plannedResidents, serviceReport, type ServiceReport, type Utility } from './utilityRules'
 
 // Keeps the town's utility report and every building's location bonus up to
 // date, tells City how much each building earns and is worth, and pays the
@@ -33,6 +33,11 @@ export class Services {
 
   onChange(listener: (event: ServicesEvent) => void) {
     this.listeners.push(listener)
+  }
+
+  // Is there room in town for this many more residents?
+  roomFor(residents: number): boolean {
+    return residents <= 0 || plannedResidents(this.city.all()) + residents <= this.report.capacity
   }
 
   // The share of its income a building gets from the utilities (1 = fully served).

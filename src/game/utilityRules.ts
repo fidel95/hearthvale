@@ -31,8 +31,13 @@ export interface UtilityStatus {
   level: number // share of demand that's met, 0 to 1
 }
 
+// Every town has room for this many residents. Community buildings add more,
+// and a new home (or an upgrade that adds residents) needs room to fit.
+export const BASE_POPULATION_CAPACITY = 40
+
 export interface ServiceReport {
   population: number
+  capacity: number // how many residents the town has room for
   upkeep: number // coins per game month to run every utility and community building
   utilities: Record<Utility, UtilityStatus>
 }
@@ -43,10 +48,12 @@ export function serviceReport(buildings: Iterable<{ type: BuildingType; level?: 
   const supply = { ...COUNTY_SUPPLY }
   const demand: Record<Utility, number> = { water: 0, power: 0, trash: 0 }
   let population = 0
+  let capacity = BASE_POPULATION_CAPACITY
   let upkeep = 0
   for (const { type, level = 1 } of buildings) {
     const factor = levelFactor(level)
     population += Math.round((type.residents ?? 0) * factor)
+    capacity += type.populationCapacity ?? 0
     for (const u of UTILITIES) demand[u] += Math.round((type.needs?.[u] ?? 0) * factor)
     if (type.supplies) supply[type.supplies.utility] += type.supplies.amount
     upkeep += type.upkeep ?? 0
@@ -56,7 +63,15 @@ export function serviceReport(buildings: Iterable<{ type: BuildingType; level?: 
     demand: demand[u],
     level: demand[u] === 0 ? 1 : Math.min(1, supply[u] / demand[u]),
   })
-  return { population, upkeep, utilities: { water: status('water'), power: status('power'), trash: status('trash') } }
+  return { population, capacity, upkeep, utilities: { water: status('water'), power: status('power'), trash: status('trash') } }
+}
+
+// Residents every home will hold, including homes still being built, so the
+// town can't promise the same room twice.
+export function plannedResidents(buildings: Iterable<{ type: BuildingType; level?: number }>): number {
+  let total = 0
+  for (const { type, level = 1 } of buildings) total += Math.round((type.residents ?? 0) * levelFactor(level))
+  return total
 }
 
 // What share of its full income a building earns, given the service levels.

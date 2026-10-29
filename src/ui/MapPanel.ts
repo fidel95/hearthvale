@@ -1,4 +1,4 @@
-import type { City } from '../game/City'
+import { sizeOf, type City } from '../game/City'
 import { GRID_SIZE, lotOf, type Lot, type Tile } from '../game/grid'
 import { isWater } from '../game/terrain'
 import { el } from './dom'
@@ -107,8 +107,9 @@ export class MapPanel {
       }
     }
     for (const b of this.city.all()) {
-      for (let dx = 0; dx < b.type.size.x; dx++) {
-        for (let dz = 0; dz < b.type.size.z; dz++) tile(b.tile.x + dx, b.tile.z + dz, COLORS[b.type.category] ?? '#999')
+      const size = sizeOf(b)
+      for (let dx = 0; dx < size.x; dx++) {
+        for (let dz = 0; dz < size.z; dz++) tile(b.tile.x + dx, b.tile.z + dz, COLORS[b.type.category] ?? '#999')
       }
     }
 

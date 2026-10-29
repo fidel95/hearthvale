@@ -1072,6 +1072,10 @@ button {
   cursor: pointer;
 }
 
+.place-turn {
+  background: var(--ink);
+}
+
 .place-yes {
   background: var(--good);
 }
@@ -1368,4 +1372,77 @@ button {
   border-radius: 2px;
   background: var(--swatch);
   vertical-align: -1px;
+}
+
+/* Settings → Reduce motion: no bobbing, sliding or floating. Pop-ups still
+   end (their animationend removes them), just almost instantly. */
+.reduce-motion *,
+.reduce-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}
+
+.setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+}
+
+.setting-row input {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--accent);
+}
+
+/* ---- Tutorial ---- */
+
+.coach {
+  position: absolute;
+  left: 50%;
+  bottom: 96px;
+  translate: -50% 0;
+  z-index: 4; /* above the HUD, below sheets */
+  width: min(420px, calc(100% - 24px));
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--ink);
+  color: #fff;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  font-size: 14px;
+  animation: coach-in 0.3s ease-out;
+}
+
+@keyframes coach-in {
+  from {
+    translate: -50% 12px;
+  }
+}
+
+.coach p {
+  margin: 0 0 8px;
+  line-height: 1.4;
+}
+
+.coach-buttons {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.coach-skip {
+  border: none;
+  background: none;
+  color: #cbbfa9;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.coach .panel-button {
+  margin: 0;
+  padding: 6px 14px;
 }

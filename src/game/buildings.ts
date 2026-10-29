@@ -52,6 +52,12 @@ export interface BuildingType {
   upkeep?: number
   // Community buildings: homes and shops within `radius` tiles earn `bonus` more (communityRules.ts).
   amenity?: { bonus: number; radius: number }
+  // Room for this many more residents in town (see utilityRules.ts, population capacity).
+  populationCapacity?: number
+  // Walkers like to visit, and linger this many seconds (PeopleView).
+  attractsVisitors?: { lingerSeconds: number }
+  // Experience for building it; without this it's worked out from the cost (progression.ts buildXp).
+  xpReward?: number
   // Shops: goods used up by each sale (they can't sell without them), and how
   // many goods their shelves hold (filled from town storage by restocking).
   goodsPerSale?: number
@@ -316,6 +322,8 @@ export const BUILDING_TYPES: BuildingType[] = [
     needs: { water: 1 },
     upkeep: 5,
     amenity: { bonus: 0.1, radius: 4 },
+    populationCapacity: 15,
+    attractsVisitors: { lingerSeconds: 8 },
     recoveryYears: 15, // land improvements
     placeholder: { shape: 'park', color: '#6fbf5a', accent: '#d9c79a', height: 0.6 },
   },
@@ -330,6 +338,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     needs: { water: 2, power: 2, trash: 1 },
     upkeep: 20,
     amenity: { bonus: 0.1, radius: 6 },
+    populationCapacity: 30,
     placeholder: { shape: 'firestation', color: '#c8463a', accent: '#f0e6d8', height: 1.1 },
   },
   {
@@ -343,11 +352,20 @@ export const BUILDING_TYPES: BuildingType[] = [
     needs: { water: 3, power: 3, trash: 2 },
     upkeep: 30,
     amenity: { bonus: 0.15, radius: 6 },
+    populationCapacity: 50,
     placeholder: { shape: 'school', color: '#e2c08d', accent: '#a0473b', height: 1.2 },
   },
 ]
 
 export const BUILDINGS_BY_ID = new Map(BUILDING_TYPES.map((b) => [b.id, b]))
+
+// A building can be turned in quarter turns (0–3). Turned a quarter, its
+// footprint swaps width and depth.
+export type Rotation = 0 | 1 | 2 | 3
+
+export function footprint(type: BuildingType, rotation: Rotation = 0): { x: number; z: number } {
+  return rotation % 2 === 0 ? type.size : { x: type.size.z, z: type.size.x }
+}
 
 // Ids that were renamed, so old saves still load. Saves store a building's
 // type id, so renaming an id without this would silently drop those buildings.

@@ -1,4 +1,4 @@
-import type { Lot } from './grid'
+import type { Lot, Tile } from './grid'
 
 // The rules for owning and buying land. Like buildings.ts and taxRules.ts,
 // it's plain data and pure functions; City applies them.
@@ -9,6 +9,17 @@ export const START_LOTS: Lot[] = [
   { x: 3, z: 2 },
   { x: 2, z: 3 },
   { x: 3, z: 3 },
+]
+
+// What a new town starts with: a cottage, a farm plot with strawberries
+// already 40 seconds in (so the first harvest comes quickly), and some trees.
+// Tiles 20–39 are the starting land in the middle of the world.
+export const STARTING_TOWN: { typeId: string; tile: Tile; crop?: { cropId: string; secondsIn: number } }[] = [
+  { typeId: 'cottage', tile: { x: 29, z: 29 } },
+  { typeId: 'farm-plot', tile: { x: 32, z: 29 }, crop: { cropId: 'strawberries', secondsIn: 40 } },
+  { typeId: 'oak-tree', tile: { x: 28, z: 32 } },
+  { typeId: 'oak-tree', tile: { x: 31, z: 32 } },
+  { typeId: 'oak-tree', tile: { x: 27, z: 28 } },
 ]
 
 // The starting land came with the town, but it still has a value for

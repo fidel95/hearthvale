@@ -2,6 +2,7 @@ import { BUILDING_TYPES, type BuildingType, type Category } from '../game/buildi
 import type { City } from '../game/City'
 import { ROAD_BONUS } from '../game/communityRules'
 import type { Player } from '../game/Player'
+import type { Services } from '../game/Services'
 import { UTILITIES, UTILITY_INFO } from '../game/utilityRules'
 import { el } from './dom'
 import { Sheet, button } from './Sheet'
@@ -42,6 +43,7 @@ function details(type: BuildingType): string[] {
   if (type.storage) lines.push(`Stores 📦 ${type.storage} goods`)
   if (type.supplies) lines.push(`Supplies ${UTILITY_INFO[type.supplies.utility].icon} ${type.supplies.amount} ${UTILITY_INFO[type.supplies.utility].name.toLowerCase()}`)
   if (type.amenity) lines.push(`+${type.amenity.bonus * 100}% income for homes and shops within ${type.amenity.radius} tiles`)
+  if (type.populationCapacity) lines.push(`Room for 👥 ${type.populationCapacity} more residents in town`)
   if (type.category === 'road') lines.push(`Drag to draw. Homes and shops beside a road earn +${ROAD_BONUS * 100}%`)
   if (type.onShore) lines.push('Must be built on the shore. Order shipments of goods here')
   const needs = UTILITIES.filter((u) => type.needs?.[u]).map((u) => `${UTILITY_INFO[u].icon} ${type.needs![u]}`)
@@ -59,11 +61,13 @@ export class BuildMenu {
   private chosen: BuildingType | null = null
   private city: City
   private player: Player
+  private services: Services
   private onPlace: (type: BuildingType) => void
 
-  constructor(container: HTMLElement, city: City, player: Player, onPlace: (type: BuildingType) => void) {
+  constructor(container: HTMLElement, city: City, player: Player, services: Services, onPlace: (type: BuildingType) => void) {
     this.city = city
     this.player = player
+    this.services = services
     this.onPlace = onPlace
     this.sheet = new Sheet(container, '🔨 Build', 'build-sheet')
     this.sheet.body.append(this.tabs, this.grid)
@@ -121,9 +125,16 @@ export class BuildMenu {
     for (const { card, status, type } of this.cards) {
       const locked = !this.player.isUnlocked(type)
       const short = type.cost - this.city.coins
+      const noRoom = !this.services.roomFor(type.residents ?? 0)
       card.classList.toggle('locked', locked)
-      card.classList.toggle('unaffordable', !locked && short > 0)
-      status.textContent = locked ? `🔒 Reach level ${type.unlockLevel}` : short > 0 ? `Need 🪙 ${short.toLocaleString()} more` : ''
+      card.classList.toggle('unaffordable', !locked && (short > 0 || noRoom))
+      status.textContent = locked
+        ? `🔒 Reach level ${type.unlockLevel}`
+        : short > 0
+          ? `Need 🪙 ${short.toLocaleString()} more`
+          : noRoom
+            ? '👥 No room: build community buildings'
+            : ''
       status.hidden = status.textContent === ''
     }
     if (this.chosen) this.choose(this.chosen)
@@ -138,16 +149,23 @@ export class BuildMenu {
 
     const locked = !this.player.isUnlocked(type)
     const short = type.cost - this.city.coins
+    const noRoom = !this.services.roomFor(type.residents ?? 0)
     const list = el('ul', 'build-details')
     for (const line of details(type)) list.append(el('li', '', line))
     const place = button(
-      locked ? `🔒 Reach level ${type.unlockLevel}` : short > 0 ? `Need 🪙 ${short.toLocaleString()} more` : `Place for 🪙 ${type.cost.toLocaleString()}`,
+      locked
+        ? `🔒 Reach level ${type.unlockLevel}`
+        : short > 0
+          ? `Need 🪙 ${short.toLocaleString()} more`
+          : noRoom
+            ? '👥 No room for more residents'
+            : `Place for 🪙 ${type.cost.toLocaleString()}`,
       () => {
         this.sheet.close()
         this.onPlace(type)
       },
     )
-    place.disabled = locked || short > 0
+    place.disabled = locked || short > 0 || noRoom
     const title = el('div', 'build-preview-title')
     title.append(el('strong', '', type.name), el('span', 'muted', ` · ${type.size.x}×${type.size.z} tiles`))
     this.preview.replaceChildren(title, list, place)

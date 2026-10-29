@@ -15,6 +15,7 @@ ideas behind them.
 |---|---|
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | How the code fits together: state vs. views, events, the frame loop, saving |
 | [docs/TAXES.md](docs/TAXES.md) | The tax system: each tax, the real rule behind it, worked examples, simplifications |
+| [docs/DATA_MODEL.md](docs/DATA_MODEL.md) | Building definitions vs. placed buildings, and every field of the save file |
 | [docs/BALANCE.md](docs/BALANCE.md) | Balance principles, the unlock schedule, and a worksheet of every building and crop (generated) |
 | [docs/LEARNING.md](docs/LEARNING.md) | Stage-by-stage journal of the concepts each part teaches, with exercises |
 
@@ -78,6 +79,10 @@ the right on a wide screen) so the town stays in view.
 - **Construction:** bigger buildings start as a construction site with a timer, then need materials (🧱 bricks, 🪵 lumber, 🪟 glass, 🔩 steel) to finish. You start with a few; buy more in Inventory, or right from the building's details.
 - **Shops and stock:** shops sell from their own shelves (the Bakery holds 40 goods, 4 per sale). Tap an out-of-stock shop, or press Restock, to fill its shelves from town storage.
 - **Upgrades:** homes and shops go up to ★★★: +50% and then +100% income, residents and shelf space, for coins, materials and a player level.
+- **Turning:** press ⟳ (or R) while placing or moving a building, or choose Turn on a placed one. A turned building's footprint swaps width and depth.
+- **Population capacity:** a town has room for 40 residents; Parks, Fire Stations and Schools make room for more. New homes and upgrades need room. The top bar shows 👥 residents / room.
+- **Settings:** ⚙️ for the tile grid, walking residents, the ✓ step before buying, reduced motion, replaying the tutorial, and starting a new town.
+- **Tutorial:** a new town is guided through the basics, one step at a time; skip it any time.
 - **Storing:** put a building away in your Inventory and place it again later for free. While stored it pays no property tax and isn't depreciated.
 - **Levels and XP:** building, collecting, harvesting, finishing and upgrading earn XP (⭐). Each level pays a reward, refills energy, raises its maximum and unlocks more.
 - **Energy (⚡):** collecting, harvesting, planting, clearing and unloading use 1. It refills by 1 a minute in real time, even while the game is closed.
@@ -132,6 +137,8 @@ src/
     quests.ts             quests, achievements and the stats behind them
     balance.ts            the balancing worksheet, computed from the catalogs
     safetyNet.ts          the county grant for a town that would otherwise be stuck
+    settings.ts           player settings and their defaults
+    tutorial.ts           the new-town tutorial steps
     ContextMenu.ts        the menu over a selected building
     utilityRules.ts       water, power and trash: demand, supply, effect on income (pure functions)
     communityRules.ts     location bonuses (parks, schools, roads) and road shapes (pure functions)
@@ -172,6 +179,7 @@ src/
     InventoryPanel.ts     stored buildings, materials, goods, collectibles
     CollectionsPanel.ts   collection sets and rewards
     MapPanel.ts           the world map
+    Coach.ts              the tutorial's instruction card
     dom.ts                small DOM helpers
 scripts/                  generators run with Vitest (npm run balance)
 public/models/            3D models served as-is (Kenney City Kit, CC0)

@@ -1,4 +1,4 @@
-import { BUILDINGS_BY_ID, RENAMED_BUILDING_IDS, type BuildingType } from './buildings'
+import { BUILDINGS_BY_ID, RENAMED_BUILDING_IDS, footprint, type BuildingType, type Rotation } from './buildings'
 import { levelFactor } from './construction'
 import { CROPS_BY_ID, cropState, type CropType, type PlantedCrop } from './crops'
 import {
@@ -29,14 +29,21 @@ const STARTING_GOODS = 40
 // The town square stores this many goods; barns, warehouses and docks add more.
 export const BASE_STORAGE = 100
 
+// The tiles a placed building covers, given how it's turned.
+export function sizeOf(b: { type: BuildingType; rotation?: Rotation }) {
+  return footprint(b.type, b.rotation ?? 0)
+}
+
 export interface PlacedBuilding {
   id: number
   type: BuildingType
   tile: Tile // the footprint's lowest corner tile
+  rotation: Rotation // quarter turns; see footprint()
   // When its income can next be collected, as a Date.now() timestamp.
   // Real clock time (not "seconds since the game started") so timers keep
   // running while the game is closed: rent is waiting when you come back.
   readyAt: number
+  lastCollectedAt: number | null // when income was last collected, if ever
   // Farm plots only: what's planted, or null when the plot is empty.
   crop: PlantedCrop | null
   level: number // 1 to 3 (construction.ts)
@@ -50,7 +57,9 @@ interface BuildingSave {
   id: number
   typeId: string
   tile: Tile
+  rotation?: Rotation
   readyAt: number
+  lastCollectedAt?: number | null
   crop?: PlantedCrop | null
   level?: number // the fields from here on were added in Stage 9; older saves lack them
   stock?: number
@@ -206,28 +215,43 @@ export class City {
     return this._coins >= type.cost
   }
 
-  // ignoreId lets a building being moved overlap its own current spot.
-  canPlace(type: BuildingType, tile: Tile, ignoreId?: number): boolean {
-    const fits = footprintTiles(tile, type.size).every((t) => {
+  // ignoreId lets a building being moved (or turned) overlap its own current spot.
+  canPlace(type: BuildingType, tile: Tile, ignoreId?: number, rotation: Rotation = 0): boolean {
+    const fits = footprintTiles(tile, footprint(type, rotation)).every((t) => {
       if (!inBounds(t) || !this.ownsTile(t) || isWater(t)) return false
       const id = this.occupied[t.z * GRID_SIZE + t.x]
       return id === null || id === ignoreId
     })
     if (!fits) return false
     // Docks stand on the shore: at least two of the tiles along their edges must be sea.
-    if (type.onShore) return edgeTiles({ type, tile }).filter(isWater).length >= 2
+    if (type.onShore) return edgeTiles({ type, tile, rotation }).filter(isWater).length >= 2
     return true
   }
 
   // free: true skips the cost, for the starting town.
-  place(type: BuildingType, tile: Tile, { now = Date.now(), free = false } = {}): PlacedBuilding | null {
-    if (!this.canPlace(type, tile)) return null
+  place(
+    type: BuildingType,
+    tile: Tile,
+    { now = Date.now(), free = false, rotation = 0 as Rotation } = {},
+  ): PlacedBuilding | null {
+    if (!this.canPlace(type, tile, undefined, rotation)) return null
     if (!free && !this.canAfford(type)) return null
 
     // Bigger buildings start as a construction site (unless they're free, like the starting town).
     const construction = type.build && !free ? { endsAt: now + type.build.seconds * 1000 } : null
     const readyAt = type.income && !construction ? now + type.income.seconds * 1000 : 0
-    const building: PlacedBuilding = { id: this.nextId++, type, tile, readyAt, crop: null, level: 1, stock: 0, construction }
+    const building: PlacedBuilding = {
+      id: this.nextId++,
+      type,
+      tile,
+      rotation,
+      readyAt,
+      lastCollectedAt: null,
+      crop: null,
+      level: 1,
+      stock: 0,
+      construction,
+    }
     this.buildings.set(building.id, building)
     this.mark(building, building.id)
     const paid = free ? 0 : type.cost
@@ -244,11 +268,14 @@ export class City {
     this.emit({ kind: 'removed', building })
   }
 
-  move(id: number, tile: Tile): boolean {
+  // Move a building, optionally turning it too.
+  move(id: number, tile: Tile, rotation?: Rotation): boolean {
     const building = this.buildings.get(id)
-    if (!building || !this.canPlace(building.type, tile, id)) return false
+    const turn = rotation ?? building?.rotation ?? 0
+    if (!building || !this.canPlace(building.type, tile, id, turn)) return false
     this.mark(building, null)
     building.tile = tile
+    building.rotation = turn
     this.mark(building, id)
     this.emit({ kind: 'moved', building })
     return true
@@ -302,11 +329,12 @@ export class City {
   }
 
   // Put a stored building back on the map, free.
-  restore(id: number, tile: Tile, now = Date.now()): boolean {
+  restore(id: number, tile: Tile, now = Date.now(), rotation: Rotation = 0): boolean {
     const b = this.stored.get(id)
-    if (!b || !this.canPlace(b.type, tile)) return false
+    if (!b || !this.canPlace(b.type, tile, undefined, rotation)) return false
     this.stored.delete(id)
     b.tile = tile
+    b.rotation = rotation
     if (b.type.income) b.readyAt = now + b.type.income.seconds * 1000
     this.buildings.set(id, b)
     this.mark(b, id)
@@ -375,6 +403,7 @@ export class City {
     // The next timer starts when you collect, not when it became ready,
     // so leaving money uncollected doesn't stack up extra payouts.
     building.readyAt = now + building.type.income.seconds * 1000
+    building.lastCollectedAt = now
     building.stock -= goodsUsed
     this.emit({ kind: 'collected', building, amount, goodsUsed })
     this.adjustCoins(amount)
@@ -486,7 +515,7 @@ export class City {
     this.emit({ kind: 'land' })
     for (const saved of save.buildings) {
       const type = BUILDINGS_BY_ID.get(RENAMED_BUILDING_IDS[saved.typeId] ?? saved.typeId)
-      if (!type || (!saved.stored && !this.canPlace(type, saved.tile))) {
+      if (!type || (!saved.stored && !this.canPlace(type, saved.tile, undefined, saved.rotation ?? 0))) {
         console.warn('Skipping saved building that no longer fits:', saved)
         continue
       }
@@ -496,7 +525,9 @@ export class City {
         id: saved.id,
         type,
         tile: saved.tile,
+        rotation: saved.rotation ?? 0,
         readyAt: saved.readyAt,
+        lastCollectedAt: saved.lastCollectedAt ?? null,
         crop,
         level: saved.level ?? 1,
         stock: saved.stock ?? 0,
@@ -523,7 +554,9 @@ export class City {
       id: b.id,
       typeId: b.type.id,
       tile: b.tile,
+      rotation: b.rotation,
       readyAt: b.readyAt,
+      lastCollectedAt: b.lastCollectedAt,
       crop: b.crop,
       level: b.level,
       stock: b.stock,
@@ -533,7 +566,7 @@ export class City {
   }
 
   private mark(building: PlacedBuilding, value: number | null) {
-    for (const t of footprintTiles(building.tile, building.type.size)) {
+    for (const t of footprintTiles(building.tile, sizeOf(building))) {
       this.occupied[t.z * GRID_SIZE + t.x] = value
     }
   }

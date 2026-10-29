@@ -2,7 +2,7 @@ import { BUILDING_TYPES } from '../game/buildings'
 import type { City } from '../game/City'
 import type { Services } from '../game/Services'
 import { MAX_LOCATION_BONUS } from '../game/communityRules'
-import { COUNTY_SUPPLY, UTILITIES, UTILITY_INFO, incomeMultiplier } from '../game/utilityRules'
+import { BASE_POPULATION_CAPACITY, COUNTY_SUPPLY, UTILITIES, UTILITY_INFO, incomeMultiplier } from '../game/utilityRules'
 import { coins, el, percent } from './dom'
 import { Sheet } from './Sheet'
 
@@ -28,7 +28,10 @@ export class TownPanel {
 
   private render() {
     const report = this.services.report
-    const parts: HTMLElement[] = [el('p', 'town-population', `👥 ${report.population} residents`)]
+    const parts: HTMLElement[] = [
+      el('p', 'town-population', `👥 ${report.population} residents · room for ${report.capacity}`),
+      el('p', 'muted', `Every town has room for ${BASE_POPULATION_CAPACITY} residents. Parks, fire stations and schools make room for more; new homes and upgrades need room to fit.`),
+    ]
 
     // Count utility buildings by type, for the "where it comes from" lines.
     const plants = new Map<string, number>()

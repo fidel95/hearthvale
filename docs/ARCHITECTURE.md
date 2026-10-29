@@ -350,25 +350,14 @@ prize as income.
 ### Save versions
 
 `upgradeSave` in `save.ts` brings any older save up to date one version at a
-time. Version 1 (the 20×20 map) → 2 moves every building 20 tiles so it lands
-in the middle of the 60×60 world, and adds the starting lots.
+time: 1 → 2 moves every building onto the bigger world; 2 → 3 regroups the
+file into sections and adds settings and tutorial progress. Details in
+[DATA_MODEL.md](DATA_MODEL.md#versions).
 `save.test.ts` checks it with a real version 1 save.
 
 `save.ts` stores one JSON document in `localStorage` under `hearthvale.save`:
 
-```jsonc
-{
-  "version": 1,
-  "savedAt": 1761700000000,
-  "city":  { "coins": 271, "nextId": 7, "buildings": [
-    { "id": 1, "typeId": "cottage", "tile": { "x": 9, "z": 9 }, "readyAt": 1761700030000, "crop": null },
-    { "id": 2, "typeId": "farm-plot", "tile": { "x": 12, "z": 9 }, "readyAt": 0, "crop": { "cropId": "wheat", "plantedAt": 1761700000000 } }
-  ] },
-  "clock": { "playedMs": 812345 },
-  "taxes": { "ledger": { … }, "salesTaxHeld": 3, "lastReturn": { … }, "assets": [[1, { "basis": 100, "depreciated": 4.2, "placedMonth": 0 }]] },
-  "player": { "xp": 52, "energy": 9, "energyAt": 1761700000000 }
-}
-```
+The file's sections and every field are described in [DATA_MODEL.md](DATA_MODEL.md).
 
 - **What's saved:** only data. Buildings are saved by `typeId`, not by copying
   the type, so changing a building's stats in `buildings.ts` applies to old

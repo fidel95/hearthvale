@@ -480,6 +480,44 @@ the `*.test.ts` files, and [TAXES.md](TAXES.md)
 
 ---
 
+## Stage 9.6: the data model
+
+**Files:** [DATA_MODEL.md](DATA_MODEL.md), `buildings.ts` (`footprint`),
+`City.ts` (`rotation`, `lastCollectedAt`), `save.ts` (version 3),
+`settings.ts`, `tutorial.ts`, `ui/Coach.ts`
+
+- **Definitions vs. instances.** A definition is the *kind* of building (cost,
+  size, income); an instance is *this one*, in your town (where, turned how,
+  when last collected). Definitions are data in code; instances are state in
+  the save. Adding a building touches only the data.
+- **Timestamps instead of progress values.** A design might store
+  `constructionProgress: 0.4` or `lastProducedAt`. Hearthvale stores *when*
+  things end (`construction.endsAt`, `readyAt`) and computes progress from
+  the clock. A stored progress value would need updating every frame, and
+  would stop while the game is closed.
+- **Derived data.** Level comes from XP and population from the buildings, so
+  they're computed, not stored; the save keeps a copy only to be readable.
+- **Rotation changes geometry, not just looks.** Turning a 3×2 building makes
+  it 2×3. Everything that asked `type.size` now asks `sizeOf(building)`, and
+  the compiler helped find all 25 places.
+- **Moving hardcoded data into data.** The starting town was a list in
+  `Game.ts`; it's now `STARTING_TOWN` in `land.ts`. Walkers lingered in "the
+  park" by id; now any building with `attractsVisitors` does.
+- **A save format people can read.** Version 3 groups the file by what it
+  describes (player, resources, land, buildings, quests, inventory, settings,
+  tutorial), and `upgradeSave` converts any older save, tested with a real
+  version 1 and version 2 file.
+
+**Try it:**
+
+1. Add a Town Hall definition with `populationCapacity: 60` and nothing else.
+   What does the build menu show, and which test tells you if it breaks balance?
+2. Give the Cottage an explicit `xpReward: 8`. Where does it show up?
+3. Open your browser's developer tools, look at `localStorage['hearthvale.save']`,
+   and find your town's coins and your newest building.
+
+---
+
 ## Coming next
 
 - **Stage 10:** decorations that boost payouts, and more buildings and models.

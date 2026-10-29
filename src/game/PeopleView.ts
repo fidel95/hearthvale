@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import type { City, PlacedBuilding } from './City'
+import { sizeOf, type City, type PlacedBuilding } from './City'
 import { inBounds, tileToWorld, type Tile } from './grid'
 import { levelFactor } from './construction'
 import { findPath } from './pathfinding'
@@ -27,7 +27,7 @@ interface Walker {
   offset: THREE.Vector2 // a small sideways shift so walkers don't overlap exactly
   pause: number // seconds left standing still
   goingHome: boolean
-  visiting: string | null // the type of building headed to, e.g. 'park'
+  lingerSeconds: number | null // how long to stay at the destination, if it's somewhere people linger
   phase: number // for the walking bob
 }
 
@@ -66,14 +66,22 @@ export class PeopleView {
   private city: City
   private walkers: Walker[] = []
   private spawnTimer = 0
+  private visible = true
 
   constructor(scene: THREE.Scene, city: City) {
     this.scene = scene
     this.city = city
   }
 
+  // Turned off in Settings: everyone goes home at once.
+  setVisible(visible: boolean) {
+    this.visible = visible
+    if (!visible) for (const w of [...this.walkers]) this.remove(w)
+  }
+
   // Called every frame with the seconds since the last one.
   update(dt: number) {
+    if (!this.visible) return
     this.spawnTimer -= dt
     if (this.spawnTimer <= 0) {
       this.spawnTimer = SPAWN_EVERY
@@ -95,7 +103,7 @@ export class PeopleView {
   // Free tiles right next to a building: where someone would come and go.
   private doorsteps(b: PlacedBuilding): Tile[] {
     const { x, z } = b.tile
-    const { x: w, z: d } = b.type.size
+    const { x: w, z: d } = sizeOf(b)
     const ring: Tile[] = []
     for (let i = 0; i < w; i++) ring.push({ x: x + i, z: z - 1 }, { x: x + i, z: z + d })
     for (let i = 0; i < d; i++) ring.push({ x: x - 1, z: z + i }, { x: x + w, z: z + i })
@@ -124,7 +132,7 @@ export class PeopleView {
       offset: new THREE.Vector2((Math.random() - 0.5) * 0.5, (Math.random() - 0.5) * 0.5),
       pause: 0,
       goingHome: false,
-      visiting: null,
+      lingerSeconds: null,
       phase: Math.random() * Math.PI * 2,
     }
     if (!this.chooseDestination(walker)) return
@@ -145,9 +153,9 @@ export class PeopleView {
       const others = [...this.city.all()].filter(
         (b) => b.id !== walker.homeId && b.type.category !== 'decoration' && b.type.category !== 'road',
       )
-      const favorites = others.filter((b) => b.type.category === 'business' || b.type.id === 'park')
+      const favorites = others.filter((b) => b.type.category === 'business' || b.type.attractsVisitors)
       const target = favorites.length > 0 && Math.random() < 0.5 ? pick(favorites) : others.length > 0 ? pick(others) : null
-      walker.visiting = target?.type.id ?? null
+      walker.lingerSeconds = target?.type.attractsVisitors?.lingerSeconds ?? null
       goal = target ? pick(this.doorsteps(target)) : this.randomSpotNear(from)
     }
     const path = goal && findPath(from, goal, this.passable, { cost: this.cost })
@@ -186,8 +194,9 @@ export class PeopleView {
         // Arrived.
         walker.step = walker.path.length - 1
         walker.t = 0
-        // People linger in parks.
-        walker.pause = walker.goingHome ? 0.3 : walker.visiting === 'park' ? 5 + Math.random() * 6 : 1 + Math.random() * 3
+        // People linger in places that attract visitors, like parks.
+        const linger = walker.lingerSeconds
+        walker.pause = walker.goingHome ? 0.3 : linger ? linger * (0.6 + Math.random() * 0.8) : 1 + Math.random() * 3
         break
       }
       // Something was built in the way since the path was planned: plan again.
