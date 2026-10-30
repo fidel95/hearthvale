@@ -3,7 +3,7 @@ import { sizeOf, type City, type PlacedBuilding } from './City'
 import { cropState } from './crops'
 import { footprintCenter } from './grid'
 import { isTrack, isPlot } from './buildings'
-import { createBuildingObject, createConstructionSite, createCropObject, cropLookFor, disposeCropObject } from './models'
+import { createBuildingObject, createConstructionSite, createCropObject, cropLookFor, disposeBuildingObject, disposeCropObject } from './models'
 
 const POP_MS = 350
 const POP_FROM = 0.3 // starting size, as a share of full size
@@ -164,7 +164,10 @@ export class CityView {
     this.bounces.delete(id)
     this.cranes.delete(id)
     const obj = this.objects.get(id)
-    if (obj) this.scene.remove(obj)
+    if (obj) {
+      this.scene.remove(obj)
+      disposeBuildingObject(obj)
+    }
     this.objects.delete(id)
     this.tops.delete(id)
     this.removeCrop(id)

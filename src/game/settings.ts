@@ -15,6 +15,7 @@ export interface Settings {
   snowMode: boolean // winter: snow on the ground, and showers fall as snow
   disasters: boolean // tornados, lightning, floods and tsunamis now and then
   roadOverlay: boolean // always show road networks (they show while building roads anyway)
+  tips: boolean // one-time tips about newer features (tips.ts)
   uiScale: number // the size of the interface: 0.8 to 1.3
   soundVolume: number // 0 (muted) to 1
   admin: AdminSettings
@@ -43,6 +44,7 @@ export const DEFAULT_SETTINGS: Settings = {
   snowMode: false,
   disasters: true,
   roadOverlay: false,
+  tips: true,
   uiScale: 1,
   soundVolume: 0.6,
   admin: { enabled: false, freeBuild: false, infiniteEnergy: false, instantTimers: false, calendarSpeed: 1 },
@@ -59,6 +61,7 @@ export const SETTING_LABELS: Record<SwitchSetting, string> = {
   snowMode: '❄️ Snow mode (winter)',
   disasters: 'Natural disasters (they damage, never destroy)',
   roadOverlay: '🛣️ Always show road networks',
+  tips: '💡 Tips about new features',
 }
 
 export class SettingsStore {

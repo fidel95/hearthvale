@@ -3,6 +3,7 @@ import { Disasters } from './Disasters'
 import { Tourism } from './Tourism'
 import { TownEvents } from './TownEvents'
 import { Finances } from './Finances'
+import { Tips } from './tips'
 import { BUILDINGS_BY_ID } from './buildings'
 import { City } from './City'
 import { Collections } from './collections'
@@ -51,6 +52,7 @@ export class GameState {
   readonly tourism = new Tourism(this.city)
   readonly townEvents: TownEvents
   readonly finances: Finances
+  readonly tips: Tips = new Tips(this)
   // When the county last gave a grant (safetyNet.ts), so it can't be claimed again right away.
   safetyNet = { lastGrantAt: null as number | null }
 

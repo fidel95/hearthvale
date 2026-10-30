@@ -4,6 +4,7 @@ import { BuildMenu } from '../ui/BuildMenu'
 import { BuildingPanel, canStore } from '../ui/BuildingPanel'
 import { CollectionsPanel } from '../ui/CollectionsPanel'
 import { Coach } from '../ui/Coach'
+import { TipCard } from '../ui/TipCard'
 import { CropPicker } from '../ui/CropPicker'
 import { InventoryPanel } from '../ui/InventoryPanel'
 import { MapPanel } from '../ui/MapPanel'
@@ -281,6 +282,7 @@ export class Game {
     })
     this.setUpSelection(container, builder)
     new Coach(container, this.tutorial)
+    new TipCard(container, this.state.tips, this.settings)
     this.controls.onMove = () => this.tutorial.complete('camera')
     this.hud.onGoHome = () => this.endVisit()
     // Apply settings now and whenever they change.
@@ -437,6 +439,9 @@ export class Game {
       const { geometries, textures } = this.renderer.info.memory
       document.body.dataset.geometries = String(geometries)
       document.body.dataset.textures = String(textures)
+      // The last frame's draw calls and triangles (for the phone-performance check).
+      document.body.dataset.drawCalls = String(this.renderer.info.render.calls)
+      document.body.dataset.triangles = String(this.renderer.info.render.triangles)
     }
     const seconds = frameTime / 1000
     this.landView.update(seconds)

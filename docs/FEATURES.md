@@ -147,6 +147,7 @@ with rewards; counts never go below 0; saved.
 | Factories and products | ✅ | Three factories turn goods into products (preserves, clothes, furniture) in batches; three specialty shops sell them; products share storage; for taxes a product is the goods it was made from (`products.ts`, `ProductionSystem.ts`) |
 | Financial report | ✅ | Tap the coins: income, running costs, profit and investment for this year or last, profit per month (tap a month), income by source, spending by kind, top earners; sales tax left out as pass-through (`Finances.ts`, `FinancePanel.ts`) |
 | Stage 4 content | ✅ | Apartment Block (L14, 16 residents), High-Rise (L17, 28), Police Station (L12), Hospital (L13), Shopping Center (L15); crops: carrots (L4), tomatoes (L6), grapes (L11); decorations: lamp post, hedge, gazebo, duck pond; apartments want a hospital and police nearby; quests Safe Streets → A Healthy Town → Moving Up → Shop Till You Drop → A City Skyline |
+| Stage 5 polish | ✅ | One-time tips for newer systems (`tips.ts`, `TipCard.ts`, setting to turn off); older-save tests; simple-shape buildings merged by color (986 → 369 draw calls in a big town) and freed on demolish |
 | Civic buildings and decorations add to it | ✅ | Neighborhoods and Greenery parts |
 | Minimum rating for some buildings | ✅ | Landmarks |
 | Explained, no hidden penalties | ✅ | Town window: every part, its points and what raises it; nothing but landmarks depends on it |

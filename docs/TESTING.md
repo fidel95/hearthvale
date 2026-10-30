@@ -86,6 +86,26 @@ served from a subfolder:
   page naming a missing file): after the fix is published, the first reload
   installs it in the background and the second starts the game.
 
+## Stage 5 polish — `src/tests/stage5.test.ts`
+
+**Older saves:** saves written before each recent addition (tips, the
+financial report, events and factories, neighbors and parades) are built by
+removing those sections from a current save. Each loads, keeps its whole town
+and coins, works with the new features from then on, and saves again with
+every section, which loads back identically.
+
+**Tips** wait for the tutorial, show one at a time and only once, can be
+turned off, and remember what was read across a save.
+
+**Phone performance** (browser, phone-sized window, a 125-building town with
+walkers and traffic): the development build reports the last frame's draw
+calls (`<body data-draw-calls>`). Simple-shape buildings were drawn as dozens
+of separate parts each (an Apartment Block alone was over 50); merging each
+building's parts by color took the frame from **986 to 369 draw calls**,
+looking the same. Their shapes are now also freed when a building is
+demolished. Headless browsers draw in software, so this counts work, not
+frame rate; the automatic quality steps (quality.ts) still handle slow phones.
+
 ## Simulation and audit — `src/tests/simulation.test.ts`, `src/tests/audit.test.ts`
 
 The audit added a **simulation**: 20 runs of 3,000 random actions each, the

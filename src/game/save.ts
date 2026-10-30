@@ -49,6 +49,7 @@ export interface SaveData {
   army?: ArmySave // when the last parade was (added with parades)
   events?: TownEventsSave // this season's festival and this week's challenges (added with events)
   finances?: FinancesSave // the financial report's months and top earners (added with the report)
+  tips?: string[] // the tips already read (added with tips)
 }
 
 // The City's part of the save, pieced back together from the file's sections.

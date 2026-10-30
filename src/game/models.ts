@@ -226,8 +226,9 @@ export function slopeHeight(x: number, z: number): number {
   return 0.03 + Math.max(0, height * (1 - Math.hypot(x - cx, z - cz) / radius))
 }
 
-// Simple shapes so the game is playable before any art exists.
-// (Their geometries aren't freed on demolish; they're tiny, and real models replace them.)
+// Simple shapes so the game is playable before any art exists. Each
+// building's shapes and materials are its own (ownsResources), so
+// disposeBuildingObject frees them when it's demolished.
 function createPlaceholder(type: BuildingType): THREE.Group {
   const { shape, color, accent, height } = type.placeholder
   const w = type.size.x
@@ -786,6 +787,42 @@ function createPlaceholder(type: BuildingType): THREE.Group {
       break
     }
   }
+  group.userData.ownsResources = true
+  return mergeByLook(group)
+}
+
+// Merge a placeholder's parts into one mesh per look (color and glow): a
+// building then costs a few draw calls instead of dozens, which matters on
+// phones. Each part's position is baked into its shape first. Anything that
+// can't be merged (a nested group, mismatched shapes) is left as it was.
+function mergeByLook(group: THREE.Group): THREE.Group {
+  const byLook = new Map<string, { material: THREE.MeshStandardMaterial; parts: THREE.Mesh[] }>()
+  for (const child of group.children) {
+    if (!(child instanceof THREE.Mesh) || !(child.material instanceof THREE.MeshStandardMaterial)) continue
+    const m = child.material
+    const key = `${m.color.getHexString()}/${m.emissive.getHexString()}`
+    const entry = byLook.get(key) ?? { material: m, parts: [] }
+    entry.parts.push(child)
+    byLook.set(key, entry)
+  }
+  for (const { material, parts } of byLook.values()) {
+    if (parts.length < 2) continue
+    const shapes = parts.map((part) => {
+      part.updateMatrix()
+      const shape = (part.geometry.index ? part.geometry.toNonIndexed() : part.geometry.clone()).applyMatrix4(part.matrix)
+      for (const name of Object.keys(shape.attributes)) if (name !== 'position' && name !== 'normal' && name !== 'uv') shape.deleteAttribute(name)
+      return shape
+    })
+    const merged = mergeGeometries(shapes)
+    for (const shape of shapes) shape.dispose()
+    if (!merged) continue
+    for (const part of parts) {
+      group.remove(part)
+      part.geometry.dispose()
+      if (part.material !== material) (part.material as THREE.Material).dispose()
+    }
+    group.add(new THREE.Mesh(merged, material))
+  }
   return group
 }
 
@@ -797,6 +834,7 @@ export function createConstructionSite(type: BuildingType): THREE.Group {
   const w = type.size.x
   const d = type.size.z
   const group = new THREE.Group()
+  group.userData.ownsResources = true
   const add = (geometry: THREE.BufferGeometry, color: string, x: number, y: number, z: number) => {
     geometry.computeBoundingBox()
     const mesh = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({ color, flatShading: true }))
@@ -980,6 +1018,20 @@ export function createCropObject(crop: CropType, look: CropLook, size: { x: numb
 
 // Crop geometries are unique to each plot, so free them when the crop changes.
 // (The materials are shared and stay.)
+// Free what a building's object owns: a simple-shape building's or a
+// construction site's shapes and materials. A model's are shared by every
+// copy, so they're kept.
+export function disposeBuildingObject(obj: THREE.Object3D) {
+  obj.traverse((o) => {
+    if (!o.userData.ownsResources) return
+    o.traverse((part) => {
+      if (!(part instanceof THREE.Mesh)) return
+      part.geometry.dispose()
+      for (const m of Array.isArray(part.material) ? part.material : [part.material]) m.dispose()
+    })
+  })
+}
+
 export function disposeCropObject(obj: THREE.Object3D) {
   obj.traverse((o) => {
     if (o instanceof THREE.Mesh) o.geometry.dispose()
