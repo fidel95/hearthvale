@@ -64,6 +64,8 @@ function details(type: BuildingType): string[] {
     lines.push(`🎖️ Hold a parade (🪙 ${PARADE.cost}): +${PARADE.bonus * 100}% to all rent and sales for ${PARADE.durationMs / 60_000} minutes`)
   }
   if (type.id === 'airport') lines.push('✈️ Planes take off, fly round the town and land')
+  if (type.arrivals) lines.push(`🧳 Brings ${type.arrivals} visitors a month`)
+  if (type.visitors) lines.push(`🎡 Room for ${type.visitors} visitors a month (each spends 🪙 2)`)
   if (type.animals) lines.push(`🐾 ${type.animals.count} ${type.animals.kind === 'sheep' ? 'sheep' : type.animals.kind + 's'} live here; what they give sells as farm income`)
   if (type.id === 'public-beach') lines.push('🏖️ Sunbathers and swimmers come when it isn\'t raining')
   if (type.id === 'ski-resort') lines.push('⛷️ Skiers ski down and ride the chairlift back up')

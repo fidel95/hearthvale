@@ -31,6 +31,7 @@ interface Walker {
   pause: number // seconds left standing still
   goingHome: boolean
   lingerSeconds: number | null // how long to stay at the destination, if it's somewhere people linger
+  tourist: boolean // a visitor: from a station, stop or airport to an attraction and back
   phase: number // for the walking bob
 }
 
@@ -53,6 +54,27 @@ function material(color: string) {
 }
 
 const pick = <T,>(list: T[]): T => list[Math.floor(Math.random() * list.length)]
+
+// Visitors stand out: a sun hat and a backpack.
+const TOURIST = {
+  brim: new THREE.CylinderGeometry(0.1, 0.1, 0.012, 10).translate(0, 0.37, 0),
+  crown: new THREE.CylinderGeometry(0.045, 0.05, 0.05, 8).translate(0, 0.4, 0),
+  pack: new THREE.BoxGeometry(0.06, 0.1, 0.09).translate(-0.07, 0.2, 0),
+}
+
+function createTourist(): THREE.Group {
+  const person = createPerson()
+  for (const [shape, color] of [
+    [TOURIST.brim, '#f3e2b0'],
+    [TOURIST.crown, '#f3e2b0'],
+    [TOURIST.pack, pick(['#e0453a', '#2f7fe0', '#ffd23f', '#3fae6b'])],
+  ] as const) {
+    const mesh = new THREE.Mesh(shape, material(color))
+    mesh.castShadow = true
+    person.add(mesh)
+  }
+  return person
+}
 
 function createPerson(): THREE.Group {
   const person = new THREE.Group()
@@ -87,6 +109,10 @@ export class PeopleView {
     this.city = city
   }
 
+  // How many visitors are in town this month (Tourism.ts); Game sets it.
+  visitors: () => number = () => 0
+  private touristTimer = 0
+
   // Out comes every umbrella when it rains.
   private raining = false
   setRaining(raining: boolean) {
@@ -107,6 +133,11 @@ export class PeopleView {
     if (this.spawnTimer <= 0) {
       this.spawnTimer = SPAWN_EVERY
       this.spawnOne()
+    }
+    this.touristTimer -= dt
+    if (this.touristTimer <= 0) {
+      this.touristTimer = 1.5
+      this.spawnTourist()
     }
     for (const walker of [...this.walkers]) this.move(walker, dt)
   }
@@ -155,6 +186,37 @@ export class PeopleView {
       pause: 0,
       goingHome: false,
       lingerSeconds: null,
+      tourist: false,
+      phase: Math.random() * Math.PI * 2,
+    }
+    if (!this.chooseDestination(walker)) return
+    walker.object.getObjectByName('umbrella')!.visible = this.raining
+    this.walkers.push(walker)
+    this.scene.add(walker.object)
+    this.place(walker)
+  }
+
+  // A visitor arrives at a stop, the station, the dock or the airport, and
+  // heads for an attraction: about one walking about for every eight visitors.
+  private spawnTourist() {
+    const out = this.walkers.filter((w) => w.tourist).length
+    if (out >= Math.min(12, Math.ceil(this.visitors() / 8)) || this.walkers.length >= MAX_WALKERS) return
+    const hubs = [...this.city.all()].filter((b) => b.type.arrivals && this.city.isOperating(b))
+    const hub = hubs.length ? pick(hubs) : null
+    const start = hub && pick(this.doorsteps(hub))
+    if (!hub || !start) return
+    const walker: Walker = {
+      homeId: hub.id,
+      object: createTourist(),
+      path: [start],
+      step: 0,
+      t: 0,
+      offset: new THREE.Vector2((Math.random() - 0.5) * 0.5, (Math.random() - 0.5) * 0.5),
+      side: Math.random() < 0.5 ? 1 : -1,
+      pause: 0,
+      goingHome: false,
+      lingerSeconds: null,
+      tourist: true,
       phase: Math.random() * Math.PI * 2,
     }
     if (!this.chooseDestination(walker)) return
@@ -172,6 +234,19 @@ export class PeopleView {
       const home = this.city.get(walker.homeId)
       goal = home && pick(this.doorsteps(home))
     } else {
+      // Visitors go to attractions (and linger there a good while).
+      const attractions = walker.tourist ? [...this.city.all()].filter((b) => b.type.visitors && this.city.isOperating(b)) : []
+      if (walker.tourist && attractions.length) {
+        const target = pick(attractions)
+        walker.lingerSeconds = 8 + Math.random() * 8
+        goal = pick(this.doorsteps(target))
+        const path = goal && findPath(from, goal, this.passable, { cost: this.cost })
+        if (!path || path.length < 2) return false
+        walker.path = path
+        walker.step = 0
+        walker.t = 0
+        return true
+      }
       // Mostly visit another building (shops and parks are popular), sometimes just wander.
       const others = [...this.city.all()].filter(
         (b) => b.id !== walker.homeId && b.type.category !== 'decoration' && !isTrack(b.type),

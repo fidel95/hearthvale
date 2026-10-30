@@ -99,6 +99,10 @@ export interface BuildingType {
   // Needs a road touching one side of its footprint to work (shops: customers
   // have to get there). See City.hasRoadAccess.
   requiresRoad?: boolean
+  // Tourism (Tourism.ts): visitors this brings to town each month (transport),
+  // and visitors it has room for (attractions).
+  arrivals?: number
+  visitors?: number
   // Shops: residents they need living nearby for full sales (demand.ts).
   customers?: number
   // How tall its model may stand, in tiles per tile of footprint (default 1.2;
@@ -473,6 +477,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     unlockLevel: 7,
     amenity: { bonus: 0.06, radius: 3 },
     attractsVisitors: { lingerSeconds: 6 },
+    visitors: 2,
     placeholder: { shape: 'fountain', color: '#c9c6bd', accent: '#6fb7e0', height: 0.6 },
   },
   {
@@ -483,6 +488,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     cost: 400,
     unlockLevel: 10,
     amenity: { bonus: 0.08, radius: 4 },
+    visitors: 2,
     placeholder: { shape: 'statue', color: '#b9b4ab', accent: '#d9a441', height: 1.2 },
   },
 
@@ -579,6 +585,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     storage: 100,
     upkeep: 10,
     needs: { power: 1, trash: 1 },
+    arrivals: 10,
     placeholder: { shape: 'dock', color: '#8a6a4a', accent: '#d9a441', height: 0.6 },
   },
   // ---- Roads and community buildings
@@ -606,6 +613,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     populationCapacity: 15,
     attractsVisitors: { lingerSeconds: 8 },
     recoveryYears: 15, // land improvements
+    visitors: 5,
     placeholder: { shape: 'park', color: '#6fbf5a', accent: '#d9c79a', height: 0.6 },
   },
   {
@@ -679,6 +687,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     townBonus: 0.05,
     populationCapacity: 30,
     attractsVisitors: { lingerSeconds: 5 },
+    visitors: 15,
     placeholder: { shape: 'clocktower', color: '#f2dfb0', accent: '#2f5fc4', height: 3 },
   },
   {
@@ -694,6 +703,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     onShore: true,
     townBonus: 0.03,
     shipSpeedBonus: 0.25,
+    visitors: 20,
     placeholder: { shape: 'lighthouse', color: '#f4f1ea', accent: '#c8463a', height: 3.2 },
   },
   {
@@ -709,6 +719,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     townBonus: 0.05,
     populationCapacity: 50,
     attractsVisitors: { lingerSeconds: 10 },
+    visitors: 30,
     placeholder: { shape: 'garden', color: '#6fbf5a', accent: '#cfe8f2', height: 1.4 },
   },
   // ---- Transport and the army
@@ -723,6 +734,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     amenity: { bonus: 0.04, radius: 4 },
     requiresRoad: true, // the bus has to reach it
     recoveryYears: 15, // a shelter beside the road: a land improvement
+    arrivals: 3,
     placeholder: { shape: 'busstop', color: '#2f7fe0', accent: '#ffd23f', height: 0.6 },
   },
   {
@@ -765,6 +777,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     attractsVisitors: { lingerSeconds: 6 },
     requiresRail: true,
     recoveryYears: 39, // the station building: nonresidential real property
+    arrivals: 40,
     placeholder: { shape: 'station', color: '#e9d3b0', accent: '#2f5fc4', height: 1.2 },
   },
   {
@@ -782,6 +795,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     attractsVisitors: { lingerSeconds: 8 },
     requiresRoad: true, // passengers need to get there
     recoveryYears: 15, // mostly runway and aprons: land improvements
+    arrivals: 80,
     placeholder: { shape: 'airport', color: '#4a4f57', accent: '#e8eef2', height: 0.9 },
   },
   // ---- Parks, the beach and the slopes
@@ -796,6 +810,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     amenity: { bonus: 0.06, radius: 3 },
     attractsVisitors: { lingerSeconds: 7 },
     recoveryYears: 15, // land improvements
+    visitors: 3,
     placeholder: { shape: 'playground', color: '#7fcf62', accent: '#ff7a3d', height: 0.5 },
   },
   {
@@ -812,6 +827,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     populationCapacity: 10,
     attractsVisitors: { lingerSeconds: 9 },
     recoveryYears: 15, // land improvements
+    visitors: 10,
     placeholder: { shape: 'sportsfield', color: '#4fae4a', accent: '#ffffff', height: 0.4 },
   },
   {
@@ -826,6 +842,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     amenity: { bonus: 0.08, radius: 5 },
     attractsVisitors: { lingerSeconds: 12 },
     recoveryYears: 15, // land improvements
+    visitors: 25,
     placeholder: { shape: 'beach', color: '#f6e3a4', accent: '#ff5c8a', height: 0.5 },
   },
   {
@@ -842,6 +859,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     populationCapacity: 30,
     attractsVisitors: { lingerSeconds: 12 },
     recoveryYears: 15, // land improvements
+    visitors: 20,
     placeholder: { shape: 'bigpark', color: '#5fbf52', accent: '#d9c79a', height: 0.8 },
   },
   {
@@ -856,6 +874,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     income: { coins: 260, seconds: 300 }, // lift tickets
     requiresRoad: true,
     attractsVisitors: { lingerSeconds: 10 },
+    visitors: 30,
     placeholder: { shape: 'skiresort', color: '#f4f8fb', accent: '#c8463a', height: 2.4 },
   },
   // ---- Farm animals: they earn farm income (eggs, pork, wool, milk) like a shop earns sales

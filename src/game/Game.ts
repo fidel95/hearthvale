@@ -173,6 +173,7 @@ export class Game {
     this.shipView = new ShipView(this.scene, this.city, this.docks)
     this.cityView = new CityView(this.scene, this.city)
     this.peopleView = new PeopleView(this.scene, this.city)
+    this.peopleView.visitors = () => this.state.tourism.report().visitors
     this.roadView = new RoadView(this.scene, this.city)
     this.railView = new RailView(this.scene, this.city)
     this.trafficView = new TrafficView(this.scene, this.city)
@@ -206,6 +207,7 @@ export class Game {
     const taxPanel = new TaxPanel(container, this.city, this.taxes, this.clock)
     const townPanel = new TownPanel(container, this.city, this.services)
     townPanel.onBuild = (tab) => this.openBuildMenu?.(tab)
+    townPanel.tourism = () => this.state.tourism.report()
     const help = new HelpPanel(container, () => this.tutorial.load({ step: 0, skipped: false }))
     // A building chosen from the menu: placed where "Build here" was tapped, if it was.
     let buildHere: Tile | null = null
@@ -384,6 +386,7 @@ export class Game {
     for (const month of this.clock.advance(dt)) {
       // Utility bills first, so December's land on this year's return.
       this.services.endOfMonth()
+      this.state.tourism.endOfMonth()
       this.taxes.endOfMonth(month)
     }
     this.followSun()
@@ -627,6 +630,7 @@ export class Game {
       nextMonth: () => {
         for (const month of this.clock.skipMonth()) {
           this.services.endOfMonth()
+          this.state.tourism.endOfMonth()
           this.taxes.endOfMonth(month)
         }
       },

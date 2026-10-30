@@ -4,6 +4,7 @@ import type { Services } from '../game/Services'
 import { MAX_LOCATION_BONUS } from '../game/communityRules'
 import { BASE_POPULATION_CAPACITY, COUNTY_SUPPLY, UTILITIES, UTILITY_INFO, incomeMultiplier } from '../game/utilityRules'
 import { coins, el, percent } from './dom'
+import type { TourismReport } from '../game/Tourism'
 import { Sheet, button } from './Sheet'
 
 // The Town window: population, how well water, electricity and trash pickup
@@ -16,6 +17,8 @@ export class TownPanel {
 
   // Opens the build menu at a tab, for "Build one" on residents' wishes.
   onBuild?: (tab: string) => void
+  // This month's tourism numbers (Tourism.ts); Game sets it.
+  tourism?: () => TourismReport
 
   constructor(container: HTMLElement, city: City, services: Services) {
     this.city = city
@@ -61,9 +64,31 @@ export class TownPanel {
     }
     if (wishes.length) wishSection.append(el('p', 'muted', 'A home with every need met pays up to 15% more rent.'))
 
+    // Tourism: arrivals vs. room at attractions, and what visitors spend.
+    const tourism = this.tourism?.()
+    const tourSection = el('section', 'tax-section')
+    if (tourism) {
+      tourSection.append(el('h3', '', `🧳 Tourism: ${tourism.visitors} visitors a month · 🪙 ${tourism.income}/month`))
+      tourSection.append(
+        el('p', '', `🚉 Transport brings ${tourism.arrivals} a month · 🎡 attractions have room for ${tourism.room}`),
+        el(
+          'p',
+          'muted',
+          tourism.arrivals === 0 && tourism.room === 0
+            ? 'Visitors come by bus, boat, train or plane, to parks, the beach, the ski resort and landmarks. Each spends 🪙 2 a month (taxable).'
+            : tourism.arrivals < tourism.room
+              ? '↑ More visitors could come: build bus stops, a dock, the train station or the airport.'
+              : tourism.room < tourism.arrivals
+                ? '↑ More visitors arrive than there\'s room for: build parks, a beach, Central Park, the ski resort or landmarks.'
+                : 'Arrivals and attractions are in balance.',
+        ),
+      )
+    }
+
     const parts: HTMLElement[] = [
       el('p', 'town-population', `👥 ${report.population} residents · room for ${report.capacity}`),
       wishSection,
+      ...(tourism ? [tourSection] : []),
       ratingSection,
       ...(bonus > 0 ? [el('p', '', `🏛️ Landmarks add +${percent(bonus)} to all rent and sales.`)] : []),
       el('p', 'muted', `Every town has room for ${BASE_POPULATION_CAPACITY} residents. Parks, fire stations and schools make room for more; new homes and upgrades need room to fit.`),

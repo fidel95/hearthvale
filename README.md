@@ -126,6 +126,7 @@ the right on a wide screen) so the town stays in view.
 - **Admin tools:** Settings → Admin tools adds a 🛠️ button: give yourself coins, levels and materials, finish every timer, run the calendar 10× or 60× faster, or switch on powers (build anything free and instantly, unlimited energy, everything ready at once).
 - **Parks, beaches and the slopes:** Playground, Sports Field and Central Park lift nearby homes and draw visitors; a Public Beach on the shore fills with sunbathers and swimmers; the Ski Resort (level 13) sells lift tickets while skiers zigzag down and ride the chairlift up. Snowy mountains rise behind the town.
 - **Happy homes:** homes want a shop and green space nearby (family homes a school too); each need met lifts their rent, up to +15%. The Town window lists what residents want, with a button to build it.
+- **Tourism:** bus stops, the dock, the train station and the airport bring visitors; parks, the beach, the ski resort and landmarks give them room. Each visitor spends 🪙 2 a month, and you can spot them walking about in sun hats and backpacks.
 - **Shops need customers, crops have seasons:** a shop sells at full speed with enough residents within 8 tiles (down to 60% without); each crop gives +25% in its season. Tap an empty tile for 🔨 Build here; while drawing roads, each network shows in its own color. Settings has an Interface size slider.
 - **Feels alive:** coins, stars and goods fly from buildings to the top bar when you collect, and buildings bounce; dust and sparkles when you build, confetti when construction finishes, fireworks when you level up; cranes on building sites, chimney smoke, swaying trees, birds and drifting cloud shadows; the map glides after a flick. Reduce motion turns it all off.
 - **Farm animals:** Chicken Coop, Pig Pen, Sheep Meadow and Cow Pasture: animals wander, graze and peck in their yards, and what they give sells as farm income.
@@ -214,6 +215,7 @@ src/
     RoadNetworkView.ts    overlay: each connected road network in its own color, cut-off buildings red
     demand.ts             shops' customers: residents within reach, and the share of sales they give
     needs.ts              what homes want nearby, their happiness, and its rent bonus
+    Tourism.ts            visitors: arrivals (transport) vs. room (attractions), and their monthly spending
     seasons.ts            the seasons, and crops' in-season bonus
     RailView.ts           draws railway track the same way
     TrafficView.ts        cars, buses, trains and the army's squad and jeep
