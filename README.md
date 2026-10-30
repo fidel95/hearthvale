@@ -117,7 +117,7 @@ the right on a wide screen) so the town stays in view.
 - **Utilities:** homes, shops and farms use 💧 water, 🔌 electricity and 🗑️ trash pickup. Beyond what the county supplies, build plants; they cost coins every month. Shortages cut income.
 - **Decorations:** trees, flower beds, stone paths, fences, benches, fountains and statues raise the income of homes and shops right around them (+1% to +8% each), up to +10% from decorations in all. Landscaping also raises a building's assessed value.
 - **Roads and community:** shops need a road touching one side (🚧 means one is missing); homes and shops beside a road earn +5%; near a Park, Fire Station or School, +10–15% (up to +40%), which also raises their assessed value.
-- **People:** residents walk between homes, shops and parks, preferring roads.
+- **People:** residents walk between homes, shops and parks on the sidewalks only, along the roads (never across grass or down the road); a building with no road beside it gets no foot traffic.
 - **Taxes:** see below and [docs/TAXES.md](docs/TAXES.md).
 - **City rating (😊):** 0–100, from utilities, neighborhoods, roads, room to grow, finances and greenery. The Town window shows each part and what raises it. Landmarks need a minimum rating.
 - **Landmarks:** the Clock Tower, Lighthouse and Botanical Garden: expensive, one of each, and they raise all rent and sales in town.

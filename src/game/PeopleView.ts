@@ -5,7 +5,6 @@ import { levelFactor } from './construction'
 import { findPath } from './pathfinding'
 import { isTrack } from './buildings'
 import { SIDEWALK } from './RoadView'
-import { isWater } from './terrain'
 
 // Residents walking around town. Purely for looks: nothing here changes the
 // game, and nothing is saved. Each home sends out about one walker per two
@@ -28,6 +27,10 @@ interface Walker {
   t: number // progress toward the next tile, 0 to 1
   offset: THREE.Vector2 // a small sideways shift so walkers don't overlap exactly
   side: 1 | -1 // which sidewalk they keep to along a road
+  // The buildings at either end of the path: there, they stand on the
+  // sidewalk on that building's side of the road.
+  fromId: number | null
+  toId: number | null
   pause: number // seconds left standing still
   goingHome: boolean
   lingerSeconds: number | null // how long to stay at the destination, if it's somewhere people linger
@@ -142,17 +145,12 @@ export class PeopleView {
     for (const walker of [...this.walkers]) this.move(walker, dt)
   }
 
-  // A walker can stand on owned land that's empty or a road.
-  private passable = (tile: Tile) => {
-    if (!inBounds(tile) || !this.city.ownsTile(tile) || isWater(tile)) return false
-    const here = this.city.buildingAt(tile)
-    return !here || isTrack(here.type) // people cross the railway too
-  }
+  // People walk only on the sidewalks, which run along both sides of every
+  // road: never across grass, and never down the middle of the road.
+  private passable = (tile: Tile) => inBounds(tile) && this.city.isRoad(tile)
 
-  // Walking on grass "costs" more than on a road, so paths stick to roads when they can.
-  private cost = (tile: Tile) => (this.city.isRoad(tile) ? 1 : 2.5)
-
-  // Free tiles right next to a building: where someone would come and go.
+  // The road tiles right next to a building: where its people step out onto
+  // the sidewalk (a building with no road beside it has nobody walking to it).
   private doorsteps(b: PlacedBuilding): Tile[] {
     const { x, z } = b.tile
     const { x: w, z: d } = sizeOf(b)
@@ -183,12 +181,15 @@ export class PeopleView {
       t: 0,
       offset: new THREE.Vector2((Math.random() - 0.5) * 0.5, (Math.random() - 0.5) * 0.5),
       side: Math.random() < 0.5 ? 1 : -1,
+      fromId: null,
+      toId: null,
       pause: 0,
       goingHome: false,
       lingerSeconds: null,
       tourist: false,
       phase: Math.random() * Math.PI * 2,
     }
+    walker.fromId = home.id
     if (!this.chooseDestination(walker)) return
     walker.object.getObjectByName('umbrella')!.visible = this.raining
     this.walkers.push(walker)
@@ -213,12 +214,15 @@ export class PeopleView {
       t: 0,
       offset: new THREE.Vector2((Math.random() - 0.5) * 0.5, (Math.random() - 0.5) * 0.5),
       side: Math.random() < 0.5 ? 1 : -1,
+      fromId: null,
+      toId: null,
       pause: 0,
       goingHome: false,
       lingerSeconds: null,
       tourist: true,
       phase: Math.random() * Math.PI * 2,
     }
+    walker.fromId = hub.id
     if (!this.chooseDestination(walker)) return
     walker.object.getObjectByName('umbrella')!.visible = this.raining
     this.walkers.push(walker)
@@ -226,50 +230,55 @@ export class PeopleView {
     this.place(walker)
   }
 
-  // Pick somewhere to go and find a path there. Returns false if there's nowhere reachable.
+  // Pick somewhere to go and find a path there, along the roads. Returns
+  // false if there's nowhere reachable.
   private chooseDestination(walker: Walker): boolean {
     const from = walker.path[walker.step]
-    let goal: Tile | undefined
+    let target: PlacedBuilding | undefined
+    walker.lingerSeconds = null
     if (walker.goingHome) {
-      const home = this.city.get(walker.homeId)
-      goal = home && pick(this.doorsteps(home))
-    } else {
+      target = this.city.get(walker.homeId)
+    } else if (walker.tourist) {
       // Visitors go to attractions (and linger there a good while).
-      const attractions = walker.tourist ? [...this.city.all()].filter((b) => b.type.visitors && this.city.isOperating(b)) : []
-      if (walker.tourist && attractions.length) {
-        const target = pick(attractions)
-        walker.lingerSeconds = 8 + Math.random() * 8
-        goal = pick(this.doorsteps(target))
-        const path = goal && findPath(from, goal, this.passable, { cost: this.cost })
-        if (!path || path.length < 2) return false
-        walker.path = path
-        walker.step = 0
-        walker.t = 0
-        return true
-      }
-      // Mostly visit another building (shops and parks are popular), sometimes just wander.
-      const others = [...this.city.all()].filter(
-        (b) => b.id !== walker.homeId && b.type.category !== 'decoration' && !isTrack(b.type),
-      )
+      const attractions = [...this.city.all()].filter((b) => b.type.visitors && this.city.isOperating(b))
+      target = attractions.length ? pick(attractions) : undefined
+      if (target) walker.lingerSeconds = 8 + Math.random() * 8
+    } else {
+      // Mostly visit another building (shops and parks are popular), sometimes just stroll.
+      const others = [...this.city.all()].filter((b) => b.id !== walker.homeId && b.type.category !== 'decoration' && b.type.category !== 'road' && !isTrack(b.type))
       const favorites = others.filter((b) => b.type.category === 'business' || b.type.attractsVisitors)
-      const target = favorites.length > 0 && Math.random() < 0.5 ? pick(favorites) : others.length > 0 ? pick(others) : null
+      target = favorites.length > 0 && Math.random() < 0.5 ? pick(favorites) : others.length > 0 && Math.random() < 0.85 ? pick(others) : undefined
       walker.lingerSeconds = target?.type.attractsVisitors?.lingerSeconds ?? null
-      goal = target ? pick(this.doorsteps(target)) : this.randomSpotNear(from)
     }
-    const path = goal && findPath(from, goal, this.passable, { cost: this.cost })
+    const goal = target ? pick(this.doorsteps(target)) : this.roadNear(from)
+    const path = goal && findPath(from, goal, this.passable)
     if (!path || path.length < 2) return false
+    // Leaving a building: start on the sidewalk on its side of the road.
+    const home = walker.fromId !== null ? this.towardBuilding(path[0], walker.fromId) : null
+    if (home) {
+      const right = { x: -(path[1].z - path[0].z), z: path[1].x - path[0].x }
+      const dot = right.x * home.x + right.z * home.z
+      if (dot !== 0) walker.side = dot > 0 ? 1 : -1
+    }
+    walker.toId = target?.id ?? null
     walker.path = path
     walker.step = 0
     walker.t = 0
     return true
   }
 
-  private randomSpotNear(from: Tile): Tile | undefined {
-    for (let tries = 0; tries < 10; tries++) {
-      const tile = { x: from.x + Math.round((Math.random() - 0.5) * 12), z: from.z + Math.round((Math.random() - 0.5) * 12) }
-      if (this.passable(tile)) return tile
+  // A road tile a short stroll away.
+  private roadNear(from: Tile): Tile | undefined {
+    const near = [...this.city.all()].filter((b) => b.type.category === 'road' && Math.abs(b.tile.x - from.x) <= 6 && Math.abs(b.tile.z - from.z) <= 6)
+    return near.length ? pick(near).tile : undefined
+  }
+
+  // Which way from a road tile the given building lies (a unit step), if it's right beside it.
+  private towardBuilding(tile: Tile, id: number): { x: number; z: number } | null {
+    for (const d of [{ x: 1, z: 0 }, { x: -1, z: 0 }, { x: 0, z: 1 }, { x: 0, z: -1 }]) {
+      if (this.city.buildingAt({ x: tile.x + d.x, z: tile.z + d.z })?.id === id) return d
     }
-    return undefined
+    return null
   }
 
   private move(walker: Walker, dt: number) {
@@ -279,6 +288,7 @@ export class PeopleView {
       // Done pausing: head home if it's time (or the home is gone), otherwise go somewhere else.
       if (walker.goingHome || !this.city.get(walker.homeId)) return this.remove(walker)
       walker.goingHome = Math.random() < 0.35
+      walker.fromId = walker.toId
       if (!this.chooseDestination(walker)) walker.pause = 1 + Math.random() * 2
       return
     }
@@ -300,6 +310,7 @@ export class PeopleView {
       // Something was built in the way since the path was planned: plan again.
       if (!this.passable(walker.path[walker.step + 1])) {
         walker.path = walker.path.slice(0, walker.step + 1)
+        walker.fromId = null
         if (!this.chooseDestination(walker)) walker.pause = 1
         break
       }
@@ -316,6 +327,14 @@ export class PeopleView {
     const tile = path[i]
     const c = tileToWorld(tile)
     if (!this.city.isRoad(tile)) return c.add(new THREE.Vector3(walker.offset.x, 0, walker.offset.y))
+    // At either end, the sidewalk on the building's side, by its door.
+    const endId = i === 0 ? walker.fromId : i === path.length - 1 ? walker.toId : null
+    const toward = endId !== null ? this.towardBuilding(tile, endId) : null
+    if (toward) {
+      const edge = 0.5 - SIDEWALK / 2
+      const along = walker.offset.x * 0.6
+      return c.add(new THREE.Vector3(toward.x * edge + toward.z * along, 0, toward.z * edge + toward.x * along))
+    }
     const step = (a: Tile, b: Tile) => ({ x: b.x - a.x, z: b.z - a.z })
     const into = i > 0 ? step(path[i - 1], tile) : i + 1 < path.length ? step(tile, path[i + 1]) : { x: 1, z: 0 }
     const out = i + 1 < path.length ? step(tile, path[i + 1]) : into
