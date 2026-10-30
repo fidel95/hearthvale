@@ -27,6 +27,7 @@ export class Scenery {
   private crownColors: THREE.Color[] = []
   private bushes: THREE.InstancedMesh | null = null
   private snow = 0
+  private trees: { at: THREE.Vector3; size: number }[] = []
 
   constructor(scene: THREE.Scene) {
     scene.add(this.group)
@@ -99,9 +100,24 @@ export class Scenery {
     for (const mesh of [crowns, blooms]) if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true
     blooms.userData.flowers = true
     this.crowns = crowns
+    this.trees = trees
     this.crownColors = trees.map((t) => new THREE.Color(t.color))
     this.bushes = bush
     this.setSnow(this.snow)
+  }
+
+  // A gentle breeze: every tree's crown leans a little this way and that.
+  sway(seconds: number) {
+    if (!this.crowns) return
+    const m = new THREE.Matrix4()
+    const q = new THREE.Quaternion()
+    const e = new THREE.Euler()
+    this.trees.forEach((t, i) => {
+      e.set(Math.sin(seconds * 1.1 + i) * 0.05, 0, Math.cos(seconds * 0.9 + i * 1.3) * 0.05)
+      m.compose(t.at.clone().setY(0.75 * t.size), q.setFromEuler(e), new THREE.Vector3(t.size, t.size, t.size))
+      this.crowns!.setMatrixAt(i, m)
+    })
+    this.crowns.instanceMatrix.needsUpdate = true
   }
 
   // Snow mode: trees and bushes turn white (by how much snow, 0 to 1), and

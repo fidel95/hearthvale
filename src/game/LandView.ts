@@ -145,6 +145,11 @@ export class LandView {
     this.scenery.setSnow(amount)
   }
 
+  // Trees in the countryside sway in the breeze.
+  sway(seconds: number) {
+    this.scenery.sway(seconds)
+  }
+
   setGridVisible(visible: boolean) {
     this.gridVisible = visible
     if (this.grid) this.grid.visible = visible

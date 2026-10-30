@@ -24,7 +24,7 @@ import { WelcomeBackPanel } from '../ui/WelcomeBackPanel'
 import { TaxPanel } from '../ui/TaxPanel'
 import { Builder } from './Builder'
 import { CameraController } from './CameraController'
-import type { PlacedBuilding } from './City'
+import { sizeOf, type PlacedBuilding } from './City'
 import { CityView } from './CityView'
 import { ContextMenu } from './ContextMenu'
 import { MATERIAL_IDS, materialsText } from './items'
@@ -52,6 +52,9 @@ import { FlightView } from './FlightView'
 import { LeisureView } from './LeisureView'
 import { ArmyView } from './ArmyView'
 import { AnimalView } from './AnimalView'
+import { AmbientView } from './AmbientView'
+import { EffectsView } from './EffectsView'
+import { flyToHud } from '../ui/flyToHud'
 import { PARADE } from './Army'
 import { repairCost } from './Disasters'
 import { addMountains } from './MountainView'
@@ -118,6 +121,9 @@ export class Game {
   private leisureView: LeisureView
   private armyView: ArmyView
   private animalView: AnimalView
+  private effects: EffectsView
+  private ambientView: AmbientView
+  private flights = 0 // fly-to-counter icons started this second (kept few)
   private weather: WeatherView
   private disasterView: DisasterView
   private mountains: { setSnow: (amount: number) => void }
@@ -169,6 +175,8 @@ export class Game {
     this.leisureView = new LeisureView(this.scene, this.city)
     this.armyView = new ArmyView(this.scene, this.city, this.state.army)
     this.animalView = new AnimalView(this.scene, this.city)
+    this.effects = new EffectsView(this.scene)
+    this.ambientView = new AmbientView(this.scene, this.city, this.cityView, this.effects, () => this.controls.target)
     this.mountains = addMountains(this.scene)
     this.weather = new WeatherView(this.scene, () => this.controls.target, [this.sun, this.ambient])
     this.disasterView = new DisasterView(this.scene, this.city, this.state.disasters, {
@@ -258,6 +266,7 @@ export class Game {
       this.leisureView.setVisible(s.showPeople)
       this.armyView.setVisible(s.showTraffic)
       this.animalView.setVisible(s.showPeople)
+      this.effects.enabled = this.ambientView.enabled = this.controls.inertia = !s.reduceMotion
       this.weather.enabled = s.weather
       this.weather.snow = s.snowMode
       this.disasterView.enabled = s.disasters
@@ -274,6 +283,8 @@ export class Game {
       this.clock.speed = devSpeed() !== 1 ? devSpeed() : (admin?.calendarSpeed ?? 1)
     })
     window.setInterval(() => this.applyPowers(), 500)
+    this.setUpJuice()
+
     // Rain: umbrellas up, the beach empties, and a word about it.
     this.weather.onChange = (raining) => {
       const snow = this.settings.values.snowMode
@@ -366,6 +377,9 @@ export class Game {
     this.leisureView.update(Math.min(dt, 100) / 1000)
     this.armyView.update(Math.min(dt, 100) / 1000)
     this.animalView.update(Math.min(dt, 100) / 1000)
+    this.effects.update(Math.min(dt, 100) / 1000)
+    this.ambientView.update(Math.min(dt, 100) / 1000)
+    if (this.effects.enabled) this.landView.sway(frameTime / 1000)
     this.weather.update(Math.min(dt, 100) / 1000)
     this.disasterView.raining = this.weather.isRaining && !this.weather.snow
     this.disasterView.update(Math.min(dt, 100) / 1000)
@@ -584,6 +598,76 @@ export class Game {
       },
     })
     return this.admin
+  }
+
+  // ---- Feedback that makes actions feel good: dust and sparkles when a
+  // building lands, a bounce and coins flying to the counter when you
+  // collect, fireworks for a new level. (EffectsView and flyToHud.)
+
+  private setUpJuice() {
+    const center = (b: PlacedBuilding) => footprintCenter(b.tile, sizeOf(b))
+    const top = (b: PlacedBuilding) => center(b).setY(this.cityView.topOf(b.id))
+    window.setInterval(() => (this.flights = 0), 1000)
+    const fly = (b: PlacedBuilding, icon: string, kind: 'coins' | 'xp' | 'goods', count: number) => {
+      const chip = this.hud.chip(kind)
+      if (!this.effects.enabled || this.flights >= 8) {
+        chip.classList.remove('bump')
+        void chip.offsetWidth
+        chip.classList.add('bump')
+        return
+      }
+      this.flights++
+      flyToHud(this.toScreen(top(b)), icon, chip, count)
+    }
+    this.city.onChange((e) => {
+      if (!this.loaded) return
+      switch (e.kind) {
+        case 'added':
+          if (isTrack(e.building.type)) break
+          this.effects.dust(center(e.building).setY(0.05), sizeOf(e.building))
+          if (!e.building.construction) this.effects.sparkle(top(e.building), 10)
+          break
+        case 'moved':
+        case 'restored':
+          if (!isTrack(e.building.type)) this.effects.dust(center(e.building).setY(0.05), sizeOf(e.building))
+          break
+        case 'finished':
+        case 'upgraded':
+          this.effects.sparkle(top(e.building), 18)
+          this.effects.confetti(top(e.building).add(new THREE.Vector3(0, 0.4, 0)))
+          break
+        case 'repaired':
+          this.effects.sparkle(top(e.building), 12)
+          break
+        case 'collected':
+          this.cityView.bounce(e.building.id)
+          if (e.amount > 0) fly(e.building, '🪙', 'coins', Math.min(4, 1 + Math.floor(e.amount / 25)))
+          break
+        case 'harvested':
+          if (e.amount > 0) fly(e.building, '🪙', 'coins', 3)
+          if (e.goods > 0) fly(e.building, '📦', 'goods', 2)
+          break
+      }
+    })
+    this.player.onChange((e) => {
+      if (e.kind === 'xp' && e.building && this.loaded) fly(e.building, '⭐', 'xp', 1)
+      if (e.kind === 'levelUp' && this.effects.enabled) {
+        // Fireworks over the town, one after another.
+        for (let i = 0; i < 6; i++) {
+          window.setTimeout(() => {
+            const at = this.controls.target.clone().add(new THREE.Vector3((Math.random() - 0.5) * 10, 5 + Math.random() * 2.5, (Math.random() - 0.5) * 10))
+            this.effects.firework(at)
+          }, i * 380)
+        }
+      }
+    })
+  }
+
+  // Where a point in the world is on the screen (for HTML effects).
+  private toScreen(v: THREE.Vector3): { x: number; y: number } {
+    const p = v.clone().project(this.camera)
+    const r = this.renderer.domElement.getBoundingClientRect()
+    return { x: r.left + ((p.x + 1) / 2) * r.width, y: r.top + ((1 - p.y) / 2) * r.height }
   }
 
   // Repair a building a disaster damaged (Disasters.ts has the rules).

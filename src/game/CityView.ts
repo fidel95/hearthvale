@@ -22,6 +22,10 @@ export class CityView {
   // Set once the saved town has loaded (so loading doesn't pop every building)
   // and turned off by Reduce motion.
   popIn = false
+  // Buildings giving a happy squash-and-stretch when collected from.
+  private bounces = new Map<number, number>()
+  // Cranes swinging round on construction sites.
+  private cranes = new Map<number, THREE.Object3D>()
 
   constructor(scene: THREE.Scene, city: City) {
     this.scene = scene
@@ -55,6 +59,8 @@ export class CityView {
   // its crop model only when the look actually changes (a few times per crop).
   update(now: number) {
     this.animatePops()
+    this.animateBounces()
+    for (const jib of this.cranes.values()) jib.rotation.y = Math.sin(performance.now() / 2600 + jib.id) * 1.4
     for (const b of this.city.all()) {
       if (!isPlot(b.type)) continue
       const state = cropState(b.crop, now)
@@ -104,11 +110,14 @@ export class CityView {
     // Upgraded buildings stand a little taller: 8% per level.
     const scale = 1 + 0.08 * (b.level - 1)
     obj.scale.setScalar(scale)
+    obj.userData.baseScale = scale
     if (pop && this.popIn && !isTrack(b.type)) {
       this.pops.set(b.id, { start: performance.now(), scale })
       obj.scale.setScalar(scale * POP_FROM)
     }
     this.objects.set(b.id, obj)
+    const jib = obj.getObjectByName('crane-jib')
+    if (jib) this.cranes.set(b.id, jib)
     this.scene.add(obj)
     this.position(b)
   }
@@ -129,8 +138,31 @@ export class CityView {
     }
   }
 
+  // A quick squash and spring back up, as if the building's pleased.
+  bounce(id: number) {
+    if (this.popIn && !this.pops.has(id)) this.bounces.set(id, performance.now())
+  }
+
+  private animateBounces() {
+    const now = performance.now()
+    for (const [id, start] of this.bounces) {
+      const obj = this.objects.get(id)
+      const t = (now - start) / 420
+      const base = obj?.userData.baseScale ?? 1
+      if (!obj || t >= 1) {
+        obj?.scale.setScalar(base)
+        this.bounces.delete(id)
+        continue
+      }
+      const squash = Math.sin(t * Math.PI * 2) * 0.14 * (1 - t)
+      obj.scale.set(base * (1 + squash * 0.5), base * (1 - squash), base * (1 + squash * 0.5))
+    }
+  }
+
   private destroy(id: number) {
     this.pops.delete(id)
+    this.bounces.delete(id)
+    this.cranes.delete(id)
     const obj = this.objects.get(id)
     if (obj) this.scene.remove(obj)
     this.objects.delete(id)

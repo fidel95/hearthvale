@@ -278,6 +278,11 @@ export class Hud {
   }
 
   // A message that shows for a few seconds under the top bar.
+  // The top-bar counter that collected coins, XP and goods fly to.
+  chip(kind: 'coins' | 'xp' | 'goods'): HTMLElement {
+    return (kind === 'coins' ? this.coins : kind === 'goods' ? this.goods : this.level).button
+  }
+
   // The 🛠️ button: shown while admin tools are on, and always in development.
   setAdminVisible(visible: boolean) {
     this.adminButton.hidden = !visible && !import.meta.env.DEV

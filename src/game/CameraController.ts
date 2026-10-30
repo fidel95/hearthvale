@@ -56,6 +56,10 @@ export class CameraController {
   private grabPoint: THREE.Vector3 | null = null
   private pinchStart: { distance: number; zoom: number } | null = null
   private carry: Carry | null = null
+  // Flick the map and it glides on, slowing to a stop (off with Reduce motion).
+  inertia = true
+  private velocity = new THREE.Vector3()
+  private lastPan: { target: THREE.Vector3; time: number } | null = null
   private carryPoint: ScreenPoint | null = null
   private holdTimer: number | undefined
 
@@ -115,6 +119,7 @@ export class CameraController {
     this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
 
     if (this.pointers.size === 1) {
+      this.velocity.set(0, 0, 0) // touching the map stops any glide
       const start = { x: e.clientX, y: e.clientY }
       this.gesture = { start, moved: false, multiTouch: false }
       this.grabPoint = this.groundPointAt(e.clientX, e.clientY)
@@ -198,6 +203,10 @@ export class CameraController {
 
     const g = this.gesture
     if (released && g && !g.moved && !g.multiTouch) this.onClick?.(e.clientX, e.clientY)
+    // A pan that was still moving when let go keeps gliding; one that had stopped doesn't.
+    const stillMoving = this.lastPan && performance.now() - this.lastPan.time < 80
+    if (!(released && g?.moved && !this.pinchStart && !this.paint && stillMoving && this.inertia)) this.velocity.set(0, 0, 0)
+    this.lastPan = null
     this.gesture = null
     this.grabPoint = null
     this.pinchStart = null
@@ -216,6 +225,11 @@ export class CameraController {
   // Called every frame: while carrying something near the screen's edge,
   // scroll the map that way so it can go anywhere.
   update(dtSeconds: number) {
+    if (!this.gesture && this.velocity.lengthSq() > 0.0004) {
+      this.target.addScaledVector(this.velocity, dtSeconds)
+      this.velocity.multiplyScalar(Math.exp(-dtSeconds * 4))
+      this.apply()
+    }
     if (!this.carry || !this.carryPoint) return
     const rect = this.canvas.getBoundingClientRect()
     const { x, y } = this.carryPoint
@@ -258,6 +272,13 @@ export class CameraController {
     const now = this.groundPointAt(clientX, clientY)
     if (!now) return
     this.target.add(this.grabPoint.clone().sub(now))
+    // Remember how fast the map is moving, for the glide after letting go.
+    const time = performance.now()
+    if (this.lastPan && time > this.lastPan.time) {
+      const v = this.target.clone().sub(this.lastPan.target).divideScalar((time - this.lastPan.time) / 1000)
+      this.velocity.lerp(v, 0.5)
+    }
+    this.lastPan = { target: this.target.clone(), time }
     this.apply()
     this.onMove?.()
   }

@@ -77,6 +77,7 @@ Every item in the design spec, with its status and where it lives.
 | Connectivity visualization | ⏳ | |
 | Parks, beach, ski resort | ✅ | Playground, Sports Field, Central Park, Public Beach (on the shore), Ski Resort; beach goers and skiers (`LeisureView.ts`) |
 | Mountains and weather | ✅ | Snowy mountains beyond the edge (`MountainView.ts`); rain showers with umbrellas and rain sound (`WeatherView.ts`), switchable in Settings |
+| Feedback animations | ✅ | Collect icons fly to the HUD, bounce, dust, sparkles, confetti, fireworks, cranes, smoke, birds, cloud shadows, swaying trees, camera glide (`EffectsView.ts`, `AmbientView.ts`, `flyToHud.ts`); off with Reduce motion |
 | Farm animals | ✅ | Four pens with wandering, grazing animals (`AnimalView.ts`), earning farm income |
 | Snow mode, disasters | ✅ | Snow cover and snowfall (`WeatherView.ts`); tornado, lightning, flood, tsunami (`DisasterView.ts`) that damage, never destroy; repairs (`Disasters.ts`, tested) |
 | Army | ✅ | Daily drill with animated soldiers, waving flag, sentry, helicopter (`ArmyView.ts`); 🎖️ Parade for a timed town-wide bonus (`Army.ts`, tested) |

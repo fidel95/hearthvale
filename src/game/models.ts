@@ -639,6 +639,25 @@ export function createConstructionSite(type: BuildingType): THREE.Group {
   add(new THREE.BoxGeometry(w * 0.8, 0.05, 0.06), '#d9a85e', 0, h, d * 0.38)
   add(new THREE.ConeGeometry(0.07, 0.18, 8), '#f07a2a', w * 0.42, 0.04, d * 0.45)
   add(new THREE.ConeGeometry(0.07, 0.18, 8), '#f07a2a', -w * 0.42, 0.04, d * 0.45)
+  // A tower crane at the back corner. Its jib (named, so CityView can turn
+  // it) swings slowly round with a load hanging from it.
+  const mast = Math.max(w, d) * 0.55 + 0.6
+  add(new THREE.BoxGeometry(0.08, mast, 0.08), '#f2c230', -w * 0.4, 0.04, -d * 0.4)
+  const jib = new THREE.Group()
+  jib.name = 'crane-jib'
+  jib.position.set(-w * 0.4, 0.04 + mast, -d * 0.4)
+  for (const [geometry, color, x, y] of [
+    [new THREE.BoxGeometry(Math.max(w, d) * 0.9, 0.06, 0.06), '#f2c230', Math.max(w, d) * 0.3, 0.03],
+    [new THREE.BoxGeometry(0.2, 0.12, 0.12), '#5d6168', -0.15, 0.06],
+    [new THREE.BoxGeometry(0.012, 0.4, 0.012), '#2b2d33', Math.max(w, d) * 0.6, -0.2],
+    [new THREE.BoxGeometry(0.12, 0.08, 0.12), '#b5432f', Math.max(w, d) * 0.6, -0.44],
+  ] as const) {
+    const m = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({ color, flatShading: true }))
+    m.position.set(x, y, 0)
+    m.castShadow = true
+    jib.add(m)
+  }
+  group.add(jib)
   return group
 }
 

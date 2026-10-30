@@ -420,6 +420,21 @@ roll, a Catmull-Rom curve round the town, landing roll, turn round) in the
 airport's own coordinates, then turns and moves it to where the airport
 stands. It banks the plane by how fast its heading changes.
 
+## Feedback and ambient life ("juice")
+
+Small effects make every action feel good, and none of them affect the game.
+`EffectsView` is a tiny particle system (a capped pool of little meshes with
+velocity, gravity, drag, growth and fade): dust when a building lands,
+sparkles and confetti when it's finished or upgraded, chimney smoke,
+fireworks on level-up. `flyToHud` (DOM, Web Animations API) sends coin, star
+and goods icons in an arc from a building to its counter, which bumps;
+they're limited to a few a second so "collect all" stays tidy. `CityView`
+adds a squash-and-stretch bounce on collecting and turns the cranes on
+construction sites. `AmbientView` drifts soft cloud-shadow decals across the
+land, flies flocks of birds in a V, and puffs smoke and dust; the scenery's
+trees sway. `CameraController` keeps a pan's speed and glides to a stop.
+Reduce motion turns all of it off.
+
 ## Animals, snow and disasters
 
 Animal pens are farm buildings with `animals` and `income`: they earn like

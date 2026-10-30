@@ -122,6 +122,7 @@ the right on a wide screen) so the town stays in view.
 - **Your save:** saved automatically in this browser. Settings has Save now, Export (download a copy) and Import. Clearing site data deletes the save, so export a copy to keep it safe.
 - **Admin tools:** Settings → Admin tools adds a 🛠️ button: give yourself coins, levels and materials, finish every timer, run the calendar 10× or 60× faster, or switch on powers (build anything free and instantly, unlimited energy, everything ready at once).
 - **Parks, beaches and the slopes:** Playground, Sports Field and Central Park lift nearby homes and draw visitors; a Public Beach on the shore fills with sunbathers and swimmers; the Ski Resort (level 13) sells lift tickets while skiers zigzag down and ride the chairlift up. Snowy mountains rise behind the town.
+- **Feels alive:** coins, stars and goods fly from buildings to the top bar when you collect, and buildings bounce; dust and sparkles when you build, confetti when construction finishes, fireworks when you level up; cranes on building sites, chimney smoke, swaying trees, birds and drifting cloud shadows; the map glides after a flick. Reduce motion turns it all off.
 - **Farm animals:** Chicken Coop, Pig Pen, Sheep Meadow and Cow Pasture: animals wander, graze and peck in their yards, and what they give sells as farm income.
 - **Snow mode and disasters:** Settings → Snow mode for a wintry town with snowfall. Tornados, lightning storms, floods and tsunamis strike now and then: damaged buildings (🔧) stop working until repaired (a deductible expense); nothing is ever destroyed. Settings can turn disasters off; Admin can start any of them.
 - **Weather:** rain showers roll in every few minutes: the sky dims, umbrellas come out and the beach empties (Settings → Rain showers; Admin can start or stop it).
@@ -214,6 +215,8 @@ src/
     MountainView.ts       the countryside and snowy mountains beyond the world's edge
     WeatherView.ts        rain showers and snowfall: dimmer light, a grayer sky, snow cover
     AnimalView.ts         chickens, pigs, sheep and cows in their pens
+    EffectsView.ts        particles: dust, sparkles, smoke, confetti, fireworks
+    AmbientView.ts        cloud shadows, birds, chimney smoke, dust at building sites
     Disasters.ts          what disasters do: damage, ruined crops, repairs (tested)
     DisasterView.ts       tornados, lightning, floods and tsunamis on screen, and when they strike
     routes.ts             route-finding on roads and track (tested)
