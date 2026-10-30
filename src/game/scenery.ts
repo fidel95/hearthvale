@@ -1,17 +1,32 @@
 import * as THREE from 'three'
+import { forest } from './buildings'
 import { GRID_SIZE, tileToWorld, type Tile } from './grid'
+import { loadInstanceable } from './models'
 
-// Trees, bushes and flowers scattered over land the town doesn't own yet, so
-// the world around the town looks lived-in and colorful rather than empty.
-// Purely decoration: it's never saved and never blocks anything, and it's
-// cleared from a lot the moment the town buys it.
+// Trees, bushes, rocks and flowers scattered over land the town doesn't own
+// yet, so the world around the town looks lived-in and colorful rather than
+// empty. Purely decoration: it's never saved and never blocks anything, and
+// it's cleared from a lot the moment the town buys it.
+//
+// Two kinds of tree: pines from Kenney's Mini Forest pack (a regular and a
+// tall one), and round leafy trees, some in blossom or autumn colors. Plus
+// the pack's boulders here and there.
 //
 // Everything is drawn with instancing: one mesh per kind of shape, drawn many
-// times with a different position and color each, which costs about as much
-// as drawing one.
+// times with a different position (and color) each, which costs about as
+// much as drawing one.
 
 const CROWNS = ['#4caf50', '#3f9a45', '#66bb4a', '#2e8b57', '#f28cb1', '#f5a742'] // greens, with blossom and autumn trees
 const BLOOMS = ['#ff5c8a', '#ffd23f', '#ffffff', '#b46cf0', '#ff7043', '#4fc3f7']
+
+// The pack's models, loaded once (in the background) and shared by every copy.
+const FOREST = {
+  pine: { url: forest('tree'), height: 1.5 },
+  tallPine: { url: forest('tree-high'), height: 2.1 },
+  rocks: { url: forest('rocks-low'), height: 0.42 },
+}
+type ForestKind = keyof typeof FOREST
+type Instanceable = Awaited<ReturnType<typeof loadInstanceable>>
 
 // The same "random" choice for a tile every time (so scenery doesn't shuffle
 // when the land changes).
@@ -21,29 +36,64 @@ function noise(x: number, z: number, salt: number): number {
   return ((h ^ (h >>> 16)) >>> 0) / 4294967296
 }
 
+interface Placed {
+  at: THREE.Vector3
+  size: number
+  turn: number
+}
+
 export class Scenery {
   private group = new THREE.Group()
   private crowns: THREE.InstancedMesh | null = null
   private crownColors: THREE.Color[] = []
   private bushes: THREE.InstancedMesh | null = null
   private snow = 0
-  private trees: { at: THREE.Vector3; size: number }[] = []
+  private trees: Placed[] = [] // round trees (their crowns sway)
+  private pines: { mesh: THREE.InstancedMesh; placed: Placed[] }[] = []
+  private models: Partial<Record<ForestKind, Instanceable>> = {}
+  // Snow on the pack's models: a shader tweak that whitens them (their
+  // colors come from a texture, so tinting the way the round trees are
+  // tinted can't make them lighter).
+  private snowUniform = { value: 0 }
+  private lastOpen: ((tile: Tile) => boolean) | null = null
 
   constructor(scene: THREE.Scene) {
     scene.add(this.group)
+    void Promise.all(
+      (Object.keys(FOREST) as ForestKind[]).map(async (kind) => {
+        const model = await loadInstanceable(FOREST[kind].url, FOREST[kind].height)
+        model.material.onBeforeCompile = (shader) => {
+          shader.uniforms.snow = this.snowUniform
+          shader.fragmentShader = shader.fragmentShader
+            .replace('#include <common>', '#include <common>\nuniform float snow;')
+            .replace('#include <map_fragment>', '#include <map_fragment>\ndiffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.94, 0.96, 0.99), snow);')
+        }
+        this.models[kind] = model
+      }),
+    )
+      .then(() => {
+        if (this.lastOpen) this.rebuild(this.lastOpen)
+      })
+      .catch((err) => console.warn("Couldn't load the forest models; the countryside keeps its round trees", err))
   }
 
   // Scatter scenery on every tile where open(tile) is true.
   rebuild(open: (tile: Tile) => boolean) {
+    this.lastOpen = open
     for (const child of [...this.group.children]) {
       const mesh = child as THREE.InstancedMesh
-      mesh.geometry.dispose()
-      ;(mesh.material as THREE.Material).dispose()
+      // The pack's shapes and materials are shared and kept; the rest are ours to free.
+      if (!mesh.userData.shared) {
+        mesh.geometry.dispose()
+        ;(mesh.material as THREE.Material).dispose()
+      }
       mesh.dispose()
       this.group.remove(mesh)
     }
 
-    const trees: { at: THREE.Vector3; size: number; color: string }[] = []
+    const havePines = this.models.pine !== undefined
+    const trees: (Placed & { color: string })[] = []
+    const forestPlaced: Record<ForestKind, Placed[]> = { pine: [], tallPine: [], rocks: [] }
     const bushes: { at: THREE.Vector3; size: number }[] = []
     const flowers: { at: THREE.Vector3; color: string }[] = []
     for (let x = 0; x < GRID_SIZE; x++) {
@@ -53,11 +103,19 @@ export class Scenery {
         const c = tileToWorld({ x, z })
         const jitter = new THREE.Vector3(noise(x, z, 2) - 0.5, 0, noise(x, z, 3) - 0.5).multiplyScalar(0.5)
         const at = c.clone().add(jitter)
-        if (roll < 0.07) {
-          trees.push({ at, size: 0.75 + noise(x, z, 4) * 0.5, color: CROWNS[Math.floor(noise(x, z, 5) * CROWNS.length)] })
-        } else if (roll < 0.11) {
+        const size = 0.75 + noise(x, z, 4) * 0.5
+        const turn = noise(x, z, 6) * Math.PI * 2
+        if (roll < 0.08) {
+          // About half the trees are pines (once the pack has loaded).
+          const kind = noise(x, z, 7)
+          if (havePines && kind < 0.32) forestPlaced.pine.push({ at, size, turn })
+          else if (havePines && kind < 0.5) forestPlaced.tallPine.push({ at, size, turn })
+          else trees.push({ at, size, turn, color: CROWNS[Math.floor(noise(x, z, 5) * CROWNS.length)] })
+        } else if (roll < 0.1 && havePines) {
+          forestPlaced.rocks.push({ at, size: 0.7 + noise(x, z, 4) * 0.7, turn })
+        } else if (roll < 0.13) {
           bushes.push({ at, size: 0.6 + noise(x, z, 4) * 0.4 })
-        } else if (roll < 0.18) {
+        } else if (roll < 0.2) {
           // A little patch of flowers, all one color.
           const color = BLOOMS[Math.floor(noise(x, z, 5) * BLOOMS.length)]
           for (let i = 0; i < 5; i++) {
@@ -82,6 +140,7 @@ export class Scenery {
       return mesh
     }
 
+    // The round trees: a trunk and a crown in its own color.
     const trunks = instanced(new THREE.CylinderGeometry(0.07, 0.09, 0.5, 6), '#8a5a36', trees.length)
     const crowns = instanced(new THREE.IcosahedronGeometry(0.38, 0), '#ffffff', trees.length)
     trees.forEach((t, i) => {
@@ -89,6 +148,20 @@ export class Scenery {
       place(crowns, i, t.at, t.size, 0.75)
       crowns.setColorAt(i, new THREE.Color(t.color))
     })
+    // The pack's pines and boulders, standing on the ground, each turned its own way.
+    this.pines = []
+    for (const kind of Object.keys(forestPlaced) as ForestKind[]) {
+      const model = this.models[kind]
+      const placed = forestPlaced[kind]
+      if (!model || placed.length === 0) continue
+      const mesh = new THREE.InstancedMesh(model.geometry, model.material, placed.length)
+      mesh.userData.shared = true
+      mesh.castShadow = true
+      mesh.receiveShadow = true
+      placed.forEach((p, i) => mesh.setMatrixAt(i, this.standing(p, 0, 0)))
+      this.group.add(mesh)
+      if (kind !== 'rocks') this.pines.push({ mesh, placed })
+    }
     const bush = instanced(new THREE.IcosahedronGeometry(0.25, 0), '#57a84a', bushes.length)
     bushes.forEach((b, i) => place(bush, i, b.at, b.size, 0.15))
     const blooms = instanced(new THREE.IcosahedronGeometry(0.07, 0), '#ffffff', flowers.length)
@@ -106,7 +179,14 @@ export class Scenery {
     this.setSnow(this.snow)
   }
 
-  // A gentle breeze: every tree's crown leans a little this way and that.
+  // A pack model standing at its spot: turned, sized, and leaning a little
+  // from its base (for the breeze).
+  private standing(p: Placed, leanX: number, leanZ: number): THREE.Matrix4 {
+    const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(leanX, p.turn, leanZ))
+    return new THREE.Matrix4().compose(p.at, q, new THREE.Vector3(p.size, p.size, p.size))
+  }
+
+  // A gentle breeze: every tree leans a little this way and that.
   sway(seconds: number) {
     if (!this.crowns) return
     const m = new THREE.Matrix4()
@@ -118,12 +198,17 @@ export class Scenery {
       this.crowns!.setMatrixAt(i, m)
     })
     this.crowns.instanceMatrix.needsUpdate = true
+    for (const { mesh, placed } of this.pines) {
+      placed.forEach((p, i) => mesh.setMatrixAt(i, this.standing(p, Math.sin(seconds * 0.9 + i) * 0.025, Math.cos(seconds * 0.7 + i * 1.7) * 0.025)))
+      mesh.instanceMatrix.needsUpdate = true
+    }
   }
 
-  // Snow mode: trees and bushes turn white (by how much snow, 0 to 1), and
-  // the flowers are buried.
+  // Snow mode: trees, rocks and bushes turn white (by how much snow, 0 to 1),
+  // and the flowers are buried.
   setSnow(amount: number) {
     this.snow = amount
+    this.snowUniform.value = amount * 0.75
     const white = new THREE.Color('#f4f8fb')
     if (this.crowns) {
       this.crownColors.forEach((c, i) => this.crowns!.setColorAt(i, c.clone().lerp(white, amount * 0.8)))

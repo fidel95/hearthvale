@@ -17,6 +17,9 @@ supermarket,Supermarket,business,late,12,,3×3,9,1100,🧱 6 🪟 6 🔩 6,360,1
 farm-plot,Farm Plot,farm,early,1,,2×2,4,50,,0,50,0,,,0,,,2,0,💧2,0,grows crops,,,,,—,—
 oak-tree,Oak Tree,decoration,early,1,,1×1,1,20,,0,20,0,,,0,,,1,0,,0,+2% within 1 tiles; looks nice,,,,,—,—
 pine-tree,Pine Tree,decoration,early,1,,1×1,1,15,,0,15,0,,,0,,,0,0,,0,+1% within 1 tiles; looks nice,,,,,—,—
+tall-pine,Tall Pine,decoration,early,2,,1×1,1,25,,0,25,0,,,0,,,1,0,,0,+2% within 1 tiles; looks nice,,,,,—,—
+stone-pile,Stone Pile,decoration,early,2,,1×1,1,15,,0,15,0,,,0,,,0,0,,0,+1% within 1 tiles; looks nice,,,,,—,—
+boulders,Boulders,decoration,middle,4,,1×1,1,40,,0,40,0,,,0,,,2,0,,0,+3% within 1 tiles; looks nice,,,,,—,—
 planter,Planter,decoration,early,3,,1×1,1,30,,0,30,0,,,0,,,1,0,,0,+3% within 1 tiles; looks nice,,,,,—,—
 flower-bed,Flower Bed,decoration,early,2,,1×1,1,25,,0,25,0,,,0,,,1,0,,0,+2% within 1 tiles; looks nice,,,,,—,—
 stone-path,Stone Path,decoration,early,2,,1×1,1,15,,0,15,0,,,0,,,0,0,,0,+1% within 0 tiles; looks nice,,,,,—,—

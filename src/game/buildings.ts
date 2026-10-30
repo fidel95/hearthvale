@@ -101,6 +101,9 @@ export interface BuildingType {
   requiresRoad?: boolean
   // Shops: residents they need living nearby for full sales (demand.ts).
   customers?: number
+  // How tall its model may stand, in tiles per tile of footprint (default 1.2;
+  // a tall pine gets more).
+  heightLimit?: number
   // Animal pens: which animals live here and how many (AnimalView draws them).
   animals?: { kind: 'chicken' | 'pig' | 'sheep' | 'cow'; count: number }
   // Needs railway track touching one side to work (the train station).
@@ -118,6 +121,8 @@ export interface BuildingType {
 // Models live in public/models/. BASE_URL is '/' in dev but may be a
 // subfolder once deployed (Stage 12), so build URLs from it instead of hardcoding '/'.
 const suburban = (name: string) => `${import.meta.env.BASE_URL}models/suburban/${name}.glb`
+// Kenney's Mini Forest pack (CC0): pines, rocks and stones.
+export const forest = (name: string) => `${import.meta.env.BASE_URL}models/forest/${name}.glb`
 
 export const BUILDING_TYPES: BuildingType[] = [
   {
@@ -370,8 +375,42 @@ export const BUILDING_TYPES: BuildingType[] = [
     cost: 15,
     unlockLevel: 1,
     amenity: { bonus: 0.01, radius: 1 },
-    model: suburban('tree-small'),
+    model: forest('tree'),
     placeholder: { shape: 'tree', color: '#7a5233', accent: '#2f7a4f', height: 1 },
+  },
+  {
+    id: 'tall-pine',
+    name: 'Tall Pine',
+    category: 'decoration',
+    size: { x: 1, z: 1 },
+    cost: 25,
+    unlockLevel: 2,
+    amenity: { bonus: 0.02, radius: 1 },
+    heightLimit: 2,
+    model: forest('tree-high'),
+    placeholder: { shape: 'tree', color: '#7a5233', accent: '#2f7a4f', height: 1.5 },
+  },
+  {
+    id: 'stone-pile',
+    name: 'Stone Pile',
+    category: 'decoration',
+    size: { x: 1, z: 1 },
+    cost: 15,
+    unlockLevel: 2,
+    amenity: { bonus: 0.01, radius: 1 },
+    model: forest('stones'),
+    placeholder: { shape: 'statue', color: '#9a8f86', accent: '#9a8f86', height: 0.3 },
+  },
+  {
+    id: 'boulders',
+    name: 'Boulders',
+    category: 'decoration',
+    size: { x: 1, z: 1 },
+    cost: 40,
+    unlockLevel: 4,
+    amenity: { bonus: 0.03, radius: 1 },
+    model: forest('rocks-low'),
+    placeholder: { shape: 'statue', color: '#7d7f9a', accent: '#7d7f9a', height: 0.5 },
   },
   {
     id: 'planter',

@@ -126,6 +126,27 @@ function repaintSwatch(pixels: ImageData, swatch: { column: number; row: number 
   }
 }
 
+// A model's single mesh, ready to be drawn many times at once (instancing):
+// its shape moved so it stands centered on the origin and scaled to a given
+// height, and its material. For the countryside's trees and rocks (scenery.ts).
+export async function loadInstanceable(url: string, height: number): Promise<{ geometry: THREE.BufferGeometry; material: THREE.MeshStandardMaterial }> {
+  const model = await loadModel(url)
+  model.updateMatrixWorld(true)
+  let found: THREE.Mesh | null = null
+  model.traverse((o) => {
+    if (!found && o instanceof THREE.Mesh) found = o
+  })
+  const mesh = found as unknown as THREE.Mesh
+  const geometry = mesh.geometry.clone().applyMatrix4(mesh.matrixWorld)
+  geometry.computeBoundingBox()
+  const box = geometry.boundingBox!
+  const center = box.getCenter(new THREE.Vector3())
+  geometry.translate(-center.x, -box.min.y, -center.z)
+  const scale = height / (box.max.y - box.min.y)
+  geometry.scale(scale, scale, scale)
+  return { geometry, material: (mesh.material as THREE.MeshStandardMaterial).clone() }
+}
+
 // Builds the 3D object for a building. Its origin is the center of the
 // footprint at ground level. Models load in the background, so this returns
 // an empty group right away and fills it in once the model is ready.
@@ -174,7 +195,7 @@ function fitToFootprint(model: THREE.Object3D, type: BuildingType): THREE.Object
 
   // Fill 90% of the footprint, but don't let tall, thin models (trees) tower
   // over everything: cap the height relative to the footprint too.
-  const maxHeight = Math.max(type.size.x, type.size.z) * MAX_HEIGHT_PER_TILE
+  const maxHeight = Math.max(type.size.x, type.size.z) * (type.heightLimit ?? MAX_HEIGHT_PER_TILE)
   const scale = Math.min((type.size.x / size.x) * 0.9, (type.size.z / size.z) * 0.9, maxHeight / size.y)
 
   const wrapper = new THREE.Group()

@@ -226,6 +226,7 @@ src/
     routes.ts             route-finding on roads and track (tested)
     ShipView.ts           sailboats, fishing boats and cargo ships
     models.ts             loads .glb models, draws placeholder shapes and crops
+    scenery.ts            the countryside: pines, round trees, boulders, bushes and flowers
     Builder.ts            build / move / demolish tools, ghost preview, what a tap does
     IncomeView.ts         HTML labels over buildings: bubbles, pop-ups, info card
     *.test.ts             unit tests
@@ -289,4 +290,5 @@ docs/                     the docs linked above
 ## Credits
 
 - 3D models: [City Kit (Suburban)](https://kenney.nl/assets/city-kit-suburban) by Kenney, CC0 (see `public/models/suburban/License.txt`).
+- Pines, boulders and stones: [Mini Forest](https://kenney.nl/assets/mini-forest) by Kenney, CC0 (see `public/models/forest/License.txt`).
 - Built with [three.js](https://threejs.org), [Vite](https://vite.dev) and [Vitest](https://vitest.dev).
