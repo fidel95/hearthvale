@@ -8,16 +8,49 @@
 // - activate: delete caches from older versions
 // - fetch:    answer from the cache; anything not in it goes to the network
 //
-// A new version installs in the background and waits; the game offers to
-// switch to it (a 'skipWaiting' message), so it never changes mid-game.
+// A new version installs in the background and takes over straight away
+// (so a phone can never stay stuck on a broken copy); the open game keeps
+// running the code it already has, and offers to reload into the new one.
+//
+// Installing is careful: every file is fetched fresh from the network
+// (never the browser's own HTTP cache, which can hand back an old page for
+// a while after an update), and the page must name this version's code.
+// If anything doesn't match, the install fails and the old version stays.
 
 const VERSION = '__VERSION__'
 const CACHE = `hearthvale-${VERSION}`
 const FILES = __FILES__
+const ENTRY = __ENTRY__ // the code files index.html must load
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(FILES)))
+  event.waitUntil(
+    (async () => {
+      const cache = await caches.open(CACHE)
+      try {
+        await fill(cache)
+      } catch (err) {
+        await caches.delete(CACHE) // don't leave half a version behind
+        throw err
+      }
+      await self.skipWaiting()
+    })(),
+  )
 })
+
+// Every file fresh from the network, and the page must name this version's code.
+async function fill(cache) {
+  await Promise.all(
+    FILES.map(async (file) => {
+      const response = await fetch(new Request(file, { cache: 'reload' }))
+      if (!response.ok) throw new Error(`${file}: ${response.status}`)
+      await cache.put(file, response)
+    }),
+  )
+  const page = await (await cache.match('./index.html')).text()
+  for (const entry of ENTRY) {
+    if (!page.includes(entry)) throw new Error(`index.html is from another version (no ${entry})`)
+  }
+}
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(

@@ -70,6 +70,22 @@ Every save is tried on a throwaway game first (`SaveSystem.canLoad`), so one
 that has the right version but missing parts is set aside as a backup instead
 of half-loading or stopping the game.
 
+## Updates and recovery (offline cache)
+
+A blank screen on a phone after an update was traced to the service worker:
+GitHub Pages lets browsers reuse the page for 10 minutes, so a new version
+could cache the **old** page with the **new** code, and the old page asks for
+a code file that no longer exists. Tested in a browser against a local copy
+served from a subfolder:
+
+- A "deploy" whose page is stale: the new version refuses to install (and
+  deletes its half-filled cache); the old version keeps running normally.
+- A real deploy: the new version takes over, the game offers "Update ready",
+  and after reloading it runs the new code, offline too.
+- Recovery from the broken state itself (the previous version's worker with a
+  page naming a missing file): after the fix is published, the first reload
+  installs it in the background and the second starts the game.
+
 ## Simulation and audit — `src/tests/simulation.test.ts`, `src/tests/audit.test.ts`
 
 The audit added a **simulation**: 20 runs of 3,000 random actions each, the

@@ -21,7 +21,13 @@ export function serviceWorker(): Plugin {
       for (const f of files) hash.update(f).update(readFileSync(join(outDir, f)))
       const version = hash.digest('hex').slice(0, 12)
       const template = readFileSync(new URL('./sw-template.js', import.meta.url), 'utf8')
-      const sw = template.replace('__VERSION__', version).replace('__FILES__', JSON.stringify(['./', ...files.map((f) => './' + f)], null, 2))
+      // The code and style files the page loads: the service worker checks the
+      // page it caches really names them (and so belongs to this version).
+      const entry = [...new Set(readFileSync(join(outDir, 'index.html'), 'utf8').match(/assets\/[^"']+\.(?:js|css)/g) ?? [])]
+      const sw = template
+        .replace('__VERSION__', version)
+        .replace('__FILES__', JSON.stringify(['./', ...files.map((f) => './' + f)], null, 2))
+        .replace('__ENTRY__', JSON.stringify(entry))
       writeFileSync(join(outDir, 'sw.js'), sw)
       console.log(`service worker: ${files.length} files, version ${version}`)
     },
