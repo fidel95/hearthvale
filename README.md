@@ -113,7 +113,7 @@ the right on a wide screen) so the town stays in view.
 - **Farming:** tap an empty plot (🌱) to choose seeds. Crops sprout, grow and ripen; harvest before they wither (🥀). Quick crops earn the most per minute; slow ones can be left overnight.
 - **Goods and storage (📦):** once you have a shop, harvests go into storage as goods; what doesn't fit is sold at the market. A Barn, Warehouse or Dock adds space.
 - **Land and the coast:** the world is 60×60 tiles in 10×10 lots, with the sea along the south. Tap a 🏷️ sign (or a lot on the Map) to buy the land next to yours.
-- **Docks and shipping:** build a Dock on the shore, order a coastal freighter or a container ship, and unload it (🚢) when it arrives.
+- **Docks and shipping:** build a Dock on the shore, order a coastal freighter or a container ship, and unload it (🚢) when it arrives. You can watch it all: the dock's gantry crane loads the waiting export containers, the ship casts off and sails out to sea, and it comes back full just as the shipment arrives. Unloading, the crane lifts the containers onto the quay, and trucks drive them to a shop or warehouse in town and come back with more to export.
 - **Utilities:** homes, shops and farms use 💧 water, 🔌 electricity and 🗑️ trash pickup. Beyond what the county supplies, build plants; they cost coins every month. Shortages cut income.
 - **Decorations:** trees, flower beds, stone paths, fences, benches, fountains and statues raise the income of homes and shops right around them (+1% to +8% each), up to +10% from decorations in all. Landscaping also raises a building's assessed value.
 - **Roads and community:** shops need a road touching one side (🚧 means one is missing); homes and shops beside a road earn +5%; near a Park, Fire Station or School, +10–15% (up to +40%), which also raises their assessed value.
@@ -241,7 +241,8 @@ src/
     Disasters.ts          what disasters do: damage, ruined crops, repairs (tested)
     DisasterView.ts       tornados, lightning, floods and tsunamis on screen, and when they strike
     routes.ts             route-finding on roads and track (tested)
-    ShipView.ts           sailboats, fishing boats and cargo ships
+    ShipView.ts           sailboats and fishing boats
+    PortView.ts           life at the docks: cargo ships, the crane, containers and trucks
     models.ts             loads .glb models, draws placeholder shapes and crops
     scenery.ts            the countryside: pines, round trees, boulders, bushes and flowers
     Builder.ts            build / move / demolish tools, ghost preview, what a tap does

@@ -533,13 +533,29 @@ function createPlaceholder(type: BuildingType): THREE.Group {
       break
     }
     case 'dock': {
-      // A wooden deck on posts, crates, and a yellow crane for unloading ships.
-      add(new THREE.BoxGeometry(w * 0.95, 0.1, d * 0.95), color, 0, 0.1, 0)
-      for (const [x, z] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) add(new THREE.BoxGeometry(0.1, 0.12, 0.1), '#5a4632', x * w * 0.43, 0, z * d * 0.43)
-      add(new THREE.BoxGeometry(0.3, 0.25, 0.3), '#b88a5a', -w * 0.3, 0.2, -d * 0.2)
-      add(new THREE.BoxGeometry(0.3, 0.25, 0.3), '#3f7fe0', -w * 0.3 + 0.35, 0.2, -d * 0.2)
-      add(new THREE.BoxGeometry(0.12, height * 1.6, 0.12), accent, w * 0.3, 0.2, 0)
-      add(new THREE.BoxGeometry(0.08, 0.08, d * 0.9), accent, w * 0.3, 0.2 + height * 1.6, d * 0.25)
+      // A concrete quay on a timber-edged base, with mooring bollards and
+      // tyre fenders round its edges. The crane, containers and harbor office
+      // are PortView's: they face whichever side the sea is on.
+      add(new THREE.BoxGeometry(w, 0.08, d), '#6b4f36', 0, 0.04, 0)
+      add(new THREE.BoxGeometry(w * 0.97, 0.08, d * 0.97), color, 0, 0.12, 0)
+      for (const [x, z] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) add(new THREE.BoxGeometry(0.12, 0.12, 0.12), '#5a4632', x * (w / 2 - 0.06), -0.04, z * (d / 2 - 0.06))
+      const bollard = () => new THREE.CylinderGeometry(0.035, 0.045, 0.08, 8)
+      const fender = () => new THREE.CylinderGeometry(0.05, 0.05, 0.05, 8).rotateZ(Math.PI / 2)
+      for (const side of [-1, 1]) {
+        for (let i = 0; i < w; i++) {
+          const x = -w / 2 + 0.5 + i
+          add(bollard(), '#2b2d33', x, 0.2, side * (d / 2 - 0.08))
+          add(fender().rotateY(Math.PI / 2), '#1d1d1f', x + 0.25, 0.07, side * (d / 2 + 0.02))
+        }
+        for (let i = 0; i < d; i++) {
+          const z = -d / 2 + 0.5 + i
+          add(bollard(), '#2b2d33', side * (w / 2 - 0.08), 0.2, z)
+          add(fender(), '#1d1d1f', side * (w / 2 + 0.02), 0.07, z + 0.25)
+        }
+      }
+      // Painted safety lines inset from the edge.
+      add(new THREE.BoxGeometry(w * 0.9, 0.005, 0.03), accent, 0, 0.2, d * 0.38)
+      add(new THREE.BoxGeometry(w * 0.9, 0.005, 0.03), accent, 0, 0.2, -d * 0.38)
       break
     }
     case 'flowers': {

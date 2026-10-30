@@ -788,7 +788,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     upkeep: 10,
     needs: { power: 1, trash: 1 },
     arrivals: 10,
-    placeholder: { shape: 'dock', color: '#8a6a4a', accent: '#d9a441', height: 0.6 },
+    placeholder: { shape: 'dock', color: '#b9b4a8', accent: '#f2c230', height: 0.6 },
   },
   // ---- Roads and community buildings
   {

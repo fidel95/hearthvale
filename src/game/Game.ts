@@ -63,6 +63,7 @@ import { repairCost } from './Disasters'
 import { addMountains } from './MountainView'
 import { WeatherView } from './WeatherView'
 import { DisasterView } from './DisasterView'
+import { PortView } from './PortView'
 import { ShipView } from './ShipView'
 import { AutoSaver } from './save'
 import { PRODUCTS } from './products'
@@ -142,6 +143,7 @@ export class Game {
   private ambient = new THREE.HemisphereLight('#e8f4ff', '#8fbf6a', 1.3)
   private landView: LandView
   private shipView: ShipView
+  private portView: PortView
   private incomeView: IncomeView
   private contextMenu!: ContextMenu
   private buildingPanel!: BuildingPanel
@@ -183,7 +185,8 @@ export class Game {
     const landView = new LandView(this.scene, this.city)
     this.landView = landView
     this.lotView = new LotView(this.scene, this.city)
-    this.shipView = new ShipView(this.scene, this.city, this.docks)
+    this.shipView = new ShipView(this.scene)
+    this.portView = new PortView(this.scene, this.city, this.docks)
     this.cityView = new CityView(this.scene, this.city)
     this.peopleView = new PeopleView(this.scene, this.city)
     this.peopleView.visitors = () => this.state.tourism.report().visitors
@@ -459,7 +462,8 @@ export class Game {
     const seconds = frameTime / 1000
     this.lotView.update()
     this.landView.update(seconds)
-    this.shipView.update(Math.min(dt, 100) / 1000, seconds, now)
+    this.shipView.update(Math.min(dt, 100) / 1000, seconds)
+    this.portView.update(Math.min(dt, 100) / 1000, seconds, now)
     // Capped, so a tab coming back from the background doesn't teleport everyone.
     this.peopleView.update(Math.min(dt, 100) / 1000)
     this.incomeView.update(now)
