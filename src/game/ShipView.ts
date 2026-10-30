@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import { GRID_SIZE } from './grid'
+import { modelCopy } from './models'
 import { isWater } from './terrain'
 
 // Boats on the sea. Sailboats and fishing boats wander between random points
@@ -68,7 +69,16 @@ export class ShipView {
   private boats: Boat[] = []
 
   constructor(scene: THREE.Scene) {
-    const makers = [createSailboat, createSailboat, createSailboat, createSailboat, createFishingBoat, createFishingBoat]
+    // Kenney's Watercraft Kit (CC0) boats, or simple shapes if they can't load.
+    const boat = (name: string, fallback: () => THREE.Group) => () => modelCopy(`${import.meta.env.BASE_URL}models/watercraft/${name}.glb`, 0.2, fallback)
+    const makers = [
+      boat('boat-sail-a', createSailboat),
+      boat('boat-sail-b', createSailboat),
+      boat('boat-sail-a', createSailboat),
+      boat('boat-fishing-small', createFishingBoat),
+      boat('boat-tug-b', createFishingBoat),
+      boat('boat-speed-a', createFishingBoat),
+    ]
     for (const make of makers) {
       const object = make()
       const start = randomSeaPoint()
@@ -95,7 +105,7 @@ export class ShipView {
       pos.z += Math.cos(boat.heading) * SPEED * dt
 
       // Ride the same swell as the sea (LandView.update), sitting a little low in the water, with a roll.
-      pos.y = 0.02 + 0.03 * Math.sin(seconds * 1.2 + pos.x * 0.6 + pos.z * 0.4)
+      pos.y = -0.03 + 0.03 * Math.sin(seconds * 1.2 + pos.x * 0.6 + pos.z * 0.4)
       boat.object.rotation.set(0, boat.heading, 0.06 * Math.sin(seconds * 1.7 + boat.phase))
     }
   }

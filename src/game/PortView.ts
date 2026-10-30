@@ -5,6 +5,7 @@ import { edgeTiles } from './communityRules'
 import { SHIPMENT_OPTIONS, type Docks } from './Docks'
 import { footprintCenter, GRID_SIZE, tileToWorld, type Tile } from './grid'
 import { findPath } from './pathfinding'
+import { isSharedGeometry, modelCopy } from './models'
 import { pathToFarthest, Polyline } from './routes'
 import { isWater } from './terrain'
 
@@ -27,21 +28,35 @@ import { isWater } from './terrain'
 // from the middle of the quay's seaward edge, z runs along that edge.
 
 const DECK = 0.2 // the quay's top (the dock model's deck)
-const BERTH = 0.55 // the moored ship's middle, out from the quay edge
+const BERTH = 0.6 // the moored ship's middle, out from the quay edge
 const FAR = 36 // how far out to sea the ship goes before it's out of sight
 const LIFT = 1.4 // seconds the crane takes to move one container
 const HOOK_TOP = 1.25 // how high the crane lifts containers, above the water
 const TRUCK_SPEED = 1.5 // tiles per second
 const LANE = 0.17
+const WATERLINE = -0.05 // how low the ship sits in the water
 
-const PALETTE = ['#e0553f', '#3f7fe0', '#e8b33a', '#4fa36b', '#e67e9f', '#2bb3b1', '#f08a24', '#8a56d6']
+// The models are Kenney's Watercraft Kit (CC0), drawn at a quarter size.
+const watercraft = (name: string) => `${import.meta.env.BASE_URL}models/watercraft/${name}.glb`
+const SCALE = 0.25
+// Containers come in three colors; each is 0.69 long, 0.345 wide and this tall.
+const KINDS = ['a', 'b', 'c']
+const FALLBACK_COLORS: Record<string, string> = { a: '#f26b4a', b: '#5b8de0', c: '#4fc98a' }
+const HIGH = 0.275
 const pick = <T,>(list: T[]): T => list[Math.floor(Math.random() * list.length)]
 
-// Container spots: on the ship (its own coordinates), and on the quay.
-const SHIP_SLOTS = [-0.4, 0.05, 0.5, 0.95].flatMap((z) => [-0.18, 0.18].map((x) => ({ x, z })))
-const SHIP_DECK = 0.36
-const IMPORT_SLOTS = [0, 1].flatMap((level) => [-0.75, -0.25, 0.25, 0.75].map((s) => ({ r: -0.85, s, y: DECK + level * 0.22 })))
-const EXPORT_SLOTS = [-0.45, 0, 0.45].map((s) => ({ r: -1.3, s, y: DECK }))
+// Container spots. On the ship (its own coordinates) they sit crosswise in a
+// row of three, two high. On the quay (the dock's frame) they lie the same
+// way, so the crane never has to turn them: imports in two rows of four, two
+// high, and exports behind them.
+const SHIP_DECK = 1.1 * SCALE
+const SHIP_SLOTS = [0, 1].flatMap((level) => [0.02, -0.45, -0.92].map((z) => ({ x: 0, z, y: SHIP_DECK + level * HIGH })))
+const IMPORT_SLOTS = [0, 1].flatMap((level) => [-0.6, -0.2, 0.2, 0.6].map((s) => ({ r: -1.0, s, y: DECK + level * HIGH })))
+const EXPORT_SLOTS = [
+  { r: -1.72, s: -0.4, y: DECK },
+  { r: -1.72, s: 0.02, y: DECK },
+  { r: -1.72, s: -0.4, y: DECK + HIGH },
+]
 
 // ---- Shapes: shared by every dock
 
@@ -53,8 +68,6 @@ function material(color: string) {
 }
 // A box whose bottom sits at y.
 const box = (w: number, h: number, d: number, x = 0, y = 0, z = 0) => new THREE.BoxGeometry(w, h, d).translate(x, y + h / 2, z)
-const CONTAINER = box(0.32, 0.22, 0.4)
-const TRUCK_BOX = box(0.36, 0.15, 0.2, -0.05, 0.08) // a container on a truck's trailer
 
 function part(parent: THREE.Object3D, geometry: THREE.BufferGeometry, color: string, shadow = true) {
   const mesh = new THREE.Mesh(geometry, material(color))
@@ -64,29 +77,50 @@ function part(parent: THREE.Object3D, geometry: THREE.BufferGeometry, color: str
   return mesh
 }
 
-function containerMesh(parent: THREE.Object3D, color: string) {
-  const mesh = part(parent, CONTAINER, color)
-  mesh.visible = false
-  return mesh
+// A container of one of the three kinds, lying crosswise (its length along
+// x), its bottom at the origin. setKind swaps it for another color.
+function container(kind: string, scale = SCALE): THREE.Group {
+  const holder = new THREE.Group()
+  holder.userData.scale = scale
+  setKind(holder, kind)
+  return holder
 }
 
-// The cargo ship, pointing along +z: a red-bottomed hull, the bridge and funnel
-// at the stern, and room for eight containers on deck.
-function createShip(): { object: THREE.Group; slots: THREE.Mesh[] } {
-  const g = new THREE.Group()
-  part(g, box(0.8, 0.2, 2.2, 0, 0, -0.1), '#9b2f2a')
-  part(g, box(0.8, 0.16, 2.2, 0, 0.2, -0.1), '#24365e')
-  const bow = new THREE.ConeGeometry(0.4, 0.55, 4).rotateX(Math.PI / 2).rotateZ(Math.PI / 4).scale(1, 0.45, 1)
-  part(g, bow.translate(0, 0.27, 1.27), '#24365e')
-  part(g, box(0.82, 0.03, 2.22, 0, 0.36, -0.1), '#f2f2f2')
-  part(g, box(0.62, 0.42, 0.36, 0, 0.36, -0.92), '#f2f2f2') // the bridge
-  part(g, box(0.64, 0.06, 0.06, 0, 0.66, -0.75), '#2b3a4a') // its windows
-  part(g, box(0.14, 0.24, 0.14, 0, 0.78, -1.02), '#c8463a') // the funnel
-  const slots = SHIP_SLOTS.map(({ x, z }) => {
-    const mesh = containerMesh(g, PALETTE[0])
-    mesh.position.set(x, SHIP_DECK, z)
+function setKind(holder: THREE.Object3D, kind: string) {
+  if (holder.userData.kind === kind) return
+  holder.userData.kind = kind
+  for (const child of [...holder.children]) {
+    holder.remove(child)
+    dispose(child)
+  }
+  const scale: number = holder.userData.scale
+  const copy = modelCopy(watercraft(`cargo-container-${kind}`), scale, () => {
+    const mesh = new THREE.Mesh(box(1.38 * scale, 1.1 * scale, 2.76 * scale), material(FALLBACK_COLORS[kind]))
+    mesh.castShadow = true
     return mesh
   })
+  copy.rotation.y = Math.PI / 2
+  holder.add(copy)
+}
+
+function containerAt(parent: THREE.Object3D, kind: string, at: { x: number; y: number; z: number }) {
+  const holder = container(kind)
+  holder.position.set(at.x, at.y, at.z)
+  holder.visible = false
+  parent.add(holder)
+  return holder
+}
+
+// The cargo ship (an empty hull), pointing along +z, with room for six containers.
+function createShip(): { object: THREE.Group; slots: THREE.Object3D[] } {
+  const g = new THREE.Group()
+  g.add(modelCopy(watercraft('ship-cargo-c'), SCALE, () => {
+    const hull = new THREE.Group()
+    part(hull, box(0.9, 0.2, 2.6), '#e0553f')
+    part(hull, box(0.5, 0.35, 0.4, 0, 0.2, 0.9), '#f2f2f2')
+    return hull
+  }))
+  const slots = SHIP_SLOTS.map((slot) => containerAt(g, 'a', slot))
   return { object: g, slots }
 }
 
@@ -99,9 +133,9 @@ function createCrane() {
     for (const z of [-0.25, 0.25]) part(gantry, box(0.06, 1.45, 0.06, x, 0.06, z), yellow)
     part(gantry, box(0.12, 0.06, 0.62, x, 0, 0), '#3a3d42')
   }
-  for (const z of [-0.2, 0.2]) part(gantry, box(2.6, 0.08, 0.06, -0.2, 1.45, z), yellow) // the boom
+  for (const z of [-0.2, 0.2]) part(gantry, box(3.0, 0.08, 0.06, -0.35, 1.45, z), yellow) // the boom
   for (const x of [-0.55, -0.05]) part(gantry, box(0.08, 0.08, 0.5, x, 1.38, 0), yellow)
-  part(gantry, box(0.4, 0.26, 0.5, -1.25, 1.53, 0), '#f2f2f2') // the machinery house
+  part(gantry, box(0.4, 0.26, 0.5, -1.45, 1.53, 0), '#f2f2f2') // the machinery house
   part(gantry, box(0.06, 0.4, 0.06, -0.3, 1.53, 0), yellow)
   part(gantry, box(0.06, 0.06, 1.0, -0.3, 1.9, 0).rotateY(Math.PI / 2), yellow) // a stay over the top
 
@@ -112,25 +146,30 @@ function createCrane() {
   part(trolley, box(0.16, 0.1, 0.14, 0, -0.1, 0.18), '#24365e') // the driver's cab
   // Each cable hangs from the trolley, 1 long, stretched to the hook's depth.
   const cables = [-0.12, 0.12].map((z) => part(trolley, box(0.015, 1, 0.015, 0, -1, z), '#2b2d33', false))
-  const spreader = part(trolley, box(0.3, 0.04, 0.42), yellow)
+  const spreader = part(trolley, box(0.7, 0.04, 0.36), yellow)
   return { gantry, trolley, cables, spreader }
 }
 
 function createTruck() {
   const g = new THREE.Group()
-  part(g, box(0.14, 0.13, 0.18, 0.2, 0.04), '#f2f2f2') // the cab, facing +x
-  part(g, box(0.06, 0.05, 0.181, 0.24, 0.11), '#2b3a4a')
-  part(g, box(0.42, 0.04, 0.18, -0.05, 0.04), '#3a3d42') // the trailer
-  for (const x of [-0.18, 0.02, 0.2]) {
-    for (const z of [-0.08, 0.08]) {
-      const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.03, 8).rotateX(Math.PI / 2), material('#222222'))
+  part(g, box(0.14, 0.13, 0.2, 0.3, 0.04), '#f2f2f2') // the cab, facing +x
+  part(g, box(0.06, 0.05, 0.201, 0.34, 0.11), '#2b3a4a')
+  part(g, box(0.54, 0.04, 0.2, -0.04, 0.04), '#3a3d42') // the trailer
+  for (const x of [-0.24, -0.1, 0.3]) {
+    for (const z of [-0.09, 0.09]) {
+      const wheel = new THREE.Mesh(WHEEL, material('#222222'))
       wheel.position.set(x, 0.035, z)
       g.add(wheel)
     }
   }
-  const load = part(g, TRUCK_BOX, PALETTE[0])
+  // A container lengthwise on the trailer, a little smaller than at the docks.
+  const load = container('a', 0.18)
+  load.rotation.y = Math.PI / 2
+  load.position.set(-0.04, 0.08, 0)
+  g.add(load)
   return { object: g, load }
 }
+const WHEEL = new THREE.CylinderGeometry(0.035, 0.035, 0.03, 8).rotateX(Math.PI / 2)
 
 // ---- Paths at sea, in the dock's frame (x out to sea, z along the quay)
 
@@ -198,7 +237,7 @@ interface CraneJob {
   lifts: Lift[]
   start: number
   lift: number // seconds per lift
-  meshes: THREE.Mesh[]
+  meshes: THREE.Object3D[]
   done: () => void
 }
 
@@ -216,7 +255,7 @@ function hookAt(job: CraneJob, seconds: number): { spot: Spot; carrying: number;
     const k = THREE.MathUtils.smoothstep(t, 0, 1)
     return { x: a.x + (b.x - a.x) * k, z: a.z + (b.z - a.z) * k, y: a.y + (b.y - a.y) * k }
   }
-  const above = (s: Spot) => ({ ...s, y: s.y + 0.22 }) // the hook on top of a container
+  const above = (s: Spot) => ({ ...s, y: s.y + HIGH }) // the hook on top of a container
   // Per container: 0 still waiting, 1 on the hook, 2 set down.
   const phase = job.lifts.map((_, j) => (j < i ? 2 : j > i ? 0 : f < 0.4 ? 0 : f < 0.92 ? 1 : 2))
   let spot: Spot
@@ -235,7 +274,7 @@ interface Truck {
   object: THREE.Group
   out: Polyline
   back: Polyline
-  load: THREE.Mesh
+  load: THREE.Object3D
   leg: 'out' | 'unloading' | 'back'
   distance: number
   wait: number
@@ -247,10 +286,10 @@ interface Port {
   frame: THREE.Group
   quay: THREE.Group // things standing on the quay (rails, office, lamps)
   ship: THREE.Group
-  shipSlots: THREE.Mesh[]
+  shipSlots: THREE.Object3D[]
   crane: ReturnType<typeof createCrane>
-  exports: THREE.Mesh[]
-  imports: THREE.Mesh[]
+  exports: THREE.Object3D[]
+  imports: THREE.Object3D[]
   exportCount: number
   importCount: number
   aboard: (string | null)[] // each ship slot's container, if any
@@ -314,16 +353,8 @@ export class PortView {
     const crane = createCrane()
     crane.gantry.position.y = DECK
     frame.add(crane.gantry)
-    const exports = EXPORT_SLOTS.map((s) => {
-      const mesh = containerMesh(frame, pick(PALETTE))
-      mesh.position.set(s.r, s.y, s.s)
-      return mesh
-    })
-    const imports = IMPORT_SLOTS.map((s) => {
-      const mesh = containerMesh(frame, PALETTE[0])
-      mesh.position.set(s.r, s.y, s.s)
-      return mesh
-    })
+    const exports = EXPORT_SLOTS.map((s) => containerAt(frame, pick(KINDS), { x: s.r, y: s.y, z: s.s }))
+    const imports = IMPORT_SLOTS.map((s) => containerAt(frame, 'a', { x: s.r, y: s.y, z: s.s }))
     this.scene.add(frame)
     const port: Port = {
       dock,
@@ -414,18 +445,19 @@ export class PortView {
       this.finishJob(port)
       port.order = shipment.orderedAt
       port.arrived = false
-      port.importColors = SHIP_SLOTS.map(() => pick(PALETTE))
+      port.importColors = SHIP_SLOTS.map(() => pick(KINDS))
       const fresh = now - shipment.orderedAt < 1500
       const loading = fresh ? port.exportCount : 0
       const voyage = Math.max(1, shipment.arrivesAt - shipment.orderedAt)
       const lift = Math.min(LIFT, (voyage * 0.15) / 1000 / Math.max(1, loading))
       port.loadEnd = shipment.orderedAt + loading * lift * 1000
       if (loading > 0) {
-        const lifts = EXPORT_SLOTS.slice(0, loading).map((s, i) => ({
-          from: { x: s.r, z: s.s, y: s.y },
-          to: this.shipSpot(i),
-          color: (port.exports[i].material as THREE.MeshStandardMaterial).color.getStyle(),
-        }))
+        // Top of the stack first.
+        const lifts = Array.from({ length: loading }, (_, j) => {
+          const i = port.exportCount - 1 - j
+          const s = EXPORT_SLOTS[i]
+          return { from: { x: s.r, z: s.s, y: s.y }, to: this.shipSpot(j), color: port.exports[i].userData.kind as string }
+        })
         port.exportCount -= loading
         this.startJob(port, lifts, lift, seconds, () => lifts.forEach((l, i) => (port.aboard[i] = l.color)))
       } else {
@@ -439,7 +471,7 @@ export class PortView {
     if (!shipment || back || now < port.loadEnd) {
       // At the berth.
       ship.visible = true
-      ship.position.set(BERTH, 0.02 + 0.012 * Math.sin(seconds * 1.2), 0)
+      ship.position.set(BERTH, WATERLINE + 0.01 * Math.sin(seconds * 1.2), 0)
       ship.rotation.set(0, 0, 0.012 * Math.sin(seconds * 1.3))
       if (back) {
         const left = Math.ceil((SHIP_SLOTS.length * shipment.units) / full)
@@ -471,20 +503,20 @@ export class PortView {
       }
       ship.visible = pose !== null
       if (pose) {
-        ship.position.set(pose.x, 0.02 + 0.03 * Math.sin(seconds * 1.2 + pose.x * 0.6 + pose.z * 0.4), pose.z)
+        ship.position.set(pose.x, WATERLINE + 0.03 * Math.sin(seconds * 1.2 + pose.x * 0.6 + pose.z * 0.4), pose.z)
         ship.rotation.set(0, pose.heading, 0.03 * Math.sin(seconds * 1.3))
       }
     }
     port.shipSlots.forEach((mesh, i) => {
       const color = port.aboard[i]
       mesh.visible = color !== null
-      if (color) mesh.material = material(color)
+      if (color) setKind(mesh, color)
     })
   }
 
   // Where a ship slot is, in the dock's frame, with the ship at its berth.
   private shipSpot(i: number): Spot {
-    return { x: BERTH + SHIP_SLOTS[i].x, z: SHIP_SLOTS[i].z, y: 0.02 + SHIP_DECK }
+    return { x: BERTH + SHIP_SLOTS[i].x, z: SHIP_SLOTS[i].z, y: WATERLINE + SHIP_SLOTS[i].y }
   }
 
   // Lift `count` containers off the ship onto the quay (as many as fit there;
@@ -500,7 +532,7 @@ export class PortView {
     for (const slot of taken) port.aboard[slot] = null
     const first = port.importCount
     this.startJob(port, lifts, LIFT, seconds, () => {
-      lifts.forEach((l, j) => port.imports[first + j].material = material(l.color))
+      lifts.forEach((l, j) => setKind(port.imports[first + j], l.color))
       port.importCount += lifts.length
       port.truckWait = Math.min(port.truckWait, 0.5)
     })
@@ -510,9 +542,9 @@ export class PortView {
 
   private startJob(port: Port, lifts: Lift[], lift: number, seconds: number, done: () => void) {
     const meshes = lifts.map((l) => {
-      const mesh = containerMesh(port.frame, l.color)
-      mesh.visible = true
-      return mesh
+      const holder = container(l.color)
+      port.frame.add(holder)
+      return holder
     })
     port.job = { lifts, start: seconds, lift, meshes, done }
   }
@@ -520,7 +552,10 @@ export class PortView {
   private finishJob(port: Port) {
     const job = port.job
     if (!job) return
-    for (const mesh of job.meshes) port.frame.remove(mesh)
+    for (const holder of job.meshes) {
+      port.frame.remove(holder)
+      dispose(holder)
+    }
     port.job = null
     job.done()
   }
@@ -536,7 +571,7 @@ export class PortView {
         hook = at.spot
         job.meshes.forEach((mesh, j) => {
           const lift = job.lifts[j]
-          const s = at.phase[j] === 0 ? lift.from : at.phase[j] === 2 ? lift.to : { ...hook, y: hook.y - 0.22 }
+          const s = at.phase[j] === 0 ? lift.from : at.phase[j] === 2 ? lift.to : { ...hook, y: hook.y - HIGH }
           mesh.position.set(s.x, s.y, s.z)
         })
       }
@@ -581,11 +616,11 @@ export class PortView {
     port.truckWait -= dt
     if (port.importCount > 0 && port.truckWait <= 0 && port.trucks.length < 2) {
       port.truckWait = 3
-      const color = (port.imports[port.importCount - 1].material as THREE.MeshStandardMaterial).color.getStyle()
+      const color = port.imports[port.importCount - 1].userData.kind as string
       port.importCount--
       if (port.routeOut) {
         const { object, load } = createTruck()
-        load.material = material(color)
+        setKind(load, color)
         this.scene.add(object)
         port.trucks.push({ object, load, out: port.routeOut, back: port.routeBack!, leg: 'out', distance: 0, wait: 0, bringsExport: false })
       }
@@ -598,7 +633,7 @@ export class PortView {
           const coming = port.trucks.filter((t) => t.leg === 'back' && t.bringsExport).length
           truck.bringsExport = port.exportCount + coming < EXPORT_SLOTS.length
           truck.load.visible = truck.bringsExport
-          if (truck.bringsExport) truck.load.material = material(pick(PALETTE))
+          if (truck.bringsExport) setKind(truck.load, pick(KINDS))
           truck.leg = 'back'
           truck.distance = 0
         }
@@ -621,7 +656,7 @@ export class PortView {
           truck.load.visible = false
         } else {
           if (truck.bringsExport && port.exportCount < EXPORT_SLOTS.length) {
-            port.exports[port.exportCount].material = truck.load.material
+            setKind(port.exports[port.exportCount], truck.load.userData.kind)
             port.exportCount++
           }
           this.removeTruck(port, truck)
@@ -634,12 +669,13 @@ export class PortView {
 const dist = (a: Tile, b: Tile) => Math.abs(a.x - b.x) + Math.abs(a.z - b.z)
 
 // Free the shapes (and any material of its own) of everything in a group,
-// except the shared ones every dock uses.
+// except the shared ones: models', and the colors every dock uses.
 function dispose(root: THREE.Object3D) {
   const shared = new Set<THREE.Material>(materials.values())
   root.traverse((o) => {
     if (!(o instanceof THREE.Mesh)) return
-    if (o.geometry !== CONTAINER && o.geometry !== TRUCK_BOX) o.geometry.dispose()
+    if (isSharedGeometry(o.geometry)) return // a model's: shared with every copy
+    if (o.geometry !== WHEEL) o.geometry.dispose()
     if (!shared.has(o.material)) (o.material as THREE.Material).dispose()
   })
 }

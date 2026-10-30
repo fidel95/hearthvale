@@ -147,6 +147,32 @@ export async function loadInstanceable(url: string, height: number): Promise<{ g
   return { geometry, material: (mesh.material as THREE.MeshStandardMaterial).clone() }
 }
 
+// A copy of a model at a given scale, standing where it was modelled (for
+// boats and containers, whose packs model them centered at the waterline or
+// ground). Returns a group right away and fills it in once the model has
+// loaded, with `fallback` instead if it can't load. The copy shares the
+// model's shapes and materials, so they must not be freed (isSharedGeometry).
+export function modelCopy(url: string, scale: number, fallback: () => THREE.Object3D): THREE.Group {
+  const group = new THREE.Group()
+  const fill = (content: THREE.Object3D) => {
+    content.traverse((o) => {
+      if (o instanceof THREE.Mesh) o.castShadow = o.receiveShadow = true
+    })
+    group.add(content)
+  }
+  loadModel(url)
+    .then((model) => {
+      const copy = model.clone()
+      copy.scale.setScalar(scale)
+      fill(copy)
+    })
+    .catch((err) => {
+      console.warn(`Couldn't load ${url}, using a simple shape`, err)
+      fill(fallback())
+    })
+  return group
+}
+
 // Builds the 3D object for a building. Its origin is the center of the
 // footprint at ground level. Models load in the background, so this returns
 // an empty group right away and fills it in once the model is ready.
