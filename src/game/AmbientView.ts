@@ -59,13 +59,20 @@ interface Flock {
   travelled: number
 }
 
+// One set of bird shapes, shared by every bird of every flock.
+const BIRD = {
+  material: new THREE.MeshLambertMaterial({ color: '#3b3f46', side: THREE.DoubleSide }),
+  body: new THREE.SphereGeometry(0.05, 6, 4).scale(1.8, 0.8, 0.8),
+  wing: [-1, 1].map((side) => new THREE.PlaneGeometry(0.06, 0.22).rotateX(Math.PI / 2).translate(0, 0, side * 0.11)),
+}
+
 function makeBird(): Bird {
-  const material = new THREE.MeshLambertMaterial({ color: '#3b3f46', side: THREE.DoubleSide })
+  const material = BIRD.material
   const root = new THREE.Group()
-  root.add(new THREE.Mesh(new THREE.SphereGeometry(0.05, 6, 4).scale(1.8, 0.8, 0.8), material))
+  root.add(new THREE.Mesh(BIRD.body, material))
   const wing = (side: number) => {
     const pivot = new THREE.Group()
-    const w = new THREE.Mesh(new THREE.PlaneGeometry(0.06, 0.22).rotateX(Math.PI / 2).translate(0, 0, side * 0.11), material)
+    const w = new THREE.Mesh(BIRD.wing[side < 0 ? 0 : 1], material)
     pivot.add(w)
     root.add(pivot)
     return pivot

@@ -671,6 +671,22 @@ the `*.test.ts` files, and [TAXES.md](TAXES.md)
 - **Ship through CI.** The deploy workflow runs the tests before building, so a
   failing test blocks a release.
 
+## The audit
+
+**Files:** `src/tests/simulation.test.ts`, `src/tests/audit.test.ts`, `scripts/leak-check.mjs`
+
+- **Random play finds what examples miss.** Thousands of seeded random actions
+  with invariants checked after each found a save-order bug no hand-written
+  test would have looked for. Seeding makes every failure replayable.
+- **Check the shape of state, not just values.** "Every tile points back at
+  its building" catches a whole class of map bugs in one line.
+- **Read the code for rules, not just crashes.** A free building claiming
+  depreciation, a damaged park still lifting its neighbors: both ran without
+  errors, and both were wrong.
+- **Leaks are measured, not guessed.** Watching renderer.info's geometry count
+  while repeating actions showed exactly which effects leaked: a count that
+  climbs while the game sits idle is the giveaway.
+
 ---
 
 ## Ideas for later

@@ -51,6 +51,10 @@ export class PlacementSystem {
       else if (!this.city.economy.canAfford(type.cost)) problems.push(`Need 🪙 ${(type.cost - this.city.coins).toLocaleString()} more`)
       const blocker = this.blocker(type)
       if (blocker) problems.push(blocker)
+    } else if (!free && this.uniqueTaken(type)) {
+      // Admin free building skips level, cost, rating and room, but one of a
+      // kind is still one of a kind (an airport, the station).
+      problems.push(`You already have the ${type.name}`)
     }
     if (spot) {
       if (!this.city.canPlace(type, spot.tile, spot.ignoreId, spot.rotation)) {
@@ -98,8 +102,12 @@ export class PlacementSystem {
   }
 
   // Rules beyond coins and space: one of a kind, a minimum rating, room for residents.
+  private uniqueTaken(type: BuildingType): boolean {
+    return !!type.unique && [...this.city.all(), ...this.city.storedBuildings()].some((b) => b.type.id === type.id)
+  }
+
   private blocker(type: BuildingType): string | null {
-    if (type.unique && [...this.city.all(), ...this.city.storedBuildings()].some((b) => b.type.id === type.id)) {
+    if (this.uniqueTaken(type)) {
       return `You already have the ${type.name}`
     }
     if (type.minRating) {

@@ -204,7 +204,13 @@ export class TrafficView {
       car.at = car.to
       car.to = next
     }
-    place(car.object, new Polyline([center(car.at), center(car.to)]).at(car.t, LANE))
+    // Between two tile centers, in the right-hand lane (no new objects each frame).
+    const a = center(car.at)
+    const b = center(car.to)
+    const dx = b.x - a.x
+    const dz = b.z - a.z
+    car.object.position.set(a.x + dx * car.t - dz * LANE, 0, a.z + dz * car.t + dx * LANE)
+    car.object.rotation.y = Math.atan2(-dz, dx)
   }
 
   // ---- Buses

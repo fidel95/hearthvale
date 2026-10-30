@@ -32,7 +32,8 @@ export class Services {
     // Value for property tax: a good location raises it (shortages are temporary, so they don't).
     city.valueMultiplier = (b) => 1 + this.bonus(b).total
     city.onChange((event) => {
-      const changes = ['added', 'removed', 'moved', 'finished', 'upgraded', 'stored', 'restored']
+      // Damage and repairs too: a damaged park stops lifting the homes around it.
+      const changes = ['added', 'removed', 'moved', 'finished', 'upgraded', 'stored', 'restored', 'damaged', 'repaired']
       if (changes.includes(event.kind)) this.refresh()
     })
   }

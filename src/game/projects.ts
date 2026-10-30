@@ -20,6 +20,7 @@ export type ProjectResult =
   | { ok: true }
   | { ok: false; reason: 'not-ready' | 'level' | 'coins' | 'room' }
   | { ok: false; reason: 'quest'; quest: string } // a quest to finish first (its title)
+  | { ok: false; reason: 'damaged' } // repair it first
   | { ok: false; reason: 'materials'; missing: Materials }
 
 export function finishConstruction(city: City, inventory: Inventory, b: PlacedBuilding, now: number): ProjectResult {
@@ -53,8 +54,9 @@ export function upgradeQuote(
   const cost = upgradeCost(b.type, b.level + 1)
   const extra = Math.round((b.type.residents ?? 0) * (levelFactor(b.level + 1) - levelFactor(b.level)))
   const missing = inventory.missing(cost.materials)
-  const result: ProjectResult =
-    player.level < cost.playerLevel
+  const result: ProjectResult = b.damaged
+    ? { ok: false, reason: 'damaged' }
+    : player.level < cost.playerLevel
       ? { ok: false, reason: 'level' }
       : !roomFor(extra)
         ? { ok: false, reason: 'room' }

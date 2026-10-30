@@ -16,8 +16,18 @@ const material = (color: string) => {
 }
 
 // Each animal is built along +x (its head end), standing on y = 0. `head` is
-// the part that dips down to eat.
+// the part that dips down to eat. One model per kind is built once, and each
+// animal is a copy sharing its shapes (so rebuilding the herds when the town
+// changes doesn't keep making new shapes on the graphics card).
+const templates = new Map<Kind, THREE.Group>()
 function makeAnimal(kind: Kind): { root: THREE.Group; head: THREE.Group } {
+  let template = templates.get(kind)
+  if (!template) templates.set(kind, (template = buildAnimal(kind)))
+  const root = template.clone(true)
+  return { root, head: root.getObjectByName('head') as THREE.Group }
+}
+
+function buildAnimal(kind: Kind): THREE.Group {
   const root = new THREE.Group()
   const head = new THREE.Group()
   const part = (g: THREE.BufferGeometry, color: string, parent: THREE.Object3D = root) => {
@@ -62,9 +72,10 @@ function makeAnimal(kind: Kind): { root: THREE.Group; head: THREE.Group } {
       legs('#fafafa', 0.14, 0.07, 0.15, 0.04)
       break
   }
+  head.name = 'head'
   root.add(head)
   root.scale.setScalar(1.3)
-  return { root, head }
+  return root
 }
 
 const SPEED: Record<Kind, number> = { chicken: 0.5, pig: 0.3, sheep: 0.25, cow: 0.2 }

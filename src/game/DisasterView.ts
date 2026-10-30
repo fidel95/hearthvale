@@ -221,6 +221,12 @@ export class DisasterView {
     }
     if (u >= 1) {
       this.scene.remove(t.funnel)
+      t.funnel.traverse((o) => {
+        if (o instanceof THREE.Mesh) {
+          o.geometry.dispose()
+          ;(o.material as THREE.Material).dispose()
+        }
+      })
       this.active = null
       this.hooks.setStorm(false)
       this.hooks.notice('🌪️ The tornado has passed.')
@@ -306,8 +312,14 @@ export class DisasterView {
     if (w.t >= gone) {
       this.scene.remove(w.sheet)
       w.sheet.geometry.dispose()
-      if (w.wave) this.scene.remove(w.wave)
-      if (w.foam) this.scene.remove(w.foam)
+      ;(w.sheet.material as THREE.Material).dispose()
+      for (const m of [w.wave, w.foam]) {
+        if (!m) continue
+        this.scene.remove(m)
+        m.geometry.dispose()
+        ;(m.material as THREE.Material).dispose()
+        m.dispose()
+      }
       this.active = null
       this.hooks.setStorm(false)
       this.hooks.notice(w.kind === 'flood' ? '🌊 The flood water has drained away.' : '🌊 The wave has drained back to the sea.')

@@ -126,6 +126,7 @@ export class Game {
   private ambientView: AmbientView
   private roadNetworks: RoadNetworkView
   private builder!: Builder
+  private devFrames = 0
   private flights = 0 // fly-to-counter icons started this second (kept few)
   private weather: WeatherView
   private disasterView: DisasterView
@@ -411,6 +412,12 @@ export class Game {
     }
     this.sound.setRain(this.weather.intensity)
     this.controls.update(Math.min(dt, 100) / 1000)
+    // Development only: what's on the graphics card, for leak-hunting browser tests.
+    if (import.meta.env.DEV && (this.devFrames = (this.devFrames + 1) % 60) === 0) {
+      const { geometries, textures } = this.renderer.info.memory
+      document.body.dataset.geometries = String(geometries)
+      document.body.dataset.textures = String(textures)
+    }
     const seconds = frameTime / 1000
     this.landView.update(seconds)
     this.shipView.update(Math.min(dt, 100) / 1000, seconds, now)
@@ -498,6 +505,7 @@ export class Game {
       if (r.reason === 'materials') this.hud.toast(`${what} needs ${materialsText(r.missing)} more. Buy them in Details.`, 'warn')
       if (r.reason === 'coins') this.hud.toast(`Not enough coins to ${what.toLowerCase()}`, 'warn')
       if (r.reason === 'level') this.hud.toast(`Reach a higher level to ${what.toLowerCase()}`, 'warn')
+      if (r.reason === 'damaged') this.hud.toast(`Repair it first (tap it), then ${what.toLowerCase()}`, 'warn')
       if (r.reason === 'room') this.hud.toast('No room for more residents: build a Park, Fire Station or School first', 'warn')
     }
     const finish = (b: PlacedBuilding) => {
@@ -706,7 +714,7 @@ export class Game {
     }
     const message =
       result.reason === 'no-base'
-        ? 'The squad needs a road out of the base to parade.'
+        ? 'The squad needs a working Army Base (repaired, with a road out) to parade.'
         : result.reason === 'coins'
           ? `A parade costs 🪙 ${PARADE.cost}.`
           : `The troops are resting. Next parade in ${Math.ceil((result.waitMs ?? 0) / 60_000)} min.`

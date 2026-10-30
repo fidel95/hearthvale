@@ -135,7 +135,7 @@ export class Taxes {
       switch (event.kind) {
         case 'added':
           this.assets.set(event.building.id, {
-            basis: event.building.type.cost,
+            basis: event.basis,
             depreciated: 0,
             placedMonth: this.clock.monthIndex,
           })
@@ -282,7 +282,8 @@ export class Taxes {
       salesTaxHeld: this.salesTaxHeld,
       lastReturn: this.lastReturn,
       inventory: { ...this.inventory },
-      assets: [...this.assets.entries()],
+      // Sorted by building id, so the same books always save the same way.
+      assets: [...this.assets.entries()].sort((a, b) => a[0] - b[0]),
     }
   }
 

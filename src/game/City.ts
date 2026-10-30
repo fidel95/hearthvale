@@ -88,7 +88,9 @@ export interface CitySave {
 
 export type CityEvent =
   // paid is what the player spent: 0 for free buildings and ones loaded from a save.
-  | { kind: 'added'; building: PlacedBuilding; paid: number }
+  // basis is its cost for depreciation (taxes): normally its price, but 0 for
+  // a building that cost nothing at all (Admin free building).
+  | { kind: 'added'; building: PlacedBuilding; paid: number; basis: number }
   | { kind: 'removed'; building: PlacedBuilding }
   | { kind: 'moved'; building: PlacedBuilding }
   // goodsUsed: what a shop sold out of storage to earn it.
@@ -278,7 +280,7 @@ export class City {
   place(
     type: BuildingType,
     tile: Tile,
-    { now = Date.now(), free = false, rotation = 0 as Rotation } = {},
+    { now = Date.now(), free = false, rotation = 0 as Rotation, basis = type.cost } = {},
   ): PlacedBuilding | null {
     if (!this.canPlace(type, tile, undefined, rotation)) return null
     if (!free && !this.canAfford(type)) return null
@@ -302,7 +304,7 @@ export class City {
     this.buildings.set(building.id, building)
     this.mark(building, building.id)
     const paid = free ? 0 : type.cost
-    this.emit({ kind: 'added', building, paid })
+    this.emit({ kind: 'added', building, paid, basis })
     this.economy.adjust(-paid)
     return building
   }
@@ -418,7 +420,7 @@ export class City {
       }
       this.buildings.set(building.id, building)
       this.mark(building, building.id)
-      this.emit({ kind: 'added', building, paid: 0 })
+      this.emit({ kind: 'added', building, paid: 0, basis: building.type.cost }) // the saved books replace this
     }
     this.nextId = Math.max(this.nextId, save.nextId)
     this.economy.load(save)

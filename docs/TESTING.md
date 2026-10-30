@@ -70,6 +70,36 @@ Every save is tried on a throwaway game first (`SaveSystem.canLoad`), so one
 that has the right version but missing parts is set aside as a backup instead
 of half-loading or stopping the game.
 
+## Simulation and audit — `src/tests/simulation.test.ts`, `src/tests/audit.test.ts`
+
+The audit added a **simulation**: 20 runs of 3,000 random actions each, the
+way a curious player might try anything in any order (building, moving,
+storing, collecting, farming, upgrading, buying land, disasters, repairs,
+parades, ships, neighbors, admin powers, months of taxes, saving and loading).
+After every step it checks what must always be true: coins, debt, goods and
+materials never negative or NaN; every building's tiles on the map point back
+at it, with no tile shared and nothing on land the town doesn't own; the tax
+books hold only real numbers; and a save, loaded and saved again, comes out
+exactly the same. A failure names the seed and step, so it replays exactly.
+
+Bugs it and the code review found are pinned in `audit.test.ts`: Admin free
+building allowed a second one-of-a-kind building; damage and repairs didn't
+update neighborhood bonuses; damaged buildings could be upgraded; a free
+(Admin) building claimed depreciation on money never spent; the tax books
+saved their assets in a varying order.
+
+**Leak check** (`scripts/leak-check.mjs`, in a browser against `npm run dev`):
+a large town built and torn down repeatedly, every disaster, snow on and off,
+then idle, reading the graphics card's geometry count. It found two leaks, now
+fixed: farm animals rebuilt from new shapes on every town change, and each
+flock of birds; and disasters not freeing their shapes. After the fixes the
+count levels off (one-time setup the first time an effect runs) and stays
+flat while idle, with no console errors.
+
+**Not covered here:** real phones' performance. Headless browsers draw in
+software, so frame rates there say nothing about a phone's GPU; the game's
+automatic quality steps (quality.ts) handle slow devices.
+
 ## Offline — `src/tests/offlinePlay.test.ts` and `scripts/offline-check.mjs`
 
 | Plan item | How it's checked |

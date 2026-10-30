@@ -378,7 +378,7 @@ export class Builder {
         if (first) this.onNotice?.(`Not enough coins for a ${type.name}`)
         break
       }
-      this.city.place(type, t, { free: this.placement.freeBuild })
+      this.city.place(type, t, { free: this.placement.freeBuild, basis: this.placement.freeBuild ? 0 : type.cost })
     }
     this.lastPainted = tile
     this.hoverTile = tile
@@ -562,7 +562,7 @@ export class Builder {
     if (isTrack(type) || !this.confirmPurchases) {
       const check = this.placement.check(type, { tile: anchor, rotation: this.rotation })
       if (!check.ok) this.onNotice?.(check.problems[0])
-      else this.city.place(type, anchor, { rotation: this.rotation, free: this.placement.freeBuild })
+      else this.city.place(type, anchor, { rotation: this.rotation, free: this.placement.freeBuild, basis: this.placement.freeBuild ? 0 : type.cost })
       return
     }
     // Tapping a picked spot takes it back; anywhere else picks one more.
@@ -610,7 +610,7 @@ export class Builder {
       this.onNotice?.(check.problems[0])
       return
     }
-    for (const s of this.spots) this.city.place(type, s.tile, { rotation: s.rotation, free: this.placement.freeBuild })
+    for (const s of this.spots) this.city.place(type, s.tile, { rotation: s.rotation, free: this.placement.freeBuild, basis: this.placement.freeBuild ? 0 : type.cost })
     this.clearSpots()
     this.showSpots()
   }
