@@ -22,6 +22,7 @@ import { LevelUpPanel } from '../ui/LevelUpPanel'
 import { TownPanel } from '../ui/TownPanel'
 import { WelcomeBackPanel } from '../ui/WelcomeBackPanel'
 import { TaxPanel } from '../ui/TaxPanel'
+import { FinancePanel } from '../ui/FinancePanel'
 import { Builder } from './Builder'
 import { CameraController } from './CameraController'
 import { sizeOf, type PlacedBuilding } from './City'
@@ -206,6 +207,11 @@ export class Game {
     builder.onHoverBuilding = (b) => this.incomeView.setHovered(b)
 
     const taxPanel = new TaxPanel(container, this.city, this.taxes, this.clock)
+    const financePanel = new FinancePanel(container, this.state.finances, this.clock)
+    financePanel.onOpenTaxes = () => {
+      Sheet.closeCurrent()
+      taxPanel.open()
+    }
     const townPanel = new TownPanel(container, this.city, this.services)
     townPanel.onBuild = (tab) => this.openBuildMenu?.(tab)
     townPanel.tourism = () => this.state.tourism.report()
@@ -265,6 +271,7 @@ export class Game {
       onOpenCollections: () => collectionsPanel.open(),
       onOpenMap: () => mapPanel.open(),
       onOpenTaxes: () => taxPanel.open(),
+      onOpenFinances: () => financePanel.open(),
       onOpenTown: () => townPanel.open(),
       onOpenSettings: () => this.settingsPanel.open(),
       onOpenHelp: () => help.open(),

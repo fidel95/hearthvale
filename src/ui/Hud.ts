@@ -35,6 +35,7 @@ export interface HudCallbacks {
   onOpenCollections: () => void
   onOpenMap: () => void
   onOpenTaxes: () => void
+  onOpenFinances: () => void
   onOpenTown: () => void
   onOpenSettings: () => void
   onOpenHelp: () => void
@@ -79,7 +80,7 @@ export class Hud {
     const hud = el('div', 'hud')
 
     // ---- Top bar
-    this.coins = chip('🪙', 'Coins and taxes', callbacks.onOpenTaxes)
+    this.coins = chip('🪙', 'Coins and finances', callbacks.onOpenFinances)
     this.goods = chip('📦', 'Goods and inventory', callbacks.onOpenInventory)
     this.people = chip('👥', 'Population and services', callbacks.onOpenTown)
     this.energy = chip('⚡', 'Energy', () => {

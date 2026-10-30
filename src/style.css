@@ -1895,3 +1895,134 @@ button {
   margin: 2px 0 6px;
   font-size: 13px;
 }
+
+/* The financial report (FinancePanel). Blue for profit, red for a loss:
+   checked for colorblind separation against the panel. */
+:root {
+  --money-in: #2f7fb8;
+  --money-out: #c2412d;
+}
+
+.fin-tiles {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin: 8px 0;
+}
+
+.fin-tile {
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+}
+
+.fin-tile-label {
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+
+.fin-tile-value {
+  font-size: 18px;
+}
+
+.fin-tile.profit .fin-tile-value {
+  color: var(--money-in);
+}
+
+.fin-tile.loss .fin-tile-value {
+  color: var(--money-out);
+}
+
+.fin-chart {
+  position: relative;
+  display: flex;
+  gap: 2px;
+  height: 130px;
+  padding-bottom: 16px;
+}
+
+.fin-baseline {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--ink-soft);
+  opacity: 0.5;
+  margin-top: -1px;
+}
+
+.fin-col {
+  position: relative;
+  flex: 1;
+  border: none;
+  background: none;
+  padding: 0;
+  height: calc(100% - 16px);
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.fin-col.active,
+.fin-col:hover {
+  background: rgba(59, 47, 34, 0.06);
+}
+
+.fin-bar {
+  position: absolute;
+  left: 20%;
+  right: 20%;
+  min-height: 1px;
+}
+
+.fin-bar.profit {
+  background: var(--money-in);
+  border-radius: 4px 4px 0 0;
+}
+
+.fin-bar.loss {
+  background: var(--money-out);
+  border-radius: 0 0 4px 4px;
+}
+
+.fin-month {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -16px;
+  font-size: 11px;
+  color: var(--ink-soft);
+  text-align: center;
+}
+
+.fin-readout {
+  min-height: 2.6em;
+  font-size: 13px;
+}
+
+.fin-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 2px 8px;
+  margin: 6px 0;
+  font-size: 14px;
+}
+
+.fin-row-value {
+  font-variant-numeric: tabular-nums;
+}
+
+.fin-share {
+  grid-column: 1 / -1;
+  height: 6px;
+  background: rgba(59, 47, 34, 0.08);
+  border-radius: 3px;
+}
+
+.fin-share-fill {
+  height: 100%;
+  background: var(--money-in);
+  border-radius: 3px;
+}

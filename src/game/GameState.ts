@@ -2,6 +2,7 @@ import { Army } from './Army'
 import { Disasters } from './Disasters'
 import { Tourism } from './Tourism'
 import { TownEvents } from './TownEvents'
+import { Finances } from './Finances'
 import { BUILDINGS_BY_ID } from './buildings'
 import { City } from './City'
 import { Collections } from './collections'
@@ -49,6 +50,7 @@ export class GameState {
   readonly disasters = new Disasters(this.city)
   readonly tourism = new Tourism(this.city)
   readonly townEvents: TownEvents
+  readonly finances: Finances
   // When the county last gave a grant (safetyNet.ts), so it can't be claimed again right away.
   safetyNet = { lastGrantAt: null as number | null }
 
@@ -66,6 +68,7 @@ export class GameState {
       this.neighbors,
     )
     this.townEvents = new TownEvents(this.city, this.player, this.quests)
+    this.finances = new Finances(this.city, this.taxes, this.clock)
   }
 
   // A brand-new town: the starting buildings, crops and materials (land.ts, construction.ts).

@@ -48,6 +48,7 @@ export class SaveSystem {
       neighbors: s.neighbors.toSave(),
       army: s.army.toSave(),
       events: s.townEvents.toSave(),
+      finances: s.finances.toSave(),
     }
   }
 
@@ -69,6 +70,7 @@ export class SaveSystem {
     if (save.neighbors) s.neighbors.load(save.neighbors)
     s.army.load(save.army)
     s.townEvents.load(save.events)
+    s.finances.load(save.finances)
   }
 
   // Load the town saved in this browser, or start a new one. Returns when it
@@ -98,5 +100,6 @@ export class SaveSystem {
     s.settings.onChange(changed)
     s.army.onChange(changed)
     s.townEvents.onChange(changed)
+    s.finances.onChange(changed)
   }
 }
