@@ -90,6 +90,18 @@ export class CityView {
     return this.objects.get(id)?.visible ?? false
   }
 
+  // The building a ray hits first (a tap on a tall building's upper floors
+  // lands on the ground behind it, so taps check the buildings themselves).
+  hit(ray: THREE.Raycaster): { id: number; distance: number } | null {
+    let best: { id: number; distance: number } | null = null
+    for (const [id, obj] of this.objects) {
+      if (!obj.visible) continue
+      const first = ray.intersectObject(obj, true).find((h) => shown(h.object))
+      if (first && (!best || first.distance < best.distance)) best = { id, distance: first.distance }
+    }
+    return best
+  }
+
   // Height of the building's top, for placing labels above it. Measuring
   // means walking every mesh, so we remember the answer once the model has
   // loaded. Until then we guess a typical height.
@@ -188,4 +200,10 @@ export class CityView {
     obj.rotation.y = (-b.rotation * Math.PI) / 2
     obj.rotation.z = b.damaged ? 0.07 : 0
   }
+}
+
+// Whether an object and everything it sits in are visible.
+export function shown(o: THREE.Object3D | null): boolean {
+  for (; o; o = o.parent) if (!o.visible) return false
+  return true
 }

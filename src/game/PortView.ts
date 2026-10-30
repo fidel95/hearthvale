@@ -1,12 +1,14 @@
 import * as THREE from 'three'
 import type { City, PlacedBuilding } from './City'
 import { footprint } from './buildings'
+import { shown } from './CityView'
 import { edgeTiles } from './communityRules'
 import { SHIPMENT_OPTIONS, type Docks } from './Docks'
 import { footprintCenter, GRID_SIZE, tileToWorld, type Tile } from './grid'
 import { findPath } from './pathfinding'
 import { isSharedGeometry, modelCopy } from './models'
 import { pathToFarthest, Polyline } from './routes'
+import { makeKitCar } from './TrafficView'
 import { isWater } from './terrain'
 
 // Life at the docks, worked out from each dock's shipment. Purely for looks:
@@ -150,26 +152,15 @@ function createCrane() {
   return { gantry, trolley, cables, spreader }
 }
 
+// A flatbed truck from the Car Kit, facing +x, with a container on its bed.
 function createTruck() {
-  const g = new THREE.Group()
-  part(g, box(0.14, 0.13, 0.2, 0.3, 0.04), '#f2f2f2') // the cab, facing +x
-  part(g, box(0.06, 0.05, 0.201, 0.34, 0.11), '#2b3a4a')
-  part(g, box(0.54, 0.04, 0.2, -0.04, 0.04), '#3a3d42') // the trailer
-  for (const x of [-0.24, -0.1, 0.3]) {
-    for (const z of [-0.09, 0.09]) {
-      const wheel = new THREE.Mesh(WHEEL, material('#222222'))
-      wheel.position.set(x, 0.035, z)
-      g.add(wheel)
-    }
-  }
-  // A container lengthwise on the trailer, a little smaller than at the docks.
-  const load = container('a', 0.18)
+  const g = makeKitCar('delivery-flat')
+  const load = container('a', 0.12)
   load.rotation.y = Math.PI / 2
-  load.position.set(-0.04, 0.08, 0)
+  load.position.set(-0.08, 0.1, 0)
   g.add(load)
   return { object: g, load }
 }
-const WHEEL = new THREE.CylinderGeometry(0.035, 0.035, 0.03, 8).rotateX(Math.PI / 2)
 
 // ---- Paths at sea, in the dock's frame (x out to sea, z along the quay)
 
@@ -331,6 +322,18 @@ export class PortView {
     }
   }
 
+  // The dock whose ship, crane or containers a ray hits first (they stand
+  // over the water and above the land behind, so a tap on them wouldn't
+  // otherwise find the dock).
+  hit(ray: THREE.Raycaster): { id: number; distance: number } | null {
+    let best: { id: number; distance: number } | null = null
+    for (const [id, port] of this.ports) {
+      const first = ray.intersectObject(port.frame, true).find((h) => shown(h.object))
+      if (first && (!best || first.distance < best.distance)) best = { id, distance: first.distance }
+    }
+    return best
+  }
+
   // Docks built, moved or gone: set up, move or remove their ports.
   private refresh() {
     this.dirty = false
@@ -429,7 +432,7 @@ export class PortView {
 
   private removeTruck(port: Port, truck: Truck) {
     this.scene.remove(truck.object)
-    dispose(truck.object)
+    dispose(truck.load) // the truck itself is the Car Kit's (or traffic's simple car), shared
     port.trucks.splice(port.trucks.indexOf(truck), 1)
   }
 
@@ -675,7 +678,7 @@ function dispose(root: THREE.Object3D) {
   root.traverse((o) => {
     if (!(o instanceof THREE.Mesh)) return
     if (isSharedGeometry(o.geometry)) return // a model's: shared with every copy
-    if (o.geometry !== WHEEL) o.geometry.dispose()
+    o.geometry.dispose()
     if (!shared.has(o.material)) (o.material as THREE.Material).dispose()
   })
 }

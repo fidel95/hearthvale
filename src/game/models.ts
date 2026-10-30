@@ -61,16 +61,40 @@ export const HOME_SCHEMES: { roof: string; walls: string }[] = [
   { roof: '#7a4b34', walls: '#c8f0d4' }, // brown, mint
 ]
 
+// Shops and apartments (the City Kit Commercial models) are pale gray with
+// dark ground floors; each gets its own walls and trim, keeping the dark
+// shopfronts. Their palette has the walls and trim in other swatches.
+const SHOP_WALL_SWATCH = { column: 7, row: 2 }
+const SHOP_TRIM_SWATCH = { column: 1, row: 2 }
+
+export const SHOP_SCHEMES: { walls: string; trim: string }[] = [
+  { walls: '#ffeccc', trim: '#d9534a' }, // cream, red
+  { walls: '#d4f2e4', trim: '#2f9e7a' }, // mint, teal
+  { walls: '#ffd9e2', trim: '#c2457a' }, // pink, berry
+  { walls: '#d6e8ff', trim: '#3a6fc4' }, // sky, blue
+  { walls: '#fff3b0', trim: '#e08a2c' }, // butter, orange
+  { walls: '#e6dcff', trim: '#7a56c4' }, // lavender, purple
+  { walls: '#f2e2d0', trim: '#8a5a44' }, // sand, brown
+]
+
 const schemeMaterials = new Map<string, THREE.Material>()
 
-// The material for a home's colors: a copy of the model's material using a
-// repainted texture. One per scheme (and original material), shared by every home using it.
-function schemeMaterial(original: THREE.MeshStandardMaterial, scheme: number): THREE.Material {
-  const key = `${original.uuid}:${scheme}`
+// The material for a building's colors: a copy of the model's material using
+// a repainted texture. One per scheme (and original material), shared by
+// every building using it.
+function schemeMaterial(original: THREE.MeshStandardMaterial, kind: 'home' | 'shop', scheme: number): THREE.Material {
+  const key = `${original.uuid}:${kind}:${scheme}`
   let material = schemeMaterials.get(key)
   if (!material) {
     const copy = original.clone()
-    copy.map = repaintTexture(original.map!, HOME_SCHEMES[scheme])
+    if (kind === 'home') copy.map = repaintTexture(original.map!, HOME_SCHEMES[scheme])
+    else {
+      const { walls, trim } = SHOP_SCHEMES[scheme]
+      copy.map = repaintSwatches(original.map!, [
+        { swatch: SHOP_WALL_SWATCH, color: walls, shading: false },
+        { swatch: SHOP_TRIM_SWATCH, color: trim, shading: true },
+      ])
+    }
     schemeMaterials.set(key, copy)
     material = copy
   }
@@ -78,6 +102,16 @@ function schemeMaterial(original: THREE.MeshStandardMaterial, scheme: number): T
 }
 
 function repaintTexture(base: THREE.Texture, colors: { roof: string; walls: string }): THREE.Texture {
+  // Roofs keep the swatch's shading; walls get one flat color, since they
+  // sample its gradient in steps that read as speckle up close.
+  return repaintSwatches(base, [
+    { swatch: ROOF_SWATCH, color: colors.roof, shading: true },
+    { swatch: WALL_SWATCH, color: colors.walls, shading: false },
+  ])
+}
+
+// A copy of a palette texture with some swatches repainted.
+export function repaintSwatches(base: THREE.Texture, paints: { swatch: { column: number; row: number }; color: string; shading: boolean }[]): THREE.Texture {
   const image = base.image as CanvasImageSource & { width: number; height: number }
   const canvas = document.createElement('canvas')
   canvas.width = image.width
@@ -88,10 +122,7 @@ function repaintTexture(base: THREE.Texture, colors: { roof: string; walls: stri
   // The top quarter of the palette is black. Some browsers hand the loader
   // the picture upside down; if the top isn't black, rows count from the bottom.
   const flipped = pixels.data[(4 * canvas.width + 4) * 4] > 16
-  // Roofs keep the swatch's shading; walls get one flat color, since they
-  // sample its gradient in steps that read as speckle up close.
-  repaintSwatch(pixels, ROOF_SWATCH, new THREE.Color(colors.roof), flipped, true)
-  repaintSwatch(pixels, WALL_SWATCH, new THREE.Color(colors.walls), flipped, false)
+  for (const p of paints) repaintSwatch(pixels, p.swatch, new THREE.Color(p.color), flipped, p.shading)
   ctx.putImageData(pixels, 0, 0)
   const texture = new THREE.CanvasTexture(canvas)
   texture.flipY = base.flipY
@@ -177,10 +208,12 @@ export function modelCopy(url: string, scale: number, fallback: () => THREE.Obje
 // footprint at ground level. Models load in the background, so this returns
 // an empty group right away and fills it in once the model is ready.
 // overrideMaterial replaces every material, used for the see-through placement ghost.
-// colorKey picks a home's color scheme (the building's id), so homes differ.
+// colorKey picks a home's or shop's color scheme (the building's id), so they differ.
 export function createBuildingObject(type: BuildingType, overrideMaterial?: THREE.Material, colorKey = 0): THREE.Group {
   const group = new THREE.Group()
-  const scheme = type.category === 'home' ? colorKey % HOME_SCHEMES.length : null
+  // Which colors it gets: suburban homes and commercial-kit buildings are repainted.
+  const kind = type.model?.includes('/commercial/') ? 'shop' : type.category === 'home' ? 'home' : null
+  const scheme = kind === 'shop' ? colorKey % SHOP_SCHEMES.length : kind === 'home' ? colorKey % HOME_SCHEMES.length : null
 
   const fill = (content: THREE.Object3D) => {
     content.traverse((obj) => {
@@ -189,7 +222,7 @@ export function createBuildingObject(type: BuildingType, overrideMaterial?: THRE
       obj.receiveShadow = !overrideMaterial
       if (overrideMaterial) obj.material = overrideMaterial
       else if (scheme !== null && obj.material instanceof THREE.MeshStandardMaterial && obj.material.map) {
-        obj.material = schemeMaterial(obj.material, scheme)
+        obj.material = schemeMaterial(obj.material, kind!, scheme)
       }
     })
     group.add(content)

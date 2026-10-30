@@ -275,7 +275,7 @@ src/
     NeighborsList.ts      the neighbors tab of the Map
     dom.ts                small DOM helpers
 scripts/                  generators run with Vitest (npm run balance)
-public/models/            3D models served as-is (Kenney's City Kit, Mini Forest and Watercraft Kit, CC0)
+public/models/            3D models served as-is (Kenney's City Kits, Car Kit, Mini Forest and Watercraft Kit, CC0)
 assets-src/               raw downloaded asset packs (git-ignored)
 docs/                     the docs linked above
 ```
@@ -310,4 +310,7 @@ docs/                     the docs linked above
 - 3D models: [City Kit (Suburban)](https://kenney.nl/assets/city-kit-suburban) by Kenney, CC0 (see `public/models/suburban/License.txt`).
 - Pines, boulders and stones: [Mini Forest](https://kenney.nl/assets/mini-forest) by Kenney, CC0 (see `public/models/forest/License.txt`).
 - Cargo ship, containers and boats: [Watercraft Kit](https://kenney.nl/assets/watercraft-kit) by Kenney, CC0 (see `public/models/watercraft/License.txt`).
+- Shops and apartments: [City Kit (Commercial)](https://kenney.nl/assets/city-kit-commercial) by Kenney, CC0 (see `public/models/commercial/License.txt`).
+- Factories, the power plant, water tower, recycling center and warehouse: [City Kit (Industrial)](https://kenney.nl/assets/city-kit-industrial) by Kenney, CC0 (see `public/models/industrial/License.txt`).
+- Cars, service vehicles and the docks' trucks: [Car Kit](https://kenney.nl/assets/car-kit) by Kenney, CC0 (see `public/models/cars/License.txt`).
 - Built with [three.js](https://threejs.org), [Vite](https://vite.dev) and [Vitest](https://vitest.dev).

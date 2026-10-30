@@ -600,6 +600,12 @@ export class Game {
     // A tap on the map while a sheet is open just closes the sheet.
     builder.allowDrag = () => !this.visit
     builder.onRepairRequest = (b) => this.repair(b)
+    builder.pickAt = (x, y) => {
+      const ray = this.controls.rayAt(x, y)
+      const hits = [this.cityView.hit(ray), this.portView.hit(ray)].filter((h) => h !== null)
+      const nearest = hits.sort((a, b) => a.distance - b.distance)[0]
+      return nearest ? (this.city.get(nearest.id) ?? null) : null
+    }
     builder.interceptClick = (x, y) => {
       if (Sheet.closeCurrent()) return true
       if (!this.visit) return false

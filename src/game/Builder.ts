@@ -63,6 +63,8 @@ export class Builder {
   // Asked first on every map tap; return true to swallow the tap (Game uses
   // it so a tap on the map just closes an open sheet).
   interceptClick?: (clientX: number, clientY: number) => boolean
+  // The building drawn under a screen position, if any (else the tile under it counts).
+  pickAt?: (clientX: number, clientY: number) => PlacedBuilding | null
   // Whether buildings can be dragged right now (not while visiting a neighbor).
   allowDrag: () => boolean = () => true
 
@@ -524,7 +526,7 @@ export class Builder {
 
     switch (mode.kind) {
       case 'select': {
-        const clicked = this.city.buildingAt(tile)
+        const clicked = this.pickAt?.(clientX, clientY) ?? this.city.buildingAt(tile)
         const menuWasHere = this.tileMenu.visible && this.menuTile?.x === tile.x && this.menuTile?.z === tile.z
         this.showTileMenu(null)
         if (clicked && clicked !== this.selected && this.hasQuickAction(clicked, Date.now())) this.tap(clicked)

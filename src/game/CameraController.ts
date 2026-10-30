@@ -102,6 +102,11 @@ export class CameraController {
   // Which point on the ground is under this screen position?
   // We shoot a ray from the camera through the pixel and see where it hits y = 0.
   groundPointAt(clientX: number, clientY: number): THREE.Vector3 | null {
+    return this.rayAt(clientX, clientY).ray.intersectPlane(this.groundPlane, new THREE.Vector3())
+  }
+
+  // A ray from the camera through this screen position (for tapping things in 3D).
+  rayAt(clientX: number, clientY: number): THREE.Raycaster {
     const rect = this.canvas.getBoundingClientRect()
     // Raycaster wants "normalized device coordinates": -1..1 across the screen,
     // with +Y pointing up (screen pixels have +Y pointing down, hence the minus).
@@ -110,7 +115,7 @@ export class CameraController {
       -((clientY - rect.top) / rect.height) * 2 + 1,
     )
     this.raycaster.setFromCamera(ndc, this.camera)
-    return this.raycaster.ray.intersectPlane(this.groundPlane, new THREE.Vector3())
+    return this.raycaster
   }
 
   private onPointerDown(e: PointerEvent) {

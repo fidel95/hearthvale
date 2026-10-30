@@ -3,6 +3,7 @@ import type { City, PlacedBuilding } from './City'
 import { edgeTiles } from './communityRules'
 import { tileToWorld, type Tile } from './grid'
 import { findPath } from './pathfinding'
+import { modelCopy } from './models'
 import { nextTile, pathToFarthest, Polyline } from './routes'
 
 // Everything that moves along roads and track: cars, buses, trains, and the
@@ -68,6 +69,32 @@ function build(parts: [THREE.BufferGeometry, string][], wheelsAt: number[] = [])
 }
 
 const makeCar = (color: string) => build([[GEOMETRY.carBody, color], [GEOMETRY.carCabin, color]], [-0.12, 0.12])
+
+// Cars from Kenney's Car Kit (CC0), with the simple car above if one can't load.
+// The kit's cars point along +z with their wheels' middles at the origin.
+const carKit = (name: string) => `${import.meta.env.BASE_URL}models/cars/${name}.glb`
+const CAR_SCALE = 0.15
+export function makeKitCar(name: string): THREE.Group {
+  const g = new THREE.Group()
+  const model = modelCopy(carKit(name), CAR_SCALE, () => {
+    const fallback = makeCar(pick(CAR_COLORS))
+    fallback.rotation.y = -Math.PI / 2 // undone below
+    return fallback
+  })
+  model.rotation.y = Math.PI / 2 // face +x, like every vehicle here
+  model.position.y = 0.3 * CAR_SCALE
+  g.add(model)
+  return g
+}
+const CAR_MODELS = ['sedan', 'suv', 'hatchback-sports', 'van', 'taxi', 'suv-luxury', 'sedan-sports', 'truck', 'sedan', 'suv']
+// Service vehicles join the traffic once the town has where they work from.
+const SERVICE_VEHICLES: [(id: string, category: string) => boolean, string][] = [
+  [(id) => id === 'police-station', 'police'],
+  [(id) => id === 'hospital', 'ambulance'],
+  [(id) => id === 'fire-station', 'firetruck'],
+  [(id) => id === 'recycling-center', 'garbage-truck'],
+  [(id, category) => category === 'industry' || id === 'warehouse' || id === 'supermarket', 'delivery'],
+]
 const makeJeep = () => build([[GEOMETRY.jeepBody, OLIVE], [GEOMETRY.jeepBar, '#3b4226']], [-0.12, 0.12])
 const makeBus = () => build([[GEOMETRY.busBody, '#f2c230'], [GEOMETRY.busWindows, '#2b3a4a']], [-0.25, 0.25])
 const makeLoco = () => build([[GEOMETRY.locoBody, '#d23c32'], [GEOMETRY.locoCab, '#8f2a24'], [GEOMETRY.locoChimney, '#2b2d33']], [-0.22, 0.22])
@@ -120,6 +147,7 @@ export class TrafficView {
   private spawnTimer = 0
   private wantCars = 0
   private wantJeep = false
+  private carModels = CAR_MODELS
 
   constructor(scene: THREE.Scene, city: City) {
     this.scene = scene
@@ -157,6 +185,8 @@ export class TrafficView {
     const base = all.find((b) => b.type.id === 'army-base' && this.city.isBuilt(b))
     this.wantCars = roads >= 3 ? Math.min(MAX_CARS, Math.floor(residents / 5)) : 0
     this.wantJeep = base !== undefined && this.city.isOperating(base) // the jeep needs a road out
+    const built = all.filter((b) => this.city.isBuilt(b))
+    this.carModels = [...CAR_MODELS, ...SERVICE_VEHICLES.filter(([has]) => built.some((b) => has(b.type.id, b.type.category))).map(([, name]) => name)]
     // Cars that lost their road leave; too many cars, the extras leave.
     for (const car of [...this.cars]) if (!this.city.isRoad(car.at) || !this.city.isRoad(car.to)) this.removeCar(car)
     while (this.cars.length > this.wantCars + (this.wantJeep ? 1 : 0)) this.removeCar(this.cars[this.cars.length - 1])
@@ -183,7 +213,7 @@ export class TrafficView {
     const at = pick(roads).tile
     const to = nextTile(null, at, this.city.isRoad)
     if (!to) return
-    const object = jeep ? makeJeep() : makeCar(pick(CAR_COLORS))
+    const object = jeep ? makeJeep() : makeKitCar(pick(this.carModels))
     object.userData.jeep = jeep
     this.scene.add(object)
     this.cars.push({ object, from: null, at, to, t: 0, speed: SPEED.car * (0.85 + Math.random() * 0.3) })

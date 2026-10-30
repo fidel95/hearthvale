@@ -147,6 +147,9 @@ export interface BuildingType {
 const suburban = (name: string) => `${import.meta.env.BASE_URL}models/suburban/${name}.glb`
 // Kenney's Mini Forest pack (CC0): pines, rocks and stones.
 export const forest = (name: string) => `${import.meta.env.BASE_URL}models/forest/${name}.glb`
+// Kenney's City Kit (Commercial) and (Industrial), CC0: shops, apartments, factories and utilities.
+const commercial = (name: string) => `${import.meta.env.BASE_URL}models/commercial/${name}.glb`
+const industrial = (name: string) => `${import.meta.env.BASE_URL}models/industrial/${name}.glb`
 
 export const BUILDING_TYPES: BuildingType[] = [
   // ---- Industry: factories turn goods into products for specialty shops.
@@ -161,6 +164,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     build: { seconds: 90, materials: { bricks: 4, steel: 1 } },
     factory: { product: 'preserves', input: 10, output: 5, seconds: 60 },
     needs: { water: 4, power: 4, trash: 3 },
+    model: industrial('building-c'),
     placeholder: { shape: 'factory', color: '#d9cbb0', accent: '#c4483a', height: 1.1 },
   },
   {
@@ -174,6 +178,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     build: { seconds: 150, materials: { bricks: 6, steel: 2, glass: 2 } },
     factory: { product: 'clothes', input: 15, output: 5, seconds: 90 },
     needs: { water: 5, power: 6, trash: 3 },
+    model: industrial('building-m'),
     placeholder: { shape: 'factory', color: '#c9d6e3', accent: '#5a6fa8', height: 1.3 },
   },
   {
@@ -187,6 +192,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     build: { seconds: 180, materials: { lumber: 8, steel: 2 } },
     factory: { product: 'furniture', input: 20, output: 5, seconds: 120 },
     needs: { water: 2, power: 6, trash: 4 },
+    model: industrial('building-h'),
     placeholder: { shape: 'factory', color: '#d8b98c', accent: '#7a5233', height: 1.1 },
   },
   // ---- Specialty shops: they sell a factory's product, and earn more for it.
@@ -205,6 +211,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     stockCapacity: 24,
     needs: { water: 2, power: 3, trash: 2 },
     customers: 8,
+    model: commercial('building-b'),
     placeholder: { shape: 'shop', color: '#f6e7c8', accent: '#3f8f3a', height: 1 },
   },
   {
@@ -222,6 +229,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     stockCapacity: 24,
     needs: { water: 1, power: 4, trash: 2 },
     customers: 10,
+    model: commercial('building-h'),
     placeholder: { shape: 'shop', color: '#efe1f5', accent: '#8e44ad', height: 1.1 },
   },
   {
@@ -239,6 +247,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     stockCapacity: 16,
     needs: { water: 1, power: 3, trash: 3 },
     customers: 12,
+    model: commercial('building-j'),
     placeholder: { shape: 'shop', color: '#f3e3cf', accent: '#8a5a36', height: 1.1 },
   },
 
@@ -380,6 +389,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     residents: 16,
     needs: { water: 10, power: 10, trash: 8 },
     heightLimit: 2.4,
+    model: commercial('building-l'),
     placeholder: { shape: 'apartment', color: '#e8d2b8', accent: '#8a5a44', height: 2.2 },
   },
   {
@@ -394,6 +404,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     residents: 28,
     needs: { water: 14, power: 16, trash: 12 },
     heightLimit: 3.6,
+    model: commercial('building-m'),
     placeholder: { shape: 'apartment', color: '#c9d9e6', accent: '#3d5a75', height: 3.4 },
   },
 
@@ -410,6 +421,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     stockCapacity: 40,
     needs: { water: 2, power: 3, trash: 2 },
     customers: 6,
+    model: commercial('building-a'),
     placeholder: { shape: 'shop', color: '#ffe3a8', accent: '#ff7a2f', height: 1 },
   },
   {
@@ -426,6 +438,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     stockCapacity: 70,
     needs: { water: 2, power: 4, trash: 3 },
     customers: 10,
+    model: commercial('building-e'),
     placeholder: { shape: 'shop', color: '#dff0ff', accent: '#22a85a', height: 1.2 },
   },  {
     id: 'cafe',
@@ -441,6 +454,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     stockCapacity: 40,
     needs: { water: 3, power: 2, trash: 2 },
     customers: 8,
+    model: commercial('building-c'),
     placeholder: { shape: 'shop', color: '#ffd9c4', accent: '#b8432f', height: 0.9 },
   },
   {
@@ -457,6 +471,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     stockCapacity: 48,
     needs: { water: 4, power: 2, trash: 1 },
     customers: 8,
+    model: commercial('building-d'),
     placeholder: { shape: 'shop', color: '#ffd6ea', accent: '#e8408f', height: 1 },
   },
   {
@@ -473,6 +488,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     stockCapacity: 80,
     needs: { water: 5, power: 4, trash: 4 },
     customers: 14,
+    model: commercial('building-k'),
     placeholder: { shape: 'shop', color: '#fff0c4', accent: '#d62f2f', height: 1.2 },
   },
   {
@@ -489,6 +505,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     stockCapacity: 120,
     needs: { water: 4, power: 8, trash: 6 },
     customers: 20,
+    model: commercial('building-i'),
     placeholder: { shape: 'shop', color: '#d8f4ff', accent: '#1f7fe0', height: 1.3 },
   },  {
     id: 'shopping-center',
@@ -506,6 +523,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     customers: 30,
     attractsVisitors: { lingerSeconds: 10 },
     visitors: 15,
+    model: commercial('building-n'),
     placeholder: { shape: 'mall', color: '#f2ece2', accent: '#e0663a', height: 1.3 },
   },
 
@@ -708,6 +726,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     supplies: { utility: 'water', amount: 20 },
     upkeep: 15,
     recoveryYears: 25, // water utility property
+    model: industrial('water-tower'),
     placeholder: { shape: 'tower', color: '#8fb8d8', accent: '#5b7f9e', height: 2 },
   },
   {
@@ -721,6 +740,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     supplies: { utility: 'power', amount: 30 },
     upkeep: 30, // fuel makes it expensive to run
     recoveryYears: 20, // electric utility steam production plant
+    model: industrial('building-f'),
     placeholder: { shape: 'plant', color: '#b9b4ab', accent: '#d9a441', height: 1.1 },
   },
   {
@@ -734,6 +754,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     supplies: { utility: 'trash', amount: 20 },
     upkeep: 20,
     recoveryYears: 7, // waste reduction and resource recovery plants
+    model: industrial('building-t'),
     placeholder: { shape: 'recycling', color: '#5e9e6e', accent: '#2f6f8f', height: 0.9 },
   },
   {
@@ -772,6 +793,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     build: { seconds: 180, materials: { steel: 6, lumber: 4 } },
     storage: 400,
     needs: { power: 1 },
+    model: industrial('building-q'),
     placeholder: { shape: 'warehouse', color: '#a8c8e6', accent: '#3a6ea8', height: 1 },
   },
   {
