@@ -178,6 +178,23 @@ export async function loadInstanceable(url: string, height: number): Promise<{ g
   return { geometry, material: (mesh.material as THREE.MeshStandardMaterial).clone() }
 }
 
+// A character with its animations (Kenney's Mini Characters): one load per
+// file; copies are made with SkeletonUtils.clone, which shares the shapes.
+const characterCache = new Map<string, Promise<{ scene: THREE.Object3D; animations: THREE.AnimationClip[] }>>()
+export function loadCharacter(url: string): Promise<{ scene: THREE.Object3D; animations: THREE.AnimationClip[] }> {
+  let character = characterCache.get(url)
+  if (!character) {
+    character = loader.loadAsync(url).then((gltf) => {
+      gltf.scene.traverse((o) => {
+        if (o instanceof THREE.Mesh) sharedGeometries.add(o.geometry)
+      })
+      return { scene: gltf.scene, animations: gltf.animations }
+    })
+    characterCache.set(url, character)
+  }
+  return character
+}
+
 // A copy of a model at a given scale, standing where it was modelled (for
 // boats and containers, whose packs model them centered at the waterline or
 // ground). Returns a group right away and fills it in once the model has

@@ -5,6 +5,8 @@ import { levelFactor } from './construction'
 import { findPath } from './pathfinding'
 import { isTrack } from './buildings'
 import { SIDEWALK } from './RoadView'
+import { loadCharacter } from './models'
+import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js'
 
 // Residents walking around town. Purely for looks: nothing here changes the
 // game, and nothing is saved. Each home sends out about one walker per two
@@ -13,6 +15,7 @@ import { SIDEWALK } from './RoadView'
 // home, where it disappears and is replaced a little later.
 
 const MAX_WALKERS = 40
+const HEIGHT = 0.26 // a person's height, in the person group's units (it's scaled up by 1.4)
 const SPEED = 1.1 // tiles per second
 const SPAWN_EVERY = 0.8 // seconds between new walkers, so they trickle out
 const SHIRTS = ['#e0553f', '#3f7fe0', '#e8b33a', '#4fa36b', '#9b59b6', '#e67e9f', '#2bb3b1', '#f2f2f2']
@@ -45,8 +48,8 @@ const SHAPES = {
   head: new THREE.IcosahedronGeometry(0.055, 0).translate(0, 0.32, 0),
 }
 const UMBRELLA = {
-  pole: new THREE.CylinderGeometry(0.008, 0.008, 0.22, 4).translate(0.05, 0.36, 0),
-  canopy: new THREE.ConeGeometry(0.17, 0.08, 8).translate(0.05, 0.49, 0),
+  pole: new THREE.CylinderGeometry(0.008, 0.008, 0.22, 4).translate(0.05, 0.26, 0),
+  canopy: new THREE.ConeGeometry(0.17, 0.08, 8).translate(0.05, 0.39, 0),
 }
 const UMBRELLA_COLORS = ['#e0453a', '#2f7fe0', '#ffd23f', '#2b2d33', '#ff5c8a', '#3fae6b']
 const materials = new Map<string, THREE.MeshLambertMaterial>()
@@ -60,9 +63,9 @@ const pick = <T,>(list: T[]): T => list[Math.floor(Math.random() * list.length)]
 
 // Visitors stand out: a sun hat and a backpack.
 const TOURIST = {
-  brim: new THREE.CylinderGeometry(0.1, 0.1, 0.012, 10).translate(0, 0.37, 0),
-  crown: new THREE.CylinderGeometry(0.045, 0.05, 0.05, 8).translate(0, 0.4, 0),
-  pack: new THREE.BoxGeometry(0.06, 0.1, 0.09).translate(-0.07, 0.2, 0),
+  brim: new THREE.CylinderGeometry(0.1, 0.1, 0.012, 10).translate(0, HEIGHT * 0.97, 0),
+  crown: new THREE.CylinderGeometry(0.055, 0.06, 0.045, 8).translate(0, HEIGHT * 0.97 + 0.02, 0),
+  pack: new THREE.BoxGeometry(0.08, 0.07, 0.04).translate(0, HEIGHT * 0.32, -0.05), // on their back (they face +z)
 }
 
 function createTourist(): THREE.Group {
@@ -79,8 +82,21 @@ function createTourist(): THREE.Group {
   return person
 }
 
-function createPerson(): THREE.Group {
-  const person = new THREE.Group()
+// The people are Kenney's Mini Characters (CC0): twelve townspeople, each
+// with a walk and an idle animation; one in ten residents gets about in a
+// wheelchair. Until they load (or if they can't), simple shapes stand in.
+const CHARACTERS = ['female-a', 'female-b', 'female-c', 'female-d', 'female-e', 'female-f', 'male-a', 'male-b', 'male-c', 'male-d', 'male-e', 'male-f']
+const people = (name: string) => `${import.meta.env.BASE_URL}models/people/${name}.glb`
+
+// What a person is doing, for their animation.
+type Pose = 'walk' | 'idle'
+interface Animated {
+  mixer: THREE.AnimationMixer
+  actions: Record<Pose, THREE.AnimationAction>
+  pose: Pose
+}
+
+function createSimplePerson(person: THREE.Group) {
   for (const [shape, color] of [
     [SHAPES.legs, pick(PANTS)],
     [SHAPES.body, pick(SHIRTS)],
@@ -90,6 +106,11 @@ function createPerson(): THREE.Group {
     mesh.castShadow = true
     person.add(mesh)
   }
+}
+
+function createPerson(wheelchair = false): THREE.Group {
+  const person = new THREE.Group()
+  person.userData.wheelchair = wheelchair
   // An umbrella, shown only while it rains.
   const umbrella = new THREE.Group()
   umbrella.add(new THREE.Mesh(UMBRELLA.pole, material('#444444')), new THREE.Mesh(UMBRELLA.canopy, material(pick(UMBRELLA_COLORS))))
@@ -97,7 +118,47 @@ function createPerson(): THREE.Group {
   umbrella.name = 'umbrella'
   person.add(umbrella)
   person.scale.setScalar(1.4) // a little larger than true scale, so they read at a glance
+  Promise.all([loadCharacter(people(`character-${pick(CHARACTERS)}`)), wheelchair ? loadCharacter(people('wheelchair')) : null])
+    .then(([character, chair]) => {
+      if (person.userData.gone) return
+      const body = new THREE.Group()
+      const model = cloneSkinned(character.scene)
+      model.traverse((o) => {
+        if (o instanceof THREE.Mesh) o.castShadow = true
+      })
+      body.add(model)
+      if (chair) body.add(chair.scene.clone())
+      const size = new THREE.Box3().setFromObject(character.scene).getSize(new THREE.Vector3())
+      body.scale.setScalar(HEIGHT / Math.max(0.01, size.y))
+      person.add(body)
+      const mixer = new THREE.AnimationMixer(model)
+      const clip = (name: string) => THREE.AnimationClip.findByName(character.animations, name) ?? character.animations[0]
+      const actions = {
+        walk: mixer.clipAction(clip(wheelchair ? 'wheelchair-move-forward' : 'walk')),
+        idle: mixer.clipAction(clip(wheelchair ? 'wheelchair-sit' : 'idle')),
+      }
+      actions.walk.time = Math.random() // not everyone in step
+      actions.walk.play()
+      person.userData.animated = { mixer, actions, pose: 'walk' } satisfies Animated
+    })
+    .catch((err) => {
+      console.warn("Couldn't load the townspeople; simple shapes stand in", err)
+      if (!person.userData.gone) createSimplePerson(person)
+    })
   return person
+}
+
+// Play the walk or the idle animation (blending between them), and move it on.
+function animate(person: THREE.Object3D, pose: Pose, dt: number) {
+  const a = person.userData.animated as Animated | undefined
+  if (!a) return
+  if (a.pose !== pose) {
+    const to = a.actions[pose]
+    to.reset().play()
+    a.actions[a.pose].crossFadeTo(to, 0.25, false)
+    a.pose = pose
+  }
+  a.mixer.update(dt)
 }
 
 export class PeopleView {
@@ -142,7 +203,10 @@ export class PeopleView {
       this.touristTimer = 1.5
       this.spawnTourist()
     }
-    for (const walker of [...this.walkers]) this.move(walker, dt)
+    for (const walker of [...this.walkers]) {
+      this.move(walker, dt)
+      if (walker.object.parent) animate(walker.object, walker.pause > 0 ? 'idle' : 'walk', dt)
+    }
   }
 
   // People walk only on the sidewalks, which run along both sides of every
@@ -175,7 +239,7 @@ export class PeopleView {
 
     const walker: Walker = {
       homeId: home.id,
-      object: createPerson(),
+      object: createPerson(Math.random() < 0.1),
       path: [start],
       step: 0,
       t: 0,
@@ -352,7 +416,9 @@ export class PeopleView {
     const next = walker.path[walker.step + 1]
     const walking = next !== undefined && walker.pause <= 0
     const pos = walking ? a.clone().lerp(this.spot(walker, walker.step + 1), walker.t) : a
-    walker.object.position.set(pos.x, walking ? Math.abs(Math.sin(walker.phase)) * 0.03 : 0, pos.z)
+    // The simple stand-ins bob as they walk; the characters have a walk animation.
+    const bob = walking && !walker.object.userData.animated ? Math.abs(Math.sin(walker.phase)) * 0.03 : 0
+    walker.object.position.set(pos.x, bob, pos.z)
     if (walking) {
       const b = this.spot(walker, walker.step + 1)
       walker.object.rotation.y = Math.atan2(b.x - a.x, b.z - a.z)
@@ -361,6 +427,8 @@ export class PeopleView {
 
   private remove(walker: Walker) {
     walker.object.removeFromParent()
+    walker.object.userData.gone = true
+    ;(walker.object.userData.animated as Animated | undefined)?.mixer.stopAllAction()
     this.walkers.splice(this.walkers.indexOf(walker), 1)
   }
 }

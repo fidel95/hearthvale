@@ -32,7 +32,7 @@ import { isWater } from './terrain'
 const DECK = 0.2 // the quay's top (the dock model's deck)
 const BERTH = 0.6 // the moored ship's middle, out from the quay edge
 const FAR = 36 // how far out to sea the ship goes before it's out of sight
-const LIFT = 1.4 // seconds the crane takes to move one container
+const LIFT = 2.6 // seconds the crane takes to move one container
 const HOOK_TOP = 1.25 // how high the crane lifts containers, above the water
 const TRUCK_SPEED = 1.5 // tiles per second
 const LANE = 0.17
@@ -126,29 +126,61 @@ function createShip(): { object: THREE.Group; slots: THREE.Object3D[] } {
   return { object: g, slots }
 }
 
-// The gantry crane: it rolls along the quay (z) on rails, and its trolley
-// runs out along the boom (x) over the ship, with a spreader on cables.
+// The gantry crane, a ship-to-shore container crane: a portal frame on four
+// legs that rolls along the quay (z) on rails, a boom reaching out over the
+// ship and back over the quay (x), held by stays from an A-frame on top, and
+// a trolley with the driver's cab running along under the boom, lowering the
+// spreader on its cables.
+const BOOM_Y = 1.38 // the boom's underside, above the deck
 function createCrane() {
   const gantry = new THREE.Group()
   const yellow = '#e8b33a'
-  for (const x of [-0.55, -0.05]) {
-    for (const z of [-0.25, 0.25]) part(gantry, box(0.06, 1.45, 0.06, x, 0.06, z), yellow)
-    part(gantry, box(0.12, 0.06, 0.62, x, 0, 0), '#3a3d42')
+  const steel = '#3a3d42'
+  // A beam between two points, of a given thickness.
+  const beam = (a: [number, number, number], b: [number, number, number], thick: number, color: string) => {
+    const from = new THREE.Vector3(...a)
+    const to = new THREE.Vector3(...b)
+    const geometry = new THREE.BoxGeometry(thick, thick, from.distanceTo(to))
+    const mesh = part(gantry, geometry, color)
+    mesh.position.copy(from).lerp(to, 0.5)
+    mesh.lookAt(to) // the gantry is still at the origin while it is built
+    return mesh
   }
-  for (const z of [-0.2, 0.2]) part(gantry, box(3.0, 0.08, 0.06, -0.35, 1.45, z), yellow) // the boom
-  for (const x of [-0.55, -0.05]) part(gantry, box(0.08, 0.08, 0.5, x, 1.38, 0), yellow)
-  part(gantry, box(0.4, 0.26, 0.5, -1.45, 1.53, 0), '#f2f2f2') // the machinery house
-  part(gantry, box(0.06, 0.4, 0.06, -0.3, 1.53, 0), yellow)
-  part(gantry, box(0.06, 0.06, 1.0, -0.3, 1.9, 0).rotateY(Math.PI / 2), yellow) // a stay over the top
+  const legs = [-0.55, -0.05]
+  const side = 0.25
+  for (const x of legs) {
+    for (const z of [-side, side]) beam([x, 0.06, z], [x, BOOM_Y, z], 0.07, yellow)
+    beam([x, BOOM_Y - 0.04, -side], [x, BOOM_Y - 0.04, side], 0.07, yellow) // portal beam
+    beam([x, 0.42, -side], [x, 0.42, side], 0.05, yellow) // a lower brace
+    part(gantry, box(0.12, 0.06, 0.66, x, 0, 0), steel) // wheel bogies on the rail
+  }
+  for (const z of [-side, side]) beam([legs[0], 0.08, z], [legs[1], 0.08, z], 0.05, yellow) // sill beams
+  // The boom: two girders with cross ties, from the back of the quay to over the ship.
+  const back = -1.95
+  const tip = 1.25
+  for (const z of [-0.2, 0.2]) part(gantry, box(tip - back, 0.08, 0.05, (tip + back) / 2, BOOM_Y, z), yellow)
+  for (let x = back + 0.1; x < tip; x += 0.42) part(gantry, box(0.04, 0.04, 0.4, x, BOOM_Y + 0.04, 0), yellow)
+  // The A-frame and its stays.
+  const apex: [number, number, number] = [-0.3, 2.05, 0]
+  for (const z of [-0.2, 0.2]) {
+    beam([-0.3, BOOM_Y + 0.08, z], [apex[0], apex[1], z * 0.4], 0.06, yellow)
+    beam([apex[0], apex[1] - 0.02, z * 0.4], [tip - 0.05, BOOM_Y + 0.08, z], 0.03, steel) // forestay
+    beam([apex[0], apex[1] - 0.02, z * 0.4], [back + 0.15, BOOM_Y + 0.08, z], 0.03, steel) // backstay
+  }
+  beam([apex[0], apex[1], -0.1], [apex[0], apex[1], 0.1], 0.07, yellow)
+  // The machinery house on the back of the boom.
+  part(gantry, box(0.42, 0.22, 0.46, -1.6, BOOM_Y + 0.08, 0), '#f2f2f2')
+  part(gantry, box(0.44, 0.04, 0.48, -1.6, BOOM_Y + 0.3, 0), '#2f6fbf')
 
   const trolley = new THREE.Group()
-  trolley.position.y = 1.45
+  trolley.position.y = BOOM_Y
   gantry.add(trolley)
-  part(trolley, box(0.22, 0.08, 0.46, 0, 0.02, 0), '#3a3d42')
-  part(trolley, box(0.16, 0.1, 0.14, 0, -0.1, 0.18), '#24365e') // the driver's cab
+  part(trolley, box(0.24, 0.07, 0.44, 0, -0.03, 0), steel)
+  part(trolley, box(0.16, 0.13, 0.15, 0.02, -0.17, 0.12), '#f2f2f2') // the driver's cab
+  part(trolley, box(0.165, 0.05, 0.155, 0.02, -0.12, 0.12), '#2b3a4a', false) // its windows
   // Each cable hangs from the trolley, 1 long, stretched to the hook's depth.
   const cables = [-0.12, 0.12].map((z) => part(trolley, box(0.015, 1, 0.015, 0, -1, z), '#2b2d33', false))
-  const spreader = part(trolley, box(0.7, 0.04, 0.36), yellow)
+  const spreader = part(trolley, box(0.7, 0.05, 0.36), yellow)
   return { gantry, trolley, cables, spreader }
 }
 
@@ -452,7 +484,7 @@ export class PortView {
       const fresh = now - shipment.orderedAt < 1500
       const loading = fresh ? port.exportCount : 0
       const voyage = Math.max(1, shipment.arrivesAt - shipment.orderedAt)
-      const lift = Math.min(LIFT, (voyage * 0.15) / 1000 / Math.max(1, loading))
+      const lift = Math.min(LIFT, (voyage * 0.2) / 1000 / Math.max(1, loading))
       port.loadEnd = shipment.orderedAt + loading * lift * 1000
       if (loading > 0) {
         // Top of the stack first.
@@ -583,8 +615,8 @@ export class PortView {
     for (let i = 0; i < port.imports.length; i++) port.imports[i].visible = i < port.importCount
     gantry.position.z = hook.z
     trolley.position.x = hook.x
-    // The trolley hangs at DECK + 1.45; the spreader sits on top of a container at the hook.
-    const drop = DECK + 1.45 - hook.y
+    // The trolley runs under the boom; the spreader sits on top of a container at the hook.
+    const drop = DECK + BOOM_Y - hook.y
     spreader.position.y = -drop
     for (const cable of cables) cable.scale.y = Math.max(0.01, drop)
   }
