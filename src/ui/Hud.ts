@@ -233,7 +233,10 @@ export class Hud {
     container.append(hud)
     // Hints and messages go just under the top bar, however many rows it
     // wraps onto (two on a narrow phone).
-    new ResizeObserver(() => hud.style.setProperty('--topbar-bottom', `${topbar.offsetTop + topbar.offsetHeight}px`)).observe(topbar)
+    // (Measured on screen, so it's right at any interface size.)
+    const place = () => hud.style.setProperty('--topbar-bottom', `${topbar.getBoundingClientRect().bottom - hud.getBoundingClientRect().top}px`)
+    new ResizeObserver(place).observe(topbar)
+    new MutationObserver(place).observe(document.documentElement, { attributes: true, attributeFilter: ['style'] })
   }
 
   // Called every frame; only touches the DOM when something visible changed.

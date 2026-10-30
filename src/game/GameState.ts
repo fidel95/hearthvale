@@ -52,6 +52,7 @@ export class GameState {
   constructor(speed = 1) {
     this.clock = new GameClock(speed)
     this.services.extraTownBonus = () => this.army.bonus(Date.now())
+    this.city.production.month = () => this.clock.month
     this.taxes = new Taxes(this.city, this.clock)
     this.quests = new Quests(
       { city: this.city, player: this.player, services: this.services },

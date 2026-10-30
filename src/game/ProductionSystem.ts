@@ -2,6 +2,7 @@ import type { City, CityEvent, PlacedBuilding } from './City'
 import { levelFactor } from './construction'
 import { cropState, type CropType } from './crops'
 import { isPlot } from './buildings'
+import { seasonBonus } from './seasons'
 import type { Economy } from './Economy'
 
 // Everything buildings produce over time: collecting income, planting and
@@ -11,6 +12,8 @@ import type { Economy } from './Economy'
 // (What state a building is in, for the interface, is production.ts.)
 
 export class ProductionSystem {
+  // The calendar month (0 = January), for crops in season. GameState wires it to the clock.
+  month: () => number = () => 0
   private city: City
   private economy: Economy
   private emit: (event: CityEvent) => void
@@ -38,7 +41,7 @@ export class ProductionSystem {
 
   // What a crop on this plot sells for at the market right now (less without enough water).
   harvestValue(plot: PlacedBuilding, crop: CropType): number {
-    return Math.round(crop.sellPrice * this.city.incomeMultiplier(plot))
+    return Math.round(crop.sellPrice * this.city.incomeMultiplier(plot) * (1 + seasonBonus(crop, this.month())))
   }
 
   // Shops sell from their own shelves; everything else always has "stock".
@@ -107,7 +110,8 @@ export class ProductionSystem {
     if (state.stage !== 'ripe') return 0
 
     plot.crop = null
-    const goods = Math.round(state.crop.goods * this.city.incomeMultiplier(plot)) // less without enough water
+    // Less without enough water; more in season.
+    const goods = Math.round(state.crop.goods * this.city.incomeMultiplier(plot) * (1 + seasonBonus(state.crop, this.month())))
     const hasShops = [...this.city.all()].some((b) => b.type.goodsPerSale && this.city.isBuilt(b))
     const stored = Math.min(goods, hasShops ? this.economy.room() : 0)
     const amount = goods > 0 ? Math.round((this.harvestValue(plot, state.crop) * (goods - stored)) / goods) : 0

@@ -40,7 +40,7 @@ import { xpForLevel } from './progression'
 import { QualityGovernor, type QualityLevel } from './quality'
 import { GameState } from './GameState'
 import { SaveSystem } from './SaveSystem'
-import { LOT_FOOTPRINT, footprintCenter, lotCorner, tileToWorld, worldToTile, type Lot } from './grid'
+import { LOT_FOOTPRINT, footprintCenter, lotCorner, tileToWorld, worldToTile, type Lot, type Tile } from './grid'
 import { IncomeView } from './IncomeView'
 import { LandView } from './LandView'
 import { WELCOME_BACK_AFTER_MS, awaySummary } from './offline'
@@ -53,6 +53,7 @@ import { LeisureView } from './LeisureView'
 import { ArmyView } from './ArmyView'
 import { AnimalView } from './AnimalView'
 import { AmbientView } from './AmbientView'
+import { RoadNetworkView } from './RoadNetworkView'
 import { EffectsView } from './EffectsView'
 import { flyToHud } from '../ui/flyToHud'
 import { PARADE } from './Army'
@@ -123,6 +124,8 @@ export class Game {
   private animalView: AnimalView
   private effects: EffectsView
   private ambientView: AmbientView
+  private roadNetworks: RoadNetworkView
+  private builder!: Builder
   private flights = 0 // fly-to-counter icons started this second (kept few)
   private weather: WeatherView
   private disasterView: DisasterView
@@ -176,6 +179,7 @@ export class Game {
     this.armyView = new ArmyView(this.scene, this.city, this.state.army)
     this.animalView = new AnimalView(this.scene, this.city)
     this.effects = new EffectsView(this.scene)
+    this.roadNetworks = new RoadNetworkView(this.scene, this.city)
     this.ambientView = new AmbientView(this.scene, this.city, this.cityView, this.effects, () => this.controls.target)
     this.mountains = addMountains(this.scene)
     this.weather = new WeatherView(this.scene, () => this.controls.target, [this.sun, this.ambient])
@@ -193,15 +197,23 @@ export class Game {
     this.flashEl.className = 'flash'
     container.append(this.flashEl)
     const builder = new Builder(this.scene, this.city, this.player, this.docks, this.cityView, this.controls, this.renderer.domElement)
+    this.builder = builder
     this.incomeView = new IncomeView(this.scene, this.city, this.cityView, this.services, this.docks, (b) => builder.tap(b))
     builder.onHoverBuilding = (b) => this.incomeView.setHovered(b)
 
     const taxPanel = new TaxPanel(container, this.city, this.taxes, this.clock)
     const townPanel = new TownPanel(container, this.city, this.services)
     const help = new HelpPanel(container, () => this.tutorial.load({ step: 0, skipped: false }))
+    // A building chosen from the menu: placed where "Build here" was tapped, if it was.
+    let buildHere: Tile | null = null
     const buildMenu = new BuildMenu(container, this.city, this.player, this.placement, this.unlocks, (type) =>
-      builder.setMode({ kind: 'build', type }),
+      buildHere ? builder.startBuildAt(type, buildHere) : builder.setMode({ kind: 'build', type }),
     )
+    buildMenu.onClosed = () => (buildHere = null)
+    builder.onBuildHere = (tile) => {
+      buildMenu.open()
+      buildHere = tile
+    }
     const notice = (message: string) => this.hud.toast(message)
     const inventoryPanel = new InventoryPanel(container, this.city, this.inventory, (b) => builder.setMode({ kind: 'restore', building: b }), notice)
     const collectionsPanel = new CollectionsPanel(container, this.collections, this.inventory)
@@ -267,6 +279,7 @@ export class Game {
       this.armyView.setVisible(s.showTraffic)
       this.animalView.setVisible(s.showPeople)
       this.effects.enabled = this.ambientView.enabled = this.controls.inertia = !s.reduceMotion
+      document.documentElement.style.setProperty('--ui-scale', String(s.uiScale))
       this.weather.enabled = s.weather
       this.weather.snow = s.snowMode
       this.disasterView.enabled = s.disasters
@@ -295,6 +308,7 @@ export class Game {
     }
     this.showTaxEvents(taxPanel)
     const cropPicker = new CropPicker(container, this.city, this.player, (message) => this.hud.toast(message))
+    cropPicker.month = () => this.clock.month
     builder.onPlantRequest = (plot) => cropPicker.open(plot)
     this.showPlayerEvents(new LevelUpPanel(container))
     this.showCollectionEvents()
@@ -303,9 +317,10 @@ export class Game {
       const names = event.utilities.map((u) => `${UTILITY_INFO[u].icon} ${UTILITY_INFO[u].name.toLowerCase()}`)
       this.hud.toast(`Not enough ${names.join(', ')}: income drops. Tap Town to see what to build.`, 'warn')
     })
-    const landPanel = new LandPanel(container, this.city, this.player, this.inventory, (message) => this.hud.toast(message))
+    const landPanel = new LandPanel(container, this.city, this.player, this.inventory, this.quests, (message) => this.hud.toast(message))
     this.landPanel = landPanel
     landView.onLotClick = (lot) => landPanel.open(lot)
+    builder.onLotRequest = (lot) => landPanel.open(lot)
     this.showQuestEvents()
     const dockPanel = new DockPanel(container, this.city, this.docks, (message) => this.hud.toast(message))
     builder.onDockRequest = (dock) => dockPanel.open(dock)
@@ -378,6 +393,11 @@ export class Game {
     this.armyView.update(Math.min(dt, 100) / 1000)
     this.animalView.update(Math.min(dt, 100) / 1000)
     this.effects.update(Math.min(dt, 100) / 1000)
+    // Road networks: while drawing or removing roads, or when switched on.
+    const mode = this.builder.mode
+    const roading = (mode.kind === 'build' && mode.type.category === 'road') || mode.kind === 'removeRoads'
+    this.roadNetworks.setShown(roading || this.settings.values.roadOverlay)
+    this.roadNetworks.update()
     this.ambientView.update(Math.min(dt, 100) / 1000)
     if (this.effects.enabled) this.landView.sway(frameTime / 1000)
     this.weather.update(Math.min(dt, 100) / 1000)

@@ -11,6 +11,7 @@ import type { Taxes } from '../game/Taxes'
 import { UTILITIES, UTILITY_INFO } from '../game/utilityRules'
 import { coins, duration, el, percent } from './dom'
 import { isTrack, isPlot } from '../game/buildings'
+import { CUSTOMER_REACH } from '../game/demand'
 import { Sheet, button } from './Sheet'
 
 // Everything about one building: status, a progress bar for whatever it's
@@ -160,9 +161,20 @@ export class BuildingPanel {
     const bonus = this.services.bonus(b)
     const share = this.services.utilityShare(b)
     const needs = UTILITIES.filter((u) => b.type.needs?.[u]).map((u) => `${UTILITY_INFO[u].icon} ${b.type.needs![u]}`)
-    if (bonus.total > 0 || share < 1 || needs.length) {
+    if (bonus.total > 0 || share < 1 || needs.length || b.type.customers) {
       const lines: HTMLElement[] = []
       if (needs.length) lines.push(el('p', '', `Uses ${needs.join(' ')}`))
+      if (b.type.customers) {
+        const customers = this.services.customersOf(b)
+        const demand = this.services.demand(b)
+        lines.push(
+          el(
+            'p',
+            demand < 1 ? 'warning' : '',
+            `👥 ${customers} residents live within ${CUSTOMER_REACH} tiles; it needs ${b.type.customers} for full sales${demand < 1 ? `, so it's selling at ${percent(demand)}. Build homes nearby.` : '.'}`,
+          ),
+        )
+      }
       if (bonus.total > 0) {
         // "Oak Tree ×3, Park" rather than every tree by name.
         const counts = new Map<string, number>()

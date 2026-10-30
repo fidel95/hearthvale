@@ -2,6 +2,10 @@ import { Emitter } from './events'
 import type { City, PlacedBuilding } from './City'
 import { cityRating, type CityRating } from './cityRating'
 import { locationBonus, type LocationBonus } from './communityRules'
+import { customersNear, demandFactor } from './demand'
+import { levelFactor } from './construction'
+import type { BuildingType, Rotation } from './buildings'
+import type { Tile } from './grid'
 import { UTILITIES, incomeMultiplier, plannedResidents, serviceReport, type ServiceReport, type Utility } from './utilityRules'
 
 // Keeps the town's utility report and every building's location bonus up to
@@ -24,7 +28,7 @@ export class Services {
     this.city = city
     this.report = this.compute()
     // Earnings: cut by utility shortages, raised by a good location.
-    city.incomeMultiplier = (b) => this.utilityShare(b) * (1 + this.bonus(b).total) * (1 + this.townBonus())
+    city.incomeMultiplier = (b) => this.utilityShare(b) * (1 + this.bonus(b).total) * (1 + this.townBonus()) * this.demand(b)
     // Value for property tax: a good location raises it (shortages are temporary, so they don't).
     city.valueMultiplier = (b) => 1 + this.bonus(b).total
     city.onChange((event) => {
@@ -88,6 +92,26 @@ export class Services {
     return serviceReport([...this.city.all()].filter((b) => this.city.isBuilt(b)))
   }
 
+  // Residents within reach of a shop, and the share of full sales that gives.
+  customersOf(b: PlacedBuilding): number {
+    return this.customers.get(b.id) ?? 0
+  }
+
+  demand(b: PlacedBuilding): number {
+    return demandFactor(b.type, this.customersOf(b))
+  }
+
+  // How many customers a shop would have here, before it's built (placement).
+  customersAt(type: BuildingType, tile: Tile, rotation: Rotation): number {
+    return customersNear({ type, tile, rotation }, this.homes([...this.city.all()].filter((b) => this.city.isBuilt(b))))
+  }
+
+  private homes(built: PlacedBuilding[]) {
+    return built.filter((b) => b.type.residents).map((b) => ({ type: b.type, tile: b.tile, rotation: b.rotation, residents: Math.round(b.type.residents! * levelFactor(b.level)) }))
+  }
+
+  private customers = new Map<number, number>()
+
   private refresh() {
     const before = this.report
     this.report = this.compute()
@@ -97,6 +121,10 @@ export class Services {
     // Only working buildings help their neighbors (a bus stop the bus can't reach doesn't count).
     const working = all.filter((b) => this.city.isOperating(b))
     for (const b of all) this.bonuses.set(b.id, locationBonus(b, working, this.city.isRoad))
+    // Shops: how many residents live within reach.
+    this.customers.clear()
+    const homes = this.homes(all)
+    for (const b of all) if (b.type.customers) this.customers.set(b.id, customersNear(b, homes))
     this.emit({ kind: 'changed', report: this.report })
     const newlyShort = UTILITIES.filter((u) => before.utilities[u].level >= 1 && this.report.utilities[u].level < 1)
     if (newlyShort.length > 0) this.emit({ kind: 'shortage', utilities: newlyShort })

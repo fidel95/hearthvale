@@ -1,3 +1,4 @@
+import type { Season } from './seasons'
 // The crop catalog and the rules for how a planted crop changes over time.
 // Like buildings.ts, crops are plain data: adding a crop means adding an entry.
 
@@ -18,6 +19,8 @@ export interface CropType {
   unlockLevel: number // the player level that makes it available (progression.ts)
   // How long it stays ripe before it withers and the harvest is lost.
   freshSeconds: number
+  // When it's in season (seasons.ts): harvested then, it yields 25% more.
+  season: Season
   // How to draw it (see createCropObject in models.ts).
   look: { shape: PlantShape; leaf: string; fruit: string; height: number; perTile: 1 | 2 }
 }
@@ -40,6 +43,7 @@ export const CROP_TYPES: CropType[] = [
     xp: 1,
     unlockLevel: 1,
     freshSeconds: 3 * MINUTE,
+    season: 'spring',
     look: { shape: 'bush', leaf: '#3f8f3a', fruit: '#e0383e', height: 0.2, perTile: 2 },
   },
   {
@@ -53,6 +57,7 @@ export const CROP_TYPES: CropType[] = [
     xp: 2,
     unlockLevel: 2,
     freshSeconds: 15 * MINUTE,
+    season: 'summer',
     look: { shape: 'stalk', leaf: '#7fb34a', fruit: '#e8c75a', height: 0.4, perTile: 2 },
   },
   {
@@ -66,6 +71,7 @@ export const CROP_TYPES: CropType[] = [
     xp: 4,
     unlockLevel: 5,
     freshSeconds: 1 * HOUR,
+    season: 'fall',
     look: { shape: 'vine', leaf: '#4f9a3c', fruit: '#e9822f', height: 0.25, perTile: 1 },
   },
   {
@@ -79,6 +85,7 @@ export const CROP_TYPES: CropType[] = [
     xp: 7,
     unlockLevel: 7,
     freshSeconds: 3 * HOUR,
+    season: 'summer',
     look: { shape: 'cob', leaf: '#4f9a3c', fruit: '#f2d23c', height: 0.6, perTile: 2 },
   },
   {
@@ -92,6 +99,7 @@ export const CROP_TYPES: CropType[] = [
     xp: 12,
     unlockLevel: 9,
     freshSeconds: 8 * HOUR,
+    season: 'spring',
     look: { shape: 'flower', leaf: '#4f9a3c', fruit: '#f5c518', height: 0.55, perTile: 2 },
   },
   {
@@ -105,6 +113,7 @@ export const CROP_TYPES: CropType[] = [
     xp: 16,
     unlockLevel: 10,
     freshSeconds: 16 * HOUR,
+    season: 'winter',
     look: { shape: 'bush', leaf: '#5d9e45', fruit: '#c79a5b', height: 0.18, perTile: 2 },
   },
 ]

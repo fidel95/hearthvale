@@ -3,7 +3,8 @@ import { canUpgrade, levelFactor, upgradeCost } from './construction'
 import type { Lot } from './grid'
 import type { Inventory } from './Inventory'
 import type { Materials } from './items'
-import { expansionLevel, expansionMaterials } from './land'
+import { expansionLevel, expansionMaterials, expansionQuest } from './land'
+import { QUESTS, type Quests } from './quests'
 import type { Player } from './Player'
 
 // Finishing construction and upgrading both need things from more than one
@@ -18,6 +19,7 @@ import type { Player } from './Player'
 export type ProjectResult =
   | { ok: true }
   | { ok: false; reason: 'not-ready' | 'level' | 'coins' | 'room' }
+  | { ok: false; reason: 'quest'; quest: string } // a quest to finish first (its title)
   | { ok: false; reason: 'materials'; missing: Materials }
 
 export function finishConstruction(city: City, inventory: Inventory, b: PlacedBuilding, now: number): ProjectResult {
@@ -80,8 +82,11 @@ export function upgradeBuilding(
 }
 
 // The next lot: its price, materials and level, and whether it can be bought now.
-export function landQuote(city: City, inventory: Inventory, player: Player): Quote {
+// quests: to check the quest some expansions need (optional, for tests of the rest).
+export function landQuote(city: City, inventory: Inventory, player: Player, quests?: Quests): Quote {
   const n = city.expansions + 1
+  const questId = expansionQuest(n)
+  const quest = questId && quests && !quests.claimedQuests().some((q) => q.id === questId) ? QUESTS.find((q) => q.id === questId)! : null
   const materials = expansionMaterials(n)
   const playerLevel = expansionLevel(n)
   const coins = city.nextLotPrice
@@ -89,18 +94,20 @@ export function landQuote(city: City, inventory: Inventory, player: Player): Quo
   const result: ProjectResult =
     player.level < playerLevel
       ? { ok: false, reason: 'level' }
-      : !city.economy.canAfford(coins)
-        ? { ok: false, reason: 'coins' }
-        : Object.keys(missing).length
-          ? { ok: false, reason: 'materials', missing }
-          : { ok: true }
+      : quest
+        ? { ok: false, reason: 'quest', quest: quest.title }
+        : !city.economy.canAfford(coins)
+          ? { ok: false, reason: 'coins' }
+          : Object.keys(missing).length
+            ? { ok: false, reason: 'materials', missing }
+            : { ok: true }
   return { coins, materials, playerLevel, missing, result }
 }
 
 // Buying land: the level, the coins and the materials, all checked first.
-export function buyLand(city: City, inventory: Inventory, player: Player, lot: Lot): ProjectResult {
+export function buyLand(city: City, inventory: Inventory, player: Player, lot: Lot, quests?: Quests): ProjectResult {
   if (!city.canBuyLot(lot)) return { ok: false, reason: 'not-ready' }
-  const quote = landQuote(city, inventory, player)
+  const quote = landQuote(city, inventory, player, quests)
   if (!quote.result.ok) return quote.result
   const cost = inventory.use(quote.materials)!
   city.buyLot(lot, cost)

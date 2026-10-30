@@ -3,6 +3,7 @@ import { CROP_TYPES, cropState, profitPerMinute, type CropType } from '../game/c
 import type { Player } from '../game/Player'
 import { coins, el, outOfEnergyMessage, timeSpan } from './dom'
 import { isPlot } from '../game/buildings'
+import { IN_SEASON_BONUS, SEASON_INFO, seasonOf } from '../game/seasons'
 import { Sheet } from './Sheet'
 
 // The seed window that opens when you tap an empty farm plot. Each crop shows
@@ -21,6 +22,9 @@ export class CropPicker {
   private player: Player
   private onNotice: (message: string) => void
   private plot: PlacedBuilding | null = null
+
+  // The calendar month, for crops in season.
+  month: () => number = () => 0
 
   constructor(container: HTMLElement, city: City, player: Player, onNotice: (message: string) => void) {
     this.city = city
@@ -78,6 +82,13 @@ export class CropPicker {
           el('span', 'catalog-name', `${crop.emoji} ${crop.name}`),
           el('span', 'catalog-meta', `Seeds ${coins(crop.seedCost)} → sells ${coins(crop.sellPrice)}`),
           el('span', 'catalog-meta', `Ready in ${timeSpan(crop.growSeconds)} · fresh for ${timeSpan(crop.freshSeconds)}`),
+          el(
+            'span',
+            crop.season === seasonOf(this.month()) ? 'catalog-meta in-season' : 'catalog-meta',
+            crop.season === seasonOf(this.month())
+              ? `${SEASON_INFO[crop.season].icon} In season now: +${IN_SEASON_BONUS * 100}% harvest`
+              : `${SEASON_INFO[crop.season].icon} Best in ${SEASON_INFO[crop.season].name.toLowerCase()}`,
+          ),
           el('span', 'crop-profit', `Profit ${coins(profit)} · ${coins(profitPerMinute(crop))}/min · ⭐ ${crop.xp}`),
         )
         item.disabled = !this.city.economy.canAfford(crop.seedCost)

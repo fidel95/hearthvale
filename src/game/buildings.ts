@@ -99,6 +99,8 @@ export interface BuildingType {
   // Needs a road touching one side of its footprint to work (shops: customers
   // have to get there). See City.hasRoadAccess.
   requiresRoad?: boolean
+  // Shops: residents they need living nearby for full sales (demand.ts).
+  customers?: number
   // Animal pens: which animals live here and how many (AnimalView draws them).
   animals?: { kind: 'chicken' | 'pig' | 'sheep' | 'cow'; count: number }
   // Needs railway track touching one side to work (the train station).
@@ -255,6 +257,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     goodsPerSale: 4,
     stockCapacity: 40,
     needs: { water: 2, power: 3, trash: 2 },
+    customers: 6,
     placeholder: { shape: 'shop', color: '#ffe3a8', accent: '#ff7a2f', height: 1 },
   },
   {
@@ -270,6 +273,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     goodsPerSale: 7,
     stockCapacity: 70,
     needs: { water: 2, power: 4, trash: 3 },
+    customers: 10,
     placeholder: { shape: 'shop', color: '#dff0ff', accent: '#22a85a', height: 1.2 },
   },  {
     id: 'cafe',
@@ -284,6 +288,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     goodsPerSale: 5,
     stockCapacity: 40,
     needs: { water: 3, power: 2, trash: 2 },
+    customers: 8,
     placeholder: { shape: 'shop', color: '#ffd9c4', accent: '#b8432f', height: 0.9 },
   },
   {
@@ -299,6 +304,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     goodsPerSale: 6,
     stockCapacity: 48,
     needs: { water: 4, power: 2, trash: 1 },
+    customers: 8,
     placeholder: { shape: 'shop', color: '#ffd6ea', accent: '#e8408f', height: 1 },
   },
   {
@@ -314,6 +320,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     goodsPerSale: 10,
     stockCapacity: 80,
     needs: { water: 5, power: 4, trash: 4 },
+    customers: 14,
     placeholder: { shape: 'shop', color: '#fff0c4', accent: '#d62f2f', height: 1.2 },
   },
   {
@@ -329,6 +336,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     goodsPerSale: 14,
     stockCapacity: 120,
     needs: { water: 4, power: 8, trash: 6 },
+    customers: 20,
     placeholder: { shape: 'shop', color: '#d8f4ff', accent: '#1f7fe0', height: 1.3 },
   },
 

@@ -4,6 +4,8 @@ import type { Inventory } from '../game/Inventory'
 import { materialsText } from '../game/items'
 import { buyLand, landQuote } from '../game/projects'
 import type { Player } from '../game/Player'
+import { QUESTS, type Quests } from '../game/quests'
+import { expansionQuest } from '../game/land'
 import { PROPERTY_TAX_RATE } from '../game/taxRules'
 import { coins, el } from './dom'
 import { Sheet, button } from './Sheet'
@@ -20,7 +22,10 @@ export class LandPanel {
 
   private inventory: Inventory
 
-  constructor(container: HTMLElement, city: City, player: Player, inventory: Inventory, onNotice: (message: string) => void) {
+  private quests: Quests
+
+  constructor(container: HTMLElement, city: City, player: Player, inventory: Inventory, quests: Quests, onNotice: (message: string) => void) {
+    this.quests = quests
     this.city = city
     this.player = player
     this.inventory = inventory
@@ -32,7 +37,7 @@ export class LandPanel {
   open(lot: Lot) {
     this.lot = lot
     // The rules live in landQuote; this window only shows its answer.
-    const { coins: price, materials, playerLevel: level, missing, result } = landQuote(this.city, this.inventory, this.player)
+    const { coins: price, materials, playerLevel: level, missing, result } = landQuote(this.city, this.inventory, this.player, this.quests)
     const short = Object.keys(missing).length > 0
     const tooLow = !result.ok && result.reason === 'level'
 
@@ -41,6 +46,7 @@ export class LandPanel {
       `A 10×10 lot: room for about 20 more buildings`,
       `Price ${coins(price)} and ${materialsText(materials)} to clear it (each lot costs more than the last)`,
       `Needs level ${level}${tooLow ? ` (you're level ${this.player.level})` : ''}`,
+      ...this.questLine(),
       `Property tax ${coins(price * PROPERTY_TAX_RATE)} a year`,
     ]) {
       facts.append(el('li', '', line))
@@ -63,10 +69,21 @@ export class LandPanel {
       ? `Buy for ${coins(price)}`
       : result.reason === 'level'
         ? `Reach level ${level} first`
+        : result.reason === 'quest'
+          ? `Finish the quest “${result.quest}” first`
         : result.reason === 'coins'
           ? 'Not enough coins'
           : `Needs ${materialsText(missing)} more`
     this.sheet.open()
+  }
+
+  // Some lots also need a quest finished (land.ts expansionQuest).
+  private questLine(): string[] {
+    const id = expansionQuest(this.city.expansions + 1)
+    const quest = id && QUESTS.find((q) => q.id === id)
+    if (!quest) return []
+    const done = this.quests.claimedQuests().includes(quest)
+    return [`Needs the quest “${quest.title}” finished${done ? ' ✓' : ''}`]
   }
 
   close() {
@@ -75,7 +92,7 @@ export class LandPanel {
   }
 
   private confirm() {
-    if (this.lot && buyLand(this.city, this.inventory, this.player, this.lot).ok) this.onNotice('New land! Your town just got bigger.')
+    if (this.lot && buyLand(this.city, this.inventory, this.player, this.lot, this.quests).ok) this.onNotice('New land! Your town just got bigger.')
     this.close()
   }
 }

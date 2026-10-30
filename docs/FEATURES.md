@@ -21,7 +21,7 @@ Every item in the design spec, with its status and where it lives.
 | Isometric view | ✅ | Orthographic camera at 45° (`CameraController.ts`) |
 | Grid-based placement | ✅ | `grid.ts`, `City.canPlace` |
 | Pan, zoom | ✅ | Drag, wheel, pinch; arrow keys / WASD, + / − |
-| Select buildings and empty tiles | 🟡 | Buildings select with a context menu; an empty tile shows its outline under the pointer (there's nothing to do with one except build, which the build menu covers) |
+| Select buildings and empty tiles | ✅ | Buildings select with a context menu; tapping an empty tile of your land offers 🔨 Build here (the building you pick goes on that spot); tapping land you could buy opens it |
 | Placement preview, valid / invalid | ✅ | Ghost model, green / red outline, and words: "✓ Fits here", "✗ Doesn't fit", "⚠ needs a road" |
 | Highlight the selected building | ✅ | Yellow outline (`Builder.selection`) |
 | Starting plot and expansions | ✅ | 4 starting lots of 10×10; buy more (`land.ts`) |
@@ -37,14 +37,14 @@ Every item in the design spec, with its status and where it lives.
 | Feature | | Where |
 |---|---|---|
 | Homes: population, rent, cooldowns | ✅ | 9 homes (`buildings.ts`: `residents`, `income`) |
-| Homes: road access | 🟡 | Not required; homes beside a road earn +5% |
+| Homes: road access | ✅ | Decided: not required (a new town can never be stuck without roads); homes beside a road earn +5%, and the city rating's Roads part rewards it |
 | Homes: show rent ready | ✅ | 🪙 bubble |
 | Businesses: sales cycle, stock, state | ✅ | 6 shops; shelves, Restock, timers, 📦 when out of stock |
 | Businesses: road access | ✅ | `requiresRoad`; 🚧 when cut off |
-| Businesses: nearby population | ⏳ | Not used |
+| Businesses: nearby population | ✅ | Each shop needs residents within 8 tiles for full sales; fewer still sells, down to 60% (`demand.ts`); shown when placing and in details |
 | Farms: crop choice, cost, time, reward, states | ✅ | 6 crops; empty → growing → ripe → withered (`crops.ts`) |
 | Harvest grants goods, coins, XP, quests | ✅ | |
-| Crop-specific land or seasons | ⏳ | |
+| Crop seasons | ✅ | Each crop has a best season on the calendar: +25% harvest then, never blocked otherwise (`seasons.ts`) |
 | Civic buildings: capacity, happiness, services | ✅ | Population capacity, location bonuses, the city rating; utilities |
 | Civic: construction and materials | ✅ | `build` data |
 | Decorations: appearance, small bonus | ✅ | 9 decorations, +1–8% nearby (capped at +10%) |
@@ -74,7 +74,7 @@ Every item in the design spec, with its status and where it lives.
 | Show disconnected buildings | ✅ | 🚧 bubble, info card, details |
 | Consistent adjacency rule | ✅ | A road on any tile touching one side (`City.hasRoadAccess`) |
 | Warn before a removal breaks access | ✅ | The Remove window lists what it cuts off |
-| Connectivity visualization | ⏳ | |
+| Connectivity visualization | ✅ | Each road network tinted its own color, cut-off buildings in red; shown while drawing or removing roads, or always (Settings) (`RoadNetworkView.ts`) |
 | Parks, beach, ski resort | ✅ | Playground, Sports Field, Central Park, Public Beach (on the shore), Ski Resort; beach goers and skiers (`LeisureView.ts`) |
 | Mountains and weather | ✅ | Snowy mountains beyond the edge (`MountainView.ts`); rain showers with umbrellas and rain sound (`WeatherView.ts`), switchable in Settings |
 | Feedback animations | ✅ | Collect icons fly to the HUD, bounce, dust, sparkles, confetti, fireworks, cranes, smoke, birds, cloud shadows, swaying trees, camera glide (`EffectsView.ts`, `AmbientView.ts`, `flyToHud.ts`); off with Reduce motion |
@@ -129,7 +129,7 @@ Every item in the design spec, with its status and where it lives.
 | Price and requirements shown | ✅ | Coins, materials, level (`LandPanel.ts`) |
 | Validated; grid grows only on success | ✅ | `buyLand` checks all first |
 | Saved; nothing beyond the boundary | ✅ | |
-| Quest prerequisites | 🟡 | Level only; the "Room to Grow" quest introduces it |
+| Quest prerequisites | ✅ | Lots 1, 3 and 6 also need a quest finished (`land.ts expansionQuest`); the land window says which |
 
 ## 4.10 Inventory and collections
 
@@ -183,7 +183,7 @@ with rewards; counts never go below 0; saved.
 | Focus indicators | ✅ | `:focus-visible` rings |
 | Labels and tooltips for icons | ✅ | `aria-label` and `title` |
 | Contrast | ✅ | Dark text on light panels; light text on dark hints |
-| Scalable UI | 🟡 | Browser zoom scales the whole interface; no separate in-game setting |
+| Scalable UI | ✅ | Settings → Interface size, 80–130% (bars, windows and the coach scale together) |
 | Not color alone | ✅ | Placement in words; shortages say "short"; debt says "owe"; bubbles have icons |
 | Mute | ✅ | |
 | Confirm destructive actions | ✅ | Remove, new town, import |

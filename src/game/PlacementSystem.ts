@@ -3,6 +3,7 @@ import type { City } from './City'
 import { edgeTiles } from './communityRules'
 import { footprintTiles, type Tile } from './grid'
 import type { Services } from './Services'
+import { demandFactor } from './demand'
 import type { UnlockSystem } from './UnlockSystem'
 
 // Can this building go here? One answer, with every reason, for everything
@@ -58,6 +59,11 @@ export class PlacementSystem {
         warnings.push('Needs a road beside it to open')
       } else if (type.requiresRail && !edgeTiles({ type, tile: spot.tile, rotation: spot.rotation }).some(this.city.isRail)) {
         warnings.push('Needs railway track beside it to open')
+      }
+      if (type.customers && problems.length === 0) {
+        const customers = this.services.customersAt(type, spot.tile, spot.rotation)
+        const share = Math.round(demandFactor(type, customers) * 100)
+        if (share < 100) warnings.push(`Only ${customers} of ${type.customers} customers nearby: sales at ${share}%`)
       }
     }
     return { ok: problems.length === 0, problems, warnings }

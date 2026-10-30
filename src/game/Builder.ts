@@ -7,7 +7,7 @@ import { sizeOf, type City, type PlacedBuilding } from './City'
 import type { CityView } from './CityView'
 import { cropState } from './crops'
 import type { Docks } from './Docks'
-import { footprintCenter, footprintTiles, worldToTile, type Tile } from './grid'
+import { footprintCenter, footprintTiles, lotOf, worldToTile, type Lot, type Tile } from './grid'
 import { createBuildingObject } from './models'
 import type { PlacementSystem, Spot } from './PlacementSystem'
 import type { Player } from './Player'
@@ -44,6 +44,10 @@ export class Builder {
   onPlantRequest?: (plot: PlacedBuilding) => void
   // An idle dock was tapped: show the shipments to order.
   onDockRequest?: (dock: PlacedBuilding) => void
+  // Tapping an empty tile of your land offers "Build here" (Game opens the
+  // build menu); tapping land you could buy offers it.
+  onBuildHere?: (tile: Tile) => void
+  onLotRequest?: (lot: Lot) => void
   // Tapping a damaged building asks to repair it (Game does it, with Disasters).
   onRepairRequest?: (building: PlacedBuilding) => void
   // A construction site whose timer is done was tapped: finish it.
@@ -79,6 +83,8 @@ export class Builder {
   // The last tile painted in a road drag, to fill in tiles a fast drag skips over.
   private lastPainted: Tile | null = null
   // Where a new building would go, waiting for ✓ (buy) or ✗ (cancel).
+  private tileMenu: CSS2DObject
+  private menuTile: Tile | null = null
   private pending: Tile | null = null // restoring: the spot waiting for ✓
   // Building new: every spot picked so far, each with its own see-through
   // copy of the building, all bought together with one ✓.
@@ -138,6 +144,23 @@ export class Builder {
     scene.add(this.pickedMarks)
 
     // The ✓ / ✗ buttons shown over a building waiting to be bought.
+    // The little "Build here" button over an empty tile you tapped.
+    const tileEl = document.createElement('div')
+    tileEl.className = 'place-confirm'
+    const here = document.createElement('button')
+    here.className = 'tile-build'
+    here.textContent = '🔨 Build here'
+    here.addEventListener('click', () => {
+      const tile = this.menuTile
+      this.showTileMenu(null)
+      if (tile) this.onBuildHere?.(tile)
+    })
+    tileEl.append(here)
+    this.tileMenu = new CSS2DObject(tileEl)
+    this.tileMenu.center.set(0.5, 1)
+    this.tileMenu.visible = false
+    scene.add(this.tileMenu)
+
     const confirmEl = document.createElement('div')
     confirmEl.className = 'place-confirm'
     const yes = document.createElement('button')
@@ -187,7 +210,15 @@ export class Builder {
     })
   }
 
+  private showTileMenu(tile: Tile | null) {
+    this.menuTile = tile
+    this.tileMenu.visible = tile !== null
+    if (tile) this.tileMenu.position.copy(footprintCenter(tile, { x: 1, z: 1 })).setY(0.35)
+    if (tile) this.showFootprint(tile, { x: 1, z: 1 }, COLORS.hover)
+  }
+
   setMode(mode: Mode) {
+    this.showTileMenu(null)
     // Clean up the old mode: cancel any building waiting for ✓ (first, while
     // the old mode's ghost still exists), drop the ghost and un-hide anything
     // we were carrying.
@@ -473,33 +504,18 @@ export class Builder {
     switch (mode.kind) {
       case 'select': {
         const clicked = this.city.buildingAt(tile)
+        const menuWasHere = this.tileMenu.visible && this.menuTile?.x === tile.x && this.menuTile?.z === tile.z
+        this.showTileMenu(null)
         if (clicked && clicked !== this.selected && this.hasQuickAction(clicked, Date.now())) this.tap(clicked)
-        else this.select(clicked && clicked !== this.selected ? clicked : null)
+        else if (clicked || this.selected) this.select(clicked && clicked !== this.selected ? clicked : null)
+        // An empty tile: on your land, offer to build there; next to it, offer the land.
+        else if (this.city.ownsTile(tile) && !menuWasHere) this.showTileMenu(tile)
+        else if (!this.city.ownsTile(tile) && this.city.canBuyLot(lotOf(tile))) this.onLotRequest?.(lotOf(tile))
         break
       }
-      case 'build': {
-        // Two steps: tap to put the building down, then ✓ to buy it (or tap
-        // somewhere else to try another spot). Roads skip this: they're drawn.
-        const anchor = anchorFor(mode.type, tile, this.rotation)
-        if (isTrack(mode.type) || !this.confirmPurchases) {
-          const check = this.placement.check(mode.type, { tile: anchor, rotation: this.rotation })
-          if (!check.ok) this.onNotice?.(check.problems[0])
-          else this.city.place(mode.type, anchor, { rotation: this.rotation, free: this.placement.freeBuild })
-          break
-        }
-        // Tapping a picked spot takes it back; anywhere else picks one more.
-        const at = this.spots.findIndex((s) => footprintTiles(s.tile, footprint(mode.type, s.rotation)).some((t) => t.x === tile.x && t.z === tile.z))
-        if (at >= 0) {
-          this.scene.remove(this.spots[at].ghost)
-          this.spots.splice(at, 1)
-        } else {
-          const check = this.placement.checkMany(mode.type, [...this.spotList(), { tile: anchor, rotation: this.rotation }])
-          if (!check.ok) this.onNotice?.(check.problems[0])
-          else this.addSpot(anchor, this.rotation)
-        }
-        this.showSpots()
+      case 'build':
+        this.buildAt(mode.type, tile)
         break
-      }
       case 'restore': {
         const anchor = anchorFor(mode.building.type, tile, this.rotation)
         const check = this.placement.check(mode.building.type, { tile: anchor, rotation: this.rotation }, { free: true })
@@ -536,6 +552,36 @@ export class Builder {
       this.confirm.position.copy(footprintCenter(tile, size)).setY(Math.max(size.x, size.z) * 0.6 + 0.6)
     }
     this.refresh()
+  }
+
+  // A tap in build mode: two steps, tap to put the building down, then ✓ to
+  // buy it (several spots can be picked first). Roads and track skip this:
+  // they're drawn. (Also used by "Build here" on an empty tile.)
+  private buildAt(type: BuildingType, tile: Tile) {
+    const anchor = anchorFor(type, tile, this.rotation)
+    if (isTrack(type) || !this.confirmPurchases) {
+      const check = this.placement.check(type, { tile: anchor, rotation: this.rotation })
+      if (!check.ok) this.onNotice?.(check.problems[0])
+      else this.city.place(type, anchor, { rotation: this.rotation, free: this.placement.freeBuild })
+      return
+    }
+    // Tapping a picked spot takes it back; anywhere else picks one more.
+    const at = this.spots.findIndex((s) => footprintTiles(s.tile, footprint(type, s.rotation)).some((t) => t.x === tile.x && t.z === tile.z))
+    if (at >= 0) {
+      this.scene.remove(this.spots[at].ghost)
+      this.spots.splice(at, 1)
+    } else {
+      const check = this.placement.checkMany(type, [...this.spotList(), { tile: anchor, rotation: this.rotation }])
+      if (!check.ok) this.onNotice?.(check.problems[0])
+      else this.addSpot(anchor, this.rotation)
+    }
+    this.showSpots()
+  }
+
+  // "Build here": start building this type with the tapped tile as the first spot.
+  startBuildAt(type: BuildingType, tile: Tile) {
+    this.setMode({ kind: 'build', type })
+    if (!isTrack(type)) this.buildAt(type, tile)
   }
 
   // ✓: buy the building waiting at the pending spot. Stay in build mode, so
@@ -583,6 +629,7 @@ export class Builder {
   private clearSpots() {
     for (const s of this.spots) this.scene.remove(s.ghost)
     this.spots = []
+    this.onSpotsChanged?.(0, 0) // the Buy button goes too
   }
 
   // Put each spot's ghost in place, the ✓ over the last one, and tell the HUD.

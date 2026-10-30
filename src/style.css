@@ -1777,3 +1777,37 @@ button {
   margin: -14px 0 0 -12px;
   filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.25));
 }
+
+.catalog-meta.in-season {
+  color: var(--good);
+  font-weight: 700;
+}
+
+/* "Build here" over an empty tile (a pill, not the round ✓ / ✕ buttons). */
+.place-confirm .tile-build,
+.tile-build {
+  width: auto;
+  height: auto;
+  min-width: 0;
+  border: none;
+  border-radius: 999px;
+  padding: 6px 12px;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 700;
+  font-size: 13px;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+/* Settings → Interface size: the bars, windows and coach scale together. */
+.topbar,
+.toolbar,
+.hint,
+.toasts,
+.sheet,
+.panel,
+.coach {
+  zoom: var(--ui-scale, 1);
+}

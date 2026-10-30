@@ -86,6 +86,8 @@ export class BuildMenu {
   private chosen: BuildingType | null = null
   private placement: PlacementSystem
   private unlocks: UnlockSystem
+  // Called when the menu closes (Game forgets a "Build here" spot then).
+  onClosed?: () => void
   private onPlace: (type: BuildingType) => void
 
   constructor(
@@ -100,6 +102,7 @@ export class BuildMenu {
     this.unlocks = unlocks
     this.onPlace = onPlace
     this.sheet = new Sheet(container, '🔨 Build', 'build-sheet')
+    this.sheet.onClose = () => this.onClosed?.()
     this.sheet.body.append(this.tabs, this.grid)
     this.sheet.footer.append(this.preview)
 
@@ -178,8 +181,8 @@ export class BuildMenu {
     for (const line of details(type)) list.append(el('li', '', line))
     const price = this.placement.freeBuild ? 'Place (free: admin)' : `Place for 🪙 ${type.cost.toLocaleString()}`
     const place = button(check.problems[0] ?? price, () => {
-      this.sheet.close()
       this.onPlace(type)
+      this.sheet.close()
     })
     place.disabled = !check.ok
     const title = el('div', 'build-preview-title')

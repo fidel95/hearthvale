@@ -51,6 +51,23 @@ export class SettingsPanel {
     volumeRow.append(el('span', '', '🔊 Sound volume (left = mute)'), volume)
     sheet.body.append(volumeRow)
 
+    // Interface size, for small or large screens and easier reading.
+    const sizeRow = el('label', 'setting-row')
+    const size = el('input', '')
+    size.type = 'range'
+    size.min = '0.8'
+    size.max = '1.3'
+    size.step = '0.05'
+    size.setAttribute('aria-label', 'Interface size')
+    const sizeLabel = el('span', '', '')
+    size.addEventListener('input', () => this.settings.set('uiScale', Number(size.value)))
+    this.settings.onChange((s) => {
+      size.value = String(s.uiScale)
+      sizeLabel.textContent = `🔠 Interface size: ${Math.round(s.uiScale * 100)}%`
+    })
+    sizeRow.append(sizeLabel, size)
+    sheet.body.append(sizeRow)
+
     // Admin tools: cheats, behind a switch so nobody turns them on by accident.
     const adminRow = el('label', 'setting-row')
     const adminBox = el('input', '')

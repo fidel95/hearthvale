@@ -40,6 +40,14 @@ export function expansionLevel(n: number): number {
 }
 
 // Clearing and fencing new land takes materials too, more for each lot.
+// Some expansions also need a quest finished first, so the town has grown
+// into the basics before it spreads out. (None of these quests needs land.)
+const EXPANSION_QUESTS: Record<number, string> = { 1: 'community', 3: 'tycoon', 6: 'landmark' }
+
+export function expansionQuest(n: number): string | null {
+  return EXPANSION_QUESTS[n] ?? null
+}
+
 export function expansionMaterials(n: number): Materials {
   return { lumber: 2 + 2 * n, bricks: 2 * n }
 }
