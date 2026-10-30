@@ -6,6 +6,7 @@ import { customersNear, demandFactor } from './demand'
 import { levelFactor } from './construction'
 import type { BuildingType, Rotation } from './buildings'
 import type { Tile } from './grid'
+import { happiness, happinessFactor, homeNeeds, type Need } from './needs'
 import { UTILITIES, incomeMultiplier, plannedResidents, serviceReport, type ServiceReport, type Utility } from './utilityRules'
 
 // Keeps the town's utility report and every building's location bonus up to
@@ -28,7 +29,7 @@ export class Services {
     this.city = city
     this.report = this.compute()
     // Earnings: cut by utility shortages, raised by a good location.
-    city.incomeMultiplier = (b) => this.utilityShare(b) * (1 + this.bonus(b).total) * (1 + this.townBonus()) * this.demand(b)
+    city.incomeMultiplier = (b) => this.utilityShare(b) * (1 + this.bonus(b).total) * (1 + this.townBonus()) * this.demand(b) * this.happinessFactor(b)
     // Value for property tax: a good location raises it (shortages are temporary, so they don't).
     city.valueMultiplier = (b) => 1 + this.bonus(b).total
     city.onChange((event) => {
@@ -66,6 +67,7 @@ export class Services {
       bonus: (b) => this.bonus(b as PlacedBuilding),
       hasRoad: (b) => this.city.hasRoadAccess(b as PlacedBuilding),
       debt: this.city.debt,
+      happiness: this.averageHappiness(),
     })
   }
 
@@ -112,6 +114,33 @@ export class Services {
   }
 
   private customers = new Map<number, number>()
+  private needs = new Map<number, { need: Need; met: boolean }[]>()
+
+  // A home's needs (met or not), its happiness (0 to 1), and what it does to rent.
+  needsOf(b: PlacedBuilding): { need: Need; met: boolean }[] {
+    return this.needs.get(b.id) ?? []
+  }
+
+  happiness(b: PlacedBuilding): number {
+    return happiness(this.needsOf(b))
+  }
+
+  private happinessFactor(b: PlacedBuilding): number {
+    return b.type.residents ? happinessFactor(this.happiness(b)) : 1
+  }
+
+  // What residents want most: each unmet need, and how many homes want it.
+  wishes(): { need: Need; homes: number }[] {
+    const counts = new Map<Need, number>()
+    for (const list of this.needs.values()) for (const { need, met } of list) if (!met) counts.set(need, (counts.get(need) ?? 0) + 1)
+    return [...counts].map(([need, homes]) => ({ need, homes })).sort((a, b) => b.homes - a.homes)
+  }
+
+  // Average happiness of all homes (1 with no homes yet).
+  averageHappiness(): number {
+    const homes = [...this.needs.values()]
+    return homes.length === 0 ? 1 : homes.reduce((sum, n) => sum + happiness(n), 0) / homes.length
+  }
 
   private refresh() {
     const before = this.report
@@ -122,6 +151,9 @@ export class Services {
     // Only working buildings help their neighbors (a bus stop the bus can't reach doesn't count).
     const working = all.filter((b) => this.city.isOperating(b))
     for (const b of all) this.bonuses.set(b.id, locationBonus(b, working, this.city.isRoad))
+    // Homes: which of their needs something nearby (and working) meets.
+    this.needs.clear()
+    for (const b of all) if (b.type.residents) this.needs.set(b.id, homeNeeds(b, working))
     // Shops: how many residents live within reach.
     this.customers.clear()
     const homes = this.homes(all)

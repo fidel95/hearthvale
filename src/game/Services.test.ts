@@ -49,7 +49,8 @@ describe('Services', () => {
     const home = city.place(cottage, at(0, 0), { now: 0, free: true })!
     city.place(BUILDINGS_BY_ID.get('park')!, at(3, 0), { free: true })
     expect(services.bonus(home)).toEqual({ total: 0.1, sources: ['Park'] })
-    expect(city.production.collect(home.id, 30_000)).toBe(Math.round(15 * 1.1))
+    // +10% for the park nearby, and the park meets one of the cottage's two needs (green space): +7.5%.
+    expect(city.production.collect(home.id, 30_000)).toBe(Math.round(15 * 1.1 * (1 + 0.15 * 0.5)))
     expect(city.valueMultiplier(home)).toBeCloseTo(1.1)
     expect(services.report.upkeep).toBe(5)
   })

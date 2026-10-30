@@ -32,9 +32,10 @@ export interface RatingInput {
   bonus: (b: Building) => LocationBonus
   hasRoad: (b: Building) => boolean
   debt: number
+  happiness: number // homes' average happiness, 0 to 1 (needs.ts)
 }
 
-export function cityRating({ buildings, report, bonus, hasRoad, debt }: RatingInput): CityRating {
+export function cityRating({ buildings, report, bonus, hasRoad, debt, happiness }: RatingInput): CityRating {
   const homes = buildings.filter((b) => b.type.category === 'home')
   const earners = buildings.filter((b) => b.type.category === 'home' || b.type.category === 'business')
   const decorations = buildings.filter((b) => b.type.category === 'decoration').length
@@ -46,10 +47,17 @@ export function cityRating({ buildings, report, bonus, hasRoad, debt }: RatingIn
   const parts: RatingPart[] = [
     { id: 'services', label: 'Utilities', max: 30, points: 30 * service, hint: 'Supply enough water, power and trash pickup' },
     {
+      id: 'needs',
+      label: 'Resident needs',
+      max: 15,
+      points: 15 * happiness,
+      hint: 'Homes want a shop and green space nearby (and family homes a school)',
+    },
+    {
       id: 'neighborhoods',
       label: 'Neighborhoods',
-      max: 25,
-      points: 25 * share(homes.filter((h) => bonus(h).total > 0).length, homes.length),
+      max: 10,
+      points: 10 * share(homes.filter((h) => bonus(h).total > 0).length, homes.length),
       hint: 'Put homes near parks, schools, decorations or roads',
     },
     {

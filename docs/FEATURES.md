@@ -140,7 +140,8 @@ with rewards; counts never go below 0; saved.
 
 | Feature | | Where |
 |---|---|---|
-| A simple rating | ✅ | 0–100, six parts (`cityRating.ts`) |
+| A simple rating | ✅ | 0–100, seven parts (`cityRating.ts`), including residents' needs |
+| Resident needs and happiness | ✅ | Homes want shopping, green space (and family homes a school) nearby; happiness lifts rent up to +15%; the Town window lists wishes with Build one (`needs.ts`) |
 | Civic buildings and decorations add to it | ✅ | Neighborhoods and Greenery parts |
 | Minimum rating for some buildings | ✅ | Landmarks |
 | Explained, no hidden penalties | ✅ | Town window: every part, its points and what raises it; nothing but landmarks depends on it |

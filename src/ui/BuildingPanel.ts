@@ -12,6 +12,7 @@ import { UTILITIES, UTILITY_INFO } from '../game/utilityRules'
 import { coins, duration, el, percent } from './dom'
 import { isTrack, isPlot } from '../game/buildings'
 import { CUSTOMER_REACH } from '../game/demand'
+import { happinessFactor } from '../game/needs'
 import { Sheet, button } from './Sheet'
 
 // Everything about one building: status, a progress bar for whatever it's
@@ -155,6 +156,14 @@ export class BuildingPanel {
       } else {
         parts.push(section(`⬆️ Level ${'★'.repeat(b.level)}`, el('p', 'muted', `Fully upgraded (level ${MAX_LEVEL}).`)))
       }
+    }
+
+    // ---- Happiness: what this home wants nearby.
+    const wants = this.services.needsOf(b)
+    if (wants.length) {
+      const share = this.services.happiness(b)
+      const lines = wants.map(({ need, met }) => el('p', met ? '' : 'warning', `${need.icon} ${need.name}: ${met ? '✓ nearby' : `✗ wants ${need.hint}`}`))
+      parts.push(section(`😊 Happiness ${Math.round(share * 100)}% · rent +${Math.round(happinessFactor(share) * 100 - 100)}%`, ...lines))
     }
 
     // ---- Location and services.

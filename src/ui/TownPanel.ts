@@ -4,7 +4,7 @@ import type { Services } from '../game/Services'
 import { MAX_LOCATION_BONUS } from '../game/communityRules'
 import { BASE_POPULATION_CAPACITY, COUNTY_SUPPLY, UTILITIES, UTILITY_INFO, incomeMultiplier } from '../game/utilityRules'
 import { coins, el, percent } from './dom'
-import { Sheet } from './Sheet'
+import { Sheet, button } from './Sheet'
 
 // The Town window: population, how well water, electricity and trash pickup
 // keep up with demand, what that does to income, and what the utilities cost
@@ -13,6 +13,9 @@ export class TownPanel {
   private sheet: Sheet
   private city: City
   private services: Services
+
+  // Opens the build menu at a tab, for "Build one" on residents' wishes.
+  onBuild?: (tab: string) => void
 
   constructor(container: HTMLElement, city: City, services: Services) {
     this.city = city
@@ -45,8 +48,22 @@ export class TownPanel {
     ratingSection.append(el('p', 'muted', 'Landmarks need a minimum rating to be built. Nothing else depends on it, so a low rating never costs you anything.'))
     const bonus = this.services.townBonus()
 
+    // What residents want: their unmet needs, most wanted first.
+    const wishes = this.services.wishes()
+    const wishSection = el('section', 'tax-section')
+    wishSection.append(el('h3', '', `🏘️ Residents' happiness: ${Math.round(this.services.averageHappiness() * 100)}%`))
+    if (wishes.length === 0) wishSection.append(el('p', 'muted', 'Every home has what it needs nearby. Happy homes pay up to 15% more rent.'))
+    for (const { need, homes } of wishes) {
+      const row = el('div', 'wish-row')
+      const build = button('Build one', () => this.onBuild?.(need.tab), 'panel-button secondary')
+      row.append(el('span', '', `${need.icon} ${homes} home${homes === 1 ? '' : 's'} want${homes === 1 ? 's' : ''} ${need.hint}`), build)
+      wishSection.append(row)
+    }
+    if (wishes.length) wishSection.append(el('p', 'muted', 'A home with every need met pays up to 15% more rent.'))
+
     const parts: HTMLElement[] = [
       el('p', 'town-population', `👥 ${report.population} residents · room for ${report.capacity}`),
+      wishSection,
       ratingSection,
       ...(bonus > 0 ? [el('p', '', `🏛️ Landmarks add +${percent(bonus)} to all rent and sales.`)] : []),
       el('p', 'muted', `Every town has room for ${BASE_POPULATION_CAPACITY} residents. Parks, fire stations and schools make room for more; new homes and upgrades need room to fit.`),

@@ -135,8 +135,11 @@ export class BuildMenu {
     player.onChange(() => this.sheet.isOpen && this.refresh())
   }
 
-  open() {
+  // tab: open on the tab whose label contains this (e.g. 'Community').
+  open(tab?: string) {
     this.refresh()
+    const wanted = tab && TABS.find((t) => t.label.includes(tab))
+    if (wanted) this.showTab(wanted)
     this.sheet.open()
     // Pictures are drawn the first time the menu opens, not at startup.
     for (const { card, type } of this.cards) {

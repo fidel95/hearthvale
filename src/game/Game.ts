@@ -126,6 +126,7 @@ export class Game {
   private ambientView: AmbientView
   private roadNetworks: RoadNetworkView
   private builder!: Builder
+  private openBuildMenu?: (tab: string) => void
   private devFrames = 0
   private flights = 0 // fly-to-counter icons started this second (kept few)
   private weather: WeatherView
@@ -204,6 +205,7 @@ export class Game {
 
     const taxPanel = new TaxPanel(container, this.city, this.taxes, this.clock)
     const townPanel = new TownPanel(container, this.city, this.services)
+    townPanel.onBuild = (tab) => this.openBuildMenu?.(tab)
     const help = new HelpPanel(container, () => this.tutorial.load({ step: 0, skipped: false }))
     // A building chosen from the menu: placed where "Build here" was tapped, if it was.
     let buildHere: Tile | null = null
@@ -211,6 +213,10 @@ export class Game {
       buildHere ? builder.startBuildAt(type, buildHere) : builder.setMode({ kind: 'build', type }),
     )
     buildMenu.onClosed = () => (buildHere = null)
+    this.openBuildMenu = (tab) => {
+      Sheet.closeCurrent()
+      buildMenu.open(tab)
+    }
     builder.onBuildHere = (tile) => {
       buildMenu.open()
       buildHere = tile

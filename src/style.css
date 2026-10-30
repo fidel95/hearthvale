@@ -1856,3 +1856,19 @@ button {
   padding: 8px;
   border-radius: 8px;
 }
+
+/* Town window: what residents want, each with a way to build it. */
+.wish-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 6px 0;
+  font-size: 14px;
+}
+
+.wish-row .panel-button {
+  margin: 0;
+  flex: none;
+  padding: 4px 12px;
+}
