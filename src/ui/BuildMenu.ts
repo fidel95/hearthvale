@@ -8,6 +8,7 @@ import { UTILITIES, UTILITY_INFO } from '../game/utilityRules'
 import { el } from './dom'
 import { Sheet, button } from './Sheet'
 import { PARADE } from '../game/Army'
+import { PRODUCTS, soldBy } from '../game/products'
 import { thumbnail } from './thumbnails'
 
 // The build menu: tabs by kind of building, a card for each with a picture,
@@ -20,6 +21,7 @@ const TABS: { label: string; categories: Category[] }[] = [
   { label: '🏪 Businesses', categories: ['business', 'port'] },
   { label: '🏫 Community', categories: ['community', 'utility'] },
   { label: '🌾 Farms', categories: ['farm', 'storage'] },
+  { label: '🏭 Industry', categories: ['industry'] },
   { label: '🛣️ Transport', categories: ['road', 'rail', 'air'] },
   { label: '🌳 Decor', categories: ['decoration'] },
   { label: '🏛️ Landmarks', categories: ['landmark'] },
@@ -43,7 +45,14 @@ function details(type: BuildingType): string[] {
   const lines: string[] = []
   if (type.income) lines.push(`Earns 🪙 ${type.income.coins} every ${type.income.seconds} seconds`)
   if (type.residents) lines.push(`Home to 👥 ${type.residents} residents`)
-  if (type.goodsPerSale) lines.push(`Sells 📦 ${type.goodsPerSale} goods each time`)
+  if (type.goodsPerSale) {
+    const sold = soldBy(type)
+    lines.push(`Sells ${sold.icon} ${type.goodsPerSale} ${sold.name.toLowerCase()} each time`)
+  }
+  if (type.factory) {
+    const p = PRODUCTS[type.factory.product]
+    lines.push(`Makes ${p.icon} ${type.factory.output} ${p.name.toLowerCase()} from 📦 ${type.factory.input} goods every ${type.factory.seconds}s`)
+  }
   if (isPlot(type)) lines.push('Plant crops on it: harvests stock your shops or sell at market')
   if (type.storage) lines.push(`Stores 📦 ${type.storage} goods`)
   if (type.supplies) lines.push(`Supplies ${UTILITY_INFO[type.supplies.utility].icon} ${type.supplies.amount} ${UTILITY_INFO[type.supplies.utility].name.toLowerCase()}`)

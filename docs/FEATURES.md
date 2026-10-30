@@ -144,6 +144,7 @@ with rewards; counts never go below 0; saved.
 | Resident needs and happiness | ✅ | Homes want shopping, green space (and family homes a school) nearby; happiness lifts rent up to +15%; the Town window lists wishes with Build one (`needs.ts`) |
 | Visitors and tourism | ✅ | Transport brings visitors, attractions give them room; the smaller of the two visit each month and spend 🪙 2 each (taxable); tourists walk from stops to attractions (`Tourism.ts`) |
 | Events | ✅ | A festival each real season with three goals and an exclusive prize decoration (into storage; taxed at its value as a prize), plus three weekly challenges each Monday, sized to your level; from level 3, in Quests → Events (`eventData.ts`, `TownEvents.ts`) |
+| Factories and products | ✅ | Three factories turn goods into products (preserves, clothes, furniture) in batches; three specialty shops sell them; products share storage; for taxes a product is the goods it was made from (`products.ts`, `ProductionSystem.ts`) |
 | Civic buildings and decorations add to it | ✅ | Neighborhoods and Greenery parts |
 | Minimum rating for some buildings | ✅ | Landmarks |
 | Explained, no hidden penalties | ✅ | Town window: every part, its points and what raises it; nothing but landmarks depends on it |

@@ -33,7 +33,7 @@ export class SaveSystem {
     const report = s.services.report
     return {
       player: { ...s.player.toSave(), level: s.player.level },
-      resources: { coins: city.coins, goods: city.goods ?? 0, debt: city.debt ?? 0 },
+      resources: { coins: city.coins, goods: city.goods ?? 0, debt: city.debt ?? 0, products: city.products },
       population: { current: report.population, capacity: report.capacity },
       land: { parcels: city.lots },
       buildings: { nextId: city.nextId, list: city.buildings },

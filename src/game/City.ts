@@ -18,6 +18,7 @@ import {
 } from './grid'
 import { START_LOTS, START_LOT_VALUE, expansionPrice } from './land'
 import { edgeTiles } from './communityRules'
+import type { ProductId } from './products'
 import { isWater } from './terrain'
 
 // The city's state: coins, which buildings exist and which tiles they cover.
@@ -81,6 +82,7 @@ export interface CitySave {
   coins: number
   goods?: number // missing in saves from before Stage 8
   debt?: number // saved separately since the coins-never-negative rule
+  products?: Partial<Record<ProductId, number>> // missing in saves from before factories
   nextId: number
   buildings: BuildingSave[]
   lots: { x: number; z: number; price: number }[]
@@ -101,6 +103,10 @@ export type CityEvent =
   // Goods bought and delivered (a shipment), and what they cost.
   | { kind: 'goodsIn'; units: number; cost: number }
   | { kind: 'goods'; goods: number }
+  | { kind: 'products'; products: Record<ProductId, number> }
+  // A factory started a batch (its goods went in), or one was collected (products out).
+  | { kind: 'batchStarted'; building: PlacedBuilding }
+  | { kind: 'made'; building: PlacedBuilding; product: ProductId; units: number }
   | { kind: 'cleared'; building: PlacedBuilding; crop: CropType } // a withered crop was cleared away
   | { kind: 'award'; amount: number; reason: string } // prize coins, e.g. a level-up reward
   | { kind: 'expense'; amount: number; reason: string } // a running cost, e.g. utility upkeep
@@ -153,6 +159,15 @@ export class City {
 
   get goods() {
     return this.economy.goods
+  }
+
+  get products() {
+    return this.economy.products
+  }
+
+  // Everything in town storage (goods and products).
+  get inStorage() {
+    return this.economy.stored
   }
 
   get debt() {
@@ -398,6 +413,7 @@ export class City {
       coins: this.economy.coins,
       goods: this.economy.goods,
       debt: this.economy.debt,
+      products: { ...this.economy.products },
       nextId: this.nextId,
       buildings: [
         ...[...this.buildings.values()].map((b) => this.saveBuilding(b, false)),

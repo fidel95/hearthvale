@@ -283,6 +283,18 @@ less." False: only the coins *above* the threshold get the higher rate.
 `taxRules.test.ts` proves it: going from 4,715 to 4,716 taxable coins costs
 exactly 0.22 more.
 
+## 5c. Factories: products are still inventory
+
+**Real rule:** turning raw materials into finished goods doesn't create income
+or a deduction; the materials' cost carries into the products (inventory
+costing, IRC §471 and §263A), and it's deducted as cost of goods sold when
+they're sold.
+
+**In the game:** a factory batch moves goods out of storage and products into
+it, and the tax books don't change: a product counts as the goods it was made
+from (2 goods for preserves, 3 for clothes, 4 for furniture). When a Deli sells
+3 jars, the cost of 6 goods moves to cost of goods sold.
+
 ## 6. Prizes (level-up rewards)
 
 **Real rule:** prizes and awards are taxable income (IRC §74), whether it's a

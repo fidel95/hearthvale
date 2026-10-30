@@ -13,6 +13,7 @@ import { coins, duration, el, percent } from './dom'
 import { isTrack, isPlot } from '../game/buildings'
 import { CUSTOMER_REACH } from '../game/demand'
 import { happinessFactor } from '../game/needs'
+import { PRODUCTS, soldBy } from '../game/products'
 import { Sheet, button } from './Sheet'
 
 // Everything about one building: status, a progress bar for whatever it's
@@ -115,6 +116,7 @@ export class BuildingPanel {
 
     // ---- Goods: the shop's shelves, and the town storage they're filled from.
     if (b.type.goodsPerSale && this.city.isBuilt(b)) {
+      const sold = soldBy(b.type)
       const capacity = this.city.production.stockCapacity(b)
       const track = el('div', 'progress')
       const fill = el('div', 'progress-fill')
@@ -122,10 +124,38 @@ export class BuildingPanel {
       track.append(fill)
       parts.push(
         section(
-          '📦 Stock',
+          `${sold.icon} Stock`,
           track,
-          el('p', '', `${b.stock} of ${capacity} goods on the shelves · ${b.type.goodsPerSale} per sale`),
-          el('p', 'muted', `Town storage: ${this.city.goods} of ${this.city.storageCapacity}. Restocking moves goods onto the shelves.`),
+          el('p', '', `${b.stock} of ${capacity} ${sold.name.toLowerCase()} on the shelves · ${b.type.goodsPerSale} per sale`),
+          el(
+            'p',
+            'muted',
+            b.type.sells
+              ? `In town storage: ${sold.icon} ${this.city.production.supplyFor(b)}. Factories make ${sold.name.toLowerCase()} from goods (${sold.goodsEach} each).`
+              : `Town storage: ${this.city.inStorage} of ${this.city.storageCapacity}. Restocking moves goods onto the shelves.`,
+          ),
+        ),
+      )
+    }
+
+    // ---- Factory: the batch in the works, and what it needs.
+    const f = b.type.factory
+    if (f && this.city.isBuilt(b)) {
+      const product = PRODUCTS[f.product]
+      const state = this.city.production.factoryState(b, Date.now())
+      const status =
+        state === 'done'
+          ? `✅ ${product.icon} ${b.stock} ${product.name.toLowerCase()} ready to collect`
+          : state === 'working'
+            ? `⚙️ Making ${product.icon} ${b.stock} ${product.name.toLowerCase()}, ready in ${duration(b.readyAt - Date.now())}`
+            : `⏸️ Waiting for goods: a batch needs 📦 ${f.input} (storage has ${this.city.goods})`
+      const shops = [...this.city.all()].filter((s) => s.type.sells === f.product).length
+      parts.push(
+        section(
+          '🏭 Production',
+          el('p', '', status),
+          el('p', 'muted', `Each batch: 📦 ${f.input} goods → ${product.icon} ${f.output} ${product.name.toLowerCase()} in ${f.seconds}s. The next batch starts by itself when you collect.`),
+          el('p', shops ? 'muted' : 'warning', shops ? `${shops} shop${shops === 1 ? '' : 's'} in town sell${shops === 1 ? 's' : ''} ${product.name.toLowerCase()}.` : `No shop sells ${product.name.toLowerCase()} yet: build one (Businesses).`),
         ),
       )
     }
@@ -224,7 +254,7 @@ export class BuildingPanel {
     }
     if (b.type.goodsPerSale && this.city.isBuilt(b)) {
       const restock = button('📦 Restock', () => a.restock(b))
-      restock.disabled = b.stock >= this.city.production.stockCapacity(b) || this.city.goods === 0
+      restock.disabled = b.stock >= this.city.production.stockCapacity(b) || this.city.production.supplyFor(b) === 0
       buttons.push(restock)
     }
     const quote = this.upgradeQuote(b)

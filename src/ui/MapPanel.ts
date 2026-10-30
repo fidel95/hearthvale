@@ -25,6 +25,7 @@ const COLORS: Record<string, string> = {
   landmark: '#b06ad0',
   rail: '#7a6a5a',
   air: '#9aa3ad',
+  industry: '#8a6f5a',
 }
 
 export class MapPanel {

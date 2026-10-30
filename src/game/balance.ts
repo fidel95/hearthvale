@@ -1,3 +1,4 @@
+import { soldBy } from './products'
 import { BUILDING_TYPES, type BuildingType, isPlot } from './buildings'
 import { MAX_LOCATION_BONUS, ROAD_BONUS } from './communityRules'
 import { upgradeCost } from './construction'
@@ -74,7 +75,8 @@ export interface BuildingRow {
 
 export function buildingRow(type: BuildingType): BuildingRow {
   const income = type.income
-  const goods = type.goodsPerSale ?? 0
+  // In goods: a product counts as the goods it was made from.
+  const goods = (type.goodsPerSale ?? 0) * soldBy(type).goodsEach
   const net = income ? income.coins - goods * GOOD_COST : null
   const mValue = materialsValue(type.build?.materials)
   const totalCost = type.cost + mValue
@@ -191,6 +193,7 @@ export type Mechanic =
   | 'landmarks'
   | 'railways'
   | 'flights'
+  | 'factories'
 
 // The mechanics a building brings with it.
 export function mechanicsOf(type: BuildingType): Mechanic[] {
@@ -207,6 +210,7 @@ export function mechanicsOf(type: BuildingType): Mechanic[] {
     landmark: 'landmarks',
     rail: 'railways',
     air: 'flights',
+    industry: 'factories',
   }
   return type.build ? [byCategory[type.category], 'construction'] : [byCategory[type.category]]
 }

@@ -1,4 +1,7 @@
 import type { CityEvent } from './City'
+import { PRODUCT_IDS, type ProductId } from './products'
+
+const emptyProducts = () => Object.fromEntries(PRODUCT_IDS.map((id) => [id, 0])) as Record<ProductId, number>
 
 // The town's resources: coins, goods in storage, and debt. Every change to
 // them goes through here, so the rules live in one place:
@@ -8,6 +11,7 @@ import type { CityEvent } from './City'
 // - A bill bigger than the coins on hand takes them all and the rest becomes
 //   debt; income pays debt down before it reaches the coins.
 // - Goods never go below zero, and never above what storage holds.
+// - Products (products.ts) share town storage with goods, a unit each.
 //
 // Changes are announced as City events (coins, debt, goods, award, expense,
 // goodsIn), since they're part of the town's story.
@@ -20,6 +24,7 @@ export class Economy {
   private _coins = STARTING_COINS
   private _goods = STARTING_GOODS
   private _debt = 0
+  private _products: Record<ProductId, number> = emptyProducts()
   private emit: (event: CityEvent) => void
   private capacity: () => number
 
@@ -39,6 +44,19 @@ export class Economy {
 
   get debt() {
     return this._debt
+  }
+
+  product(id: ProductId): number {
+    return this._products[id]
+  }
+
+  get products(): Readonly<Record<ProductId, number>> {
+    return this._products
+  }
+
+  // Everything in town storage: goods and products.
+  get stored(): number {
+    return this._goods + PRODUCT_IDS.reduce((sum, id) => sum + this._products[id], 0)
   }
 
   canAfford(cost: number): boolean {
@@ -96,7 +114,7 @@ export class Economy {
   // Goods bought and delivered. Only what fits in storage is taken (and its
   // cost recorded proportionally). Returns the units taken.
   addGoods(units: number, cost: number): number {
-    const taken = Math.min(units, Math.max(0, this.capacity() - this._goods))
+    const taken = Math.min(units, this.room())
     if (taken <= 0) return 0
     this.emit({ kind: 'goodsIn', units: taken, cost: (cost * taken) / units })
     this.changeGoods(taken)
@@ -105,7 +123,7 @@ export class Economy {
 
   // Free room in storage.
   room(): number {
-    return Math.max(0, this.capacity() - this._goods)
+    return Math.max(0, this.capacity() - this.stored)
   }
 
   // Goods moved in or out without being bought (harvests in, restocking out).
@@ -116,7 +134,17 @@ export class Economy {
     this.emit({ kind: 'goods', goods: this._goods })
   }
 
-  load(save: { coins: number; goods?: number; debt?: number }) {
+  // Products made (into storage) or put on a shop's shelves (out of it).
+  changeProduct(id: ProductId, delta: number) {
+    if (delta === 0) return
+    if (this._products[id] + delta < 0) throw new Error(`Taking ${-delta} ${id} with only ${this._products[id]}`)
+    this._products[id] += delta
+    this.emit({ kind: 'products', products: { ...this._products } })
+  }
+
+  load(save: { coins: number; goods?: number; debt?: number; products?: Partial<Record<ProductId, number>> }) {
+    this._products = { ...emptyProducts(), ...save.products }
+    this.emit({ kind: 'products', products: { ...this._products } })
     // Older saves kept debt as negative coins.
     this._coins = Math.max(0, save.coins)
     this._debt = save.debt ?? Math.max(0, -save.coins)

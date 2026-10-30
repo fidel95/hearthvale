@@ -63,6 +63,7 @@ import { WeatherView } from './WeatherView'
 import { DisasterView } from './DisasterView'
 import { ShipView } from './ShipView'
 import { AutoSaver } from './save'
+import { PRODUCTS } from './products'
 import { UTILITY_INFO } from './utilityRules'
 
 // Admin "max level": the level where the last content unlocks.
@@ -305,6 +306,8 @@ export class Game {
       this.clock.speed = devSpeed() !== 1 ? devSpeed() : (admin?.calendarSpeed ?? 1)
     })
     window.setInterval(() => this.applyPowers(), 500)
+    // Idle factories start a batch as soon as there are goods for one.
+    window.setInterval(() => this.city.production.runFactories(Date.now()), 1000)
     this.setUpJuice()
 
     // Rain: umbrellas up, the beach empties, and a word about it.
@@ -584,7 +587,7 @@ export class Game {
   // Sounds for what happens in the game, and a soft click for buttons.
   private setUpSounds(builder: Builder) {
     this.city.onChange((e) => {
-      if (e.kind === 'collected') this.sound.play('collect')
+      if (e.kind === 'collected' || e.kind === 'made') this.sound.play('collect')
       if (e.kind === 'harvested') this.sound.play('harvest')
       if (e.kind === 'added' && e.paid > 0) this.sound.play('place')
       if (e.kind === 'finished' || e.kind === 'upgraded') this.sound.play('place')
@@ -685,6 +688,10 @@ export class Game {
         case 'harvested':
           if (e.amount > 0) fly(e.building, '🪙', 'coins', 3)
           if (e.goods > 0) fly(e.building, '📦', 'goods', 2)
+          break
+        case 'made':
+          this.cityView.bounce(e.building.id)
+          fly(e.building, PRODUCTS[e.product].icon, 'goods', 3)
           break
       }
     })

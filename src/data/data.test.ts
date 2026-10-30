@@ -7,7 +7,7 @@ import { ACHIEVEMENTS, QUESTS } from '../game/quests'
 // Checks on the data files themselves, so a typo in a catalog or in
 // quests.json fails a test instead of quietly breaking a quest or a model.
 
-const STATS = ['rent', 'sales', 'earned', 'harvests', 'plantings', 'built', 'restocks', 'finished', 'upgrades', 'lots', 'unloads', 'sets', 'returns', 'helps']
+const STATS = ['rent', 'sales', 'earned', 'harvests', 'plantings', 'built', 'restocks', 'finished', 'upgrades', 'lots', 'unloads', 'sets', 'returns', 'helps', 'made']
 const CATEGORIES = new Set(BUILDING_TYPES.map((b) => b.category))
 
 describe('quests.json', () => {

@@ -10,6 +10,7 @@ import { footprintCenter } from './grid'
 import type { Services } from './Services'
 import { isPlot } from './buildings'
 import { repairCost } from './Disasters'
+import { PRODUCTS, soldBy } from './products'
 import { UTILITY_INFO, shortIcons } from './utilityRules'
 
 // Labels floating over buildings: bubbles that say "tap me" (coins to
@@ -138,7 +139,8 @@ export class IncomeView {
     if (b.damaged) return { kind: 'noroad', icon: '🔧' }
     if (b.type.requiresRoad && !this.city.hasRoadAccess(b)) return { kind: 'noroad', icon: '🚧' }
     if (b.type.requiresRail && !this.city.hasRailAccess(b)) return { kind: 'noroad', icon: '🛤️' }
-    if (this.city.production.isReady(b, now)) return this.city.production.hasStock(b) ? { kind: 'coins', icon: '🪙' } : { kind: 'stock', icon: '📦' }
+    if (b.type.factory) return this.city.production.factoryState(b, now) === 'done' ? { kind: 'cargo', icon: PRODUCTS[b.type.factory.product].icon } : null
+    if (this.city.production.isReady(b, now)) return this.city.production.hasStock(b) ? { kind: 'coins', icon: '🪙' } : { kind: 'stock', icon: soldBy(b.type).icon }
     if (b.type.category === 'port') return this.docks.state(b, now).stage === 'arrived' ? { kind: 'cargo', icon: '🚢' } : null
     if (!isPlot(b.type)) return null
     const state = cropState(b.crop, now)
@@ -210,15 +212,24 @@ export class IncomeView {
     const { amenity, supplies, upkeep } = b.type
     if (amenity) return [b.type.name, `+${Math.round(amenity.bonus * 100)}% for homes & shops within ${amenity.radius} tiles · 🪙 ${upkeep}/month`]
     if (supplies) return [b.type.name, `Supplies ${UTILITY_INFO[supplies.utility].icon} ${supplies.amount} · 🪙 ${upkeep}/month`]
+    const f = b.type.factory
+    if (f) {
+      const product = PRODUCTS[f.product]
+      const state = this.city.production.factoryState(b, now)
+      if (state === 'done') return [b.type.name, `Ready! Tap to collect ${product.icon} ${b.stock}`]
+      if (state === 'working') return [b.type.name, `${product.icon} ${b.stock} in ${duration(b.readyAt - now)}`]
+      return [b.type.name, `Waiting for 📦 ${f.input} goods (storage has ${this.city.goods})`]
+    }
     if (!b.type.income) return [b.type.name, '']
     const uses = b.type.goodsPerSale
     if (uses && this.city.production.isReady(b, now) && !this.city.production.hasStock(b)) {
-      return [b.type.name, this.city.goods > 0 ? 'Out of stock: tap to restock' : 'Out of stock, and storage is empty']
+      const sold = soldBy(b.type)
+      return [b.type.name, this.city.production.supplyFor(b) > 0 ? 'Out of stock: tap to restock' : `Out of stock, and storage has no ${sold.name.toLowerCase()}`]
     }
     const status = this.city.production.isReady(b, now)
       ? `Ready! Click to collect 🪙 ${this.city.production.payout(b)}`
       : `🪙 ${this.city.production.payout(b)} in ${duration(b.readyAt - now)}`
-    return [b.type.name, status + (uses ? ` · 📦 ${b.stock}/${this.city.production.stockCapacity(b)}` : '') + this.shortNote(b)]
+    return [b.type.name, status + (uses ? ` · ${soldBy(b.type).icon} ${b.stock}/${this.city.production.stockCapacity(b)}` : '') + this.shortNote(b)]
   }
 
   // " · 📍 +15%" for a good location, " · ⚠️ short on 💧🔌" when utilities cut income.

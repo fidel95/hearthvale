@@ -1,3 +1,4 @@
+import type { ProductId } from './products'
 // The building catalog. Everything the game knows about a kind of building
 // lives here as plain data, so adding a building means adding an entry,
 // not writing new code.
@@ -18,6 +19,7 @@ export type Category =
   | 'landmark'
   | 'rail' // railway track and the train station
   | 'air' // the airport
+  | 'industry' // factories (products.ts)
 
 export type PlaceholderShape =
   | 'house'
@@ -59,6 +61,7 @@ export type PlaceholderShape =
   | 'cart'
   | 'pumpkins'
   | 'fir'
+  | 'factory'
 
 export interface BuildingType {
   id: string
@@ -87,7 +90,10 @@ export interface BuildingType {
   xpReward?: number
   // Shops: goods used up by each sale (they can't sell without them), and how
   // many goods their shelves hold (filled from town storage by restocking).
-  goodsPerSale?: number
+  goodsPerSale?: number // units of what it sells (goods, or its product)
+  sells?: ProductId // a specialty shop: sells this product instead of goods
+  // A factory: each batch takes `input` goods and makes `output` of a product.
+  factory?: { product: ProductId; input: number; output: number; seconds: number }
   stockCapacity?: number
   // Bigger buildings take time to build and need materials to finish
   // (construction.ts). Without this, a building is ready the moment it's placed.
@@ -135,6 +141,99 @@ const suburban = (name: string) => `${import.meta.env.BASE_URL}models/suburban/$
 export const forest = (name: string) => `${import.meta.env.BASE_URL}models/forest/${name}.glb`
 
 export const BUILDING_TYPES: BuildingType[] = [
+  // ---- Industry: factories turn goods into products for specialty shops.
+  {
+    id: 'cannery',
+    name: 'Cannery',
+    category: 'industry',
+    size: { x: 3, z: 2 },
+    cost: 600,
+    unlockLevel: 12,
+    requiresRoad: true,
+    build: { seconds: 90, materials: { bricks: 4, steel: 1 } },
+    factory: { product: 'preserves', input: 10, output: 5, seconds: 60 },
+    needs: { water: 4, power: 4, trash: 3 },
+    placeholder: { shape: 'factory', color: '#d9cbb0', accent: '#c4483a', height: 1.1 },
+  },
+  {
+    id: 'textile-mill',
+    name: 'Textile Mill',
+    category: 'industry',
+    size: { x: 3, z: 3 },
+    cost: 900,
+    unlockLevel: 13,
+    requiresRoad: true,
+    build: { seconds: 150, materials: { bricks: 6, steel: 2, glass: 2 } },
+    factory: { product: 'clothes', input: 15, output: 5, seconds: 90 },
+    needs: { water: 5, power: 6, trash: 3 },
+    placeholder: { shape: 'factory', color: '#c9d6e3', accent: '#5a6fa8', height: 1.3 },
+  },
+  {
+    id: 'furniture-workshop',
+    name: 'Furniture Workshop',
+    category: 'industry',
+    size: { x: 3, z: 2 },
+    cost: 1100,
+    unlockLevel: 16,
+    requiresRoad: true,
+    build: { seconds: 180, materials: { lumber: 8, steel: 2 } },
+    factory: { product: 'furniture', input: 20, output: 5, seconds: 120 },
+    needs: { water: 2, power: 6, trash: 4 },
+    placeholder: { shape: 'factory', color: '#d8b98c', accent: '#7a5233', height: 1.1 },
+  },
+  // ---- Specialty shops: they sell a factory's product, and earn more for it.
+  {
+    id: 'deli',
+    name: 'Deli',
+    category: 'business',
+    size: { x: 2, z: 2 },
+    cost: 520,
+    unlockLevel: 12,
+    requiresRoad: true,
+    build: { seconds: 60, materials: { bricks: 2, glass: 2 } },
+    income: { coins: 80, seconds: 60 },
+    goodsPerSale: 3,
+    sells: 'preserves',
+    stockCapacity: 24,
+    needs: { water: 2, power: 3, trash: 2 },
+    customers: 8,
+    placeholder: { shape: 'shop', color: '#f6e7c8', accent: '#3f8f3a', height: 1 },
+  },
+  {
+    id: 'clothing-store',
+    name: 'Clothing Store',
+    category: 'business',
+    size: { x: 2, z: 2 },
+    cost: 800,
+    unlockLevel: 13,
+    requiresRoad: true,
+    build: { seconds: 120, materials: { glass: 4, bricks: 2 } },
+    income: { coins: 135, seconds: 90 },
+    goodsPerSale: 3,
+    sells: 'clothes',
+    stockCapacity: 24,
+    needs: { water: 1, power: 4, trash: 2 },
+    customers: 10,
+    placeholder: { shape: 'shop', color: '#efe1f5', accent: '#8e44ad', height: 1.1 },
+  },
+  {
+    id: 'furniture-store',
+    name: 'Furniture Store',
+    category: 'business',
+    size: { x: 3, z: 2 },
+    cost: 1000,
+    unlockLevel: 16,
+    requiresRoad: true,
+    build: { seconds: 150, materials: { lumber: 4, glass: 4 } },
+    income: { coins: 165, seconds: 120 },
+    goodsPerSale: 2,
+    sells: 'furniture',
+    stockCapacity: 16,
+    needs: { water: 1, power: 3, trash: 3 },
+    customers: 12,
+    placeholder: { shape: 'shop', color: '#f3e3cf', accent: '#8a5a36', height: 1.1 },
+  },
+
   {
     id: 'cottage',
     name: 'Cottage',

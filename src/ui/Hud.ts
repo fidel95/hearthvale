@@ -4,6 +4,7 @@ import { MONTH_NAMES, type GameClock } from '../game/GameClock'
 import type { Player } from '../game/Player'
 import type { Services } from '../game/Services'
 import { shortIcons } from '../game/utilityRules'
+import { PRODUCTS, PRODUCT_IDS } from '../game/products'
 import { duration, el } from './dom'
 
 // The HUD is built around the city: a slim bar of stats along the top, a
@@ -187,9 +188,12 @@ export class Hud {
       this.coins.button.classList.toggle('bad', city.debt > 0)
     }
     const showGoods = () => {
-      this.goods.value.textContent = city.goods.toLocaleString()
+      // Everything in storage: goods, and products when there are any.
+      this.goods.value.textContent = city.inStorage.toLocaleString()
       this.goods.extra.textContent = `/${city.storageCapacity}`
-      this.goods.button.classList.toggle('bad', city.goods >= city.storageCapacity)
+      this.goods.button.classList.toggle('bad', city.inStorage >= city.storageCapacity)
+      const made = PRODUCT_IDS.filter((id) => city.products[id] > 0).map((id) => `${PRODUCTS[id].icon} ${city.products[id]}`)
+      this.goods.button.title = `📦 ${city.goods} goods${made.length ? ` · ${made.join(' · ')}` : ''} · room for ${city.storageCapacity}`
     }
     const showPeople = () => {
       const r = services.report
@@ -214,7 +218,7 @@ export class Hud {
         void this.coins.button.offsetWidth // force the browser to notice, so the animation restarts
         this.coins.button.classList.add('bump')
       }
-      if (e.kind === 'goods' || e.kind === 'added' || e.kind === 'removed') showGoods()
+      if (e.kind === 'goods' || e.kind === 'products' || e.kind === 'added' || e.kind === 'removed') showGoods()
     })
     services.onChange(showPeople)
     player.onChange(showLevel)

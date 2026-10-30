@@ -68,9 +68,16 @@ describe('3. one new mechanic per level', () => {
 })
 
 describe('4. bigger buildings are meaningful goals', () => {
-  for (const category of ['home', 'business']) {
+  // Shops selling goods and specialty shops (selling a factory's product) are separate kinds.
+  const specialty = new Set(BUILDING_TYPES.filter((t) => t.sells).map((t) => t.id))
+  const kinds: [string, (r: (typeof earners)[number]) => boolean][] = [
+    ['home', (r) => r.category === 'home'],
+    ['business', (r) => r.category === 'business' && !specialty.has(r.id)],
+    ['specialty shop', (r) => specialty.has(r.id)],
+  ]
+  for (const [category, isKind] of kinds) {
     it(`${category}s unlocked later cost more and pay more per collection`, () => {
-      const rows = earners.filter((r) => r.category === category).sort((a, b) => a.unlockLevel - b.unlockLevel)
+      const rows = earners.filter(isKind).sort((a, b) => a.unlockLevel - b.unlockLevel)
       for (let i = 1; i < rows.length; i++) {
         expect(rows[i].totalCost, rows[i].name).toBeGreaterThan(rows[i - 1].totalCost)
         expect(rows[i].coinsPerCycle!, rows[i].name).toBeGreaterThan(rows[i - 1].coinsPerCycle!)

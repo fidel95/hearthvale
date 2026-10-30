@@ -10,6 +10,7 @@ import type { Docks } from './Docks'
 import { footprintCenter, footprintTiles, lotOf, worldToTile, type Lot, type Tile } from './grid'
 import { createBuildingObject } from './models'
 import type { PlacementSystem, Spot } from './PlacementSystem'
+import { PRODUCTS, soldBy } from './products'
 import type { Player } from './Player'
 
 // What a click on the map currently does.
@@ -288,7 +289,8 @@ export class Builder {
     if (b.damaged) return true
     if (b.construction) return this.city.production.constructionDone(b, now)
     if (b.type.requiresRoad && !this.city.hasRoadAccess(b)) return false
-    if (b.type.goodsPerSale && this.city.production.isReady(b, now) && !this.city.production.hasStock(b)) return this.city.goods > 0
+    if (b.type.factory) return this.city.production.factoryState(b, now) === 'done'
+    if (b.type.goodsPerSale && this.city.production.isReady(b, now) && !this.city.production.hasStock(b)) return this.city.production.supplyFor(b) > 0
     if (isPlot(b.type)) return cropState(b.crop, now).stage !== 'growing'
     if (b.type.category === 'port') return this.docks.state(b, now).stage !== 'sailing'
     return this.city.production.isReady(b, now) && this.city.production.hasStock(b)
@@ -326,12 +328,26 @@ export class Builder {
       else if (!outOfEnergy() && this.docks.unload(building, now) === 0) this.onNotice?.('Storage is full. Sell goods at your shops, or build a Barn or Warehouse.')
       return
     }
+    const f = building.type.factory
+    if (f) {
+      const state = this.city.production.factoryState(building, now)
+      const product = PRODUCTS[f.product]
+      if (state === 'working') this.onNotice?.(`🏭 ${product.icon} ${building.stock} ${product.name.toLowerCase()} ready in ${duration(building.readyAt - now)}`)
+      else if (state === 'idle') this.onNotice?.(`🏭 ${building.type.name} needs 📦 ${f.input} goods to start a batch (storage has ${this.city.goods}). Harvest crops, or order a shipment.`)
+      else if (!outOfEnergy() && this.city.production.collectBatch(building.id, now) === 0) this.onNotice?.('Storage is full. Sell products at your shops, or build a Barn or Warehouse.')
+      return
+    }
     if (!isPlot(building.type)) {
       if (!this.city.production.isReady(building, now)) return
       if (!this.city.production.hasStock(building)) {
         // Out of stock: fill the shelves from town storage, if there's anything there.
         if (this.city.production.restock(building.id) === 0) {
-          this.onNotice?.(`${building.type.name} needs goods to sell, and storage is empty. Harvest crops, or order a shipment at a Dock.`)
+          const sold = soldBy(building.type)
+          this.onNotice?.(
+            building.type.sells
+              ? `${building.type.name} sells ${sold.icon} ${sold.name.toLowerCase()}, and storage has none. Make them at a factory (${sold.goodsEach} goods each).`
+              : `${building.type.name} needs goods to sell, and storage is empty. Harvest crops, or order a shipment at a Dock.`,
+          )
         }
         return
       }

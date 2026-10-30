@@ -4,6 +4,7 @@ import type { Inventory } from '../game/Inventory'
 import { MATERIALS, MATERIAL_IDS } from '../game/items'
 import { coins, el } from './dom'
 import { Sheet, button } from './Sheet'
+import { PRODUCTS, PRODUCT_IDS, soldBy } from '../game/products'
 import { thumbnail } from './thumbnails'
 
 // The Inventory: buildings you've put away, construction materials (with a
@@ -105,13 +106,22 @@ export class InventoryPanel {
       case 'Goods': {
         const shops = [...this.city.all()].filter((b) => b.type.goodsPerSale && this.city.isBuilt(b))
         parts.push(
-          el('p', 'detail-status', `📦 ${this.city.goods} of ${this.city.storageCapacity} goods in storage`),
-          el('p', 'muted', 'Harvests go into storage once you have a shop; ships bring more. Shops sell from their own shelves, restocked from here.'),
+          el('p', 'detail-status', `📦 ${this.city.inStorage} of ${this.city.storageCapacity} in storage`),
+          el('p', 'muted', 'Harvests go into storage once you have a shop or a factory; ships bring more. Factories turn goods into products. Shops sell from their own shelves, restocked from here.'),
         )
+        const stock = el('div', 'item-list')
+        const kinds = [{ icon: '📦', name: 'Goods', count: this.city.goods }, ...PRODUCT_IDS.map((id) => ({ ...PRODUCTS[id], count: this.city.products[id] }))]
+        for (const k of kinds) {
+          if (k.name !== 'Goods' && k.count === 0) continue
+          const row = el('div', 'item-row')
+          row.append(el('span', 'item-icon', k.icon), el('span', 'item-name', k.name), el('span', 'item-count', `× ${k.count}`))
+          stock.append(row)
+        }
+        parts.push(stock)
         const list = el('div', 'item-list')
         for (const shop of shops) {
           const row = el('div', 'item-row')
-          row.append(el('span', 'item-icon', '🏪'), el('span', 'item-name', shop.type.name), el('span', 'item-count', `${shop.stock}/${this.city.production.stockCapacity(shop)} on shelves`))
+          row.append(el('span', 'item-icon', soldBy(shop.type).icon), el('span', 'item-name', shop.type.name), el('span', 'item-count', `${shop.stock}/${this.city.production.stockCapacity(shop)} on shelves`))
           list.append(row)
         }
         parts.push(list)

@@ -76,6 +76,10 @@ export class Player {
         case 'upgraded':
           this.addXp(buildXp(event.cost), now, event.building)
           break
+        case 'made': // collecting a factory batch
+          this.spendEnergy(now)
+          this.addXp(Math.max(2, event.units), now, event.building)
+          break
         case 'goodsIn': // unloading a ship
           this.spendEnergy(now)
           this.addXp(Math.max(1, Math.floor(event.units / 20)), now)

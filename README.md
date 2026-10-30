@@ -127,6 +127,7 @@ the right on a wide screen) so the town stays in view.
 - **Parks, beaches and the slopes:** Playground, Sports Field and Central Park lift nearby homes and draw visitors; a Public Beach on the shore fills with sunbathers and swimmers; the Ski Resort (level 13) sells lift tickets while skiers zigzag down and ride the chairlift up. Snowy mountains rise behind the town.
 - **Happy homes:** homes want a shop and green space nearby (family homes a school too); each need met lifts their rent, up to +15%. The Town window lists what residents want, with a button to build it.
 - **Tourism:** bus stops, the dock, the train station and the airport bring visitors; parks, the beach, the ski resort and landmarks give them room. Each visitor spends 🪙 2 a month, and you can spot them walking about in sun hats and backpacks.
+- **Factories and products:** a Cannery, Textile Mill and Furniture Workshop turn goods into 🫙 preserves, 👕 clothes and 🪑 furniture, which a Deli, Clothing Store and Furniture Store sell for more: farm → goods → factory → product → shop.
 - **Events:** a festival each real season (Blossom Festival, Summer Fair, Harvest Fair, Winter Lights) with three goals and a prize decoration you can only win there, plus three weekly challenges every Monday. All on the device's own calendar, so it works offline.
 - **Shops need customers, crops have seasons:** a shop sells at full speed with enough residents within 8 tiles (down to 60% without); each crop gives +25% in its season. Tap an empty tile for 🔨 Build here; while drawing roads, each network shows in its own color. Settings has an Interface size slider.
 - **Feels alive:** coins, stars and goods fly from buildings to the top bar when you collect, and buildings bounce; dust and sparkles when you build, confetti when construction finishes, fireworks when you level up; cranes on building sites, chimney smoke, swaying trees, birds and drifting cloud shadows; the map glides after a flick. Reduce motion turns it all off.
@@ -218,6 +219,7 @@ src/
     needs.ts              what homes want nearby, their happiness, and its rent bonus
     Tourism.ts            visitors: arrivals (transport) vs. room (attractions), and their monthly spending
     eventData.ts          festivals (one per real season), weekly challenges, and their rewards
+    products.ts           what factories make, and what each specialty shop sells
     TownEvents.ts         progress and claims for the festival that's on and this week's challenges
     seasons.ts            the seasons, and crops' in-season bonus
     RailView.ts           draws railway track the same way

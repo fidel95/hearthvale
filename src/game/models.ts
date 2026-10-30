@@ -625,6 +625,20 @@ function createPlaceholder(type: BuildingType): THREE.Group {
       for (const [x, z] of [[-1, 1], [1, 1]]) add(new THREE.IcosahedronGeometry(0.35, 0), '#3f8f3a', x * w * 0.3, 0.05, z * d * 0.3)
       break
     }
+    case 'factory': {
+      // A brick hall with a sawtooth roof, a chimney, and loading doors.
+      add(new THREE.BoxGeometry(w * 0.88, height * 0.6, d * 0.8), color, 0, 0, 0)
+      const teeth = Math.max(2, Math.round(w * 1.2))
+      for (let i = 0; i < teeth; i++) {
+        const x = -w * 0.44 + (i + 0.5) * ((w * 0.88) / teeth)
+        const tooth = new THREE.CylinderGeometry(0.01, (w * 0.88) / teeth / Math.SQRT2, d * 0.8, 3, 1).rotateX(Math.PI / 2).rotateZ(Math.PI / 6)
+        add(tooth, accent, x, height * 0.6, 0)
+      }
+      add(new THREE.CylinderGeometry(0.12, 0.16, height * 0.9, 10), '#8a4a3a', w * 0.3, height * 0.6, -d * 0.25)
+      add(new THREE.CylinderGeometry(0.17, 0.17, 0.08, 10), '#5a3a30', w * 0.3, height * 1.5, -d * 0.25)
+      for (const x of [-0.35, 0.35]) add(new THREE.BoxGeometry(0.4, height * 0.4, 0.04), '#6b6f78', x * w * 0.6, 0, d * 0.4)
+      break
+    }
     case 'arch': {
       // Two white posts and a curved arch, covered in blossom.
       for (const x of [-0.7, 0.7]) add(new THREE.BoxGeometry(0.12, height * 0.7, 0.12), color, x, 0, 0)

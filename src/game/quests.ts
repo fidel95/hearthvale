@@ -35,6 +35,7 @@ export type StatId =
   | 'sets' // collections handed in
   | 'returns' // tax returns filed
   | 'helps' // times you helped a neighbor
+  | 'made' // products made in factories
 
 export interface World {
   city: City
@@ -160,6 +161,9 @@ export class Quests {
           break
         case 'land':
           if (e.bought) this.bump('lots')
+          break
+        case 'made':
+          this.bump('made', e.units)
           break
         case 'goodsIn':
           this.bump('unloads')

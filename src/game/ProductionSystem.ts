@@ -4,9 +4,11 @@ import { cropState, type CropType } from './crops'
 import { isPlot } from './buildings'
 import { seasonBonus } from './seasons'
 import type { Economy } from './Economy'
+import { soldBy } from './products'
 
 // Everything buildings produce over time: collecting income, planting and
-// harvesting crops, restocking shops, finishing construction and upgrading.
+// harvesting crops, restocking shops, running factories, finishing
+// construction and upgrading.
 // Production runs on timestamps (readyAt, plantedAt, construction.endsAt),
 // so nothing ticks: each action checks the time it's given.
 // (What state a building is in, for the interface, is production.ts.)
@@ -62,7 +64,8 @@ export class ProductionSystem {
     if (!this.city.isOperating(building)) return 0 // e.g. a shop with no road
 
     const amount = this.payout(building)
-    const goodsUsed = building.type.goodsPerSale ?? 0
+    // For the tax books, in goods: a product counts as the goods it was made from.
+    const goodsUsed = (building.type.goodsPerSale ?? 0) * soldBy(building.type).goodsEach
     // The next timer starts when you collect, not when it became ready,
     // so leaving money uncollected doesn't stack up extra payouts.
     building.readyAt = now + building.type.income.seconds * 1000
@@ -73,16 +76,65 @@ export class ProductionSystem {
     return amount
   }
 
+  // What's in town storage for this shop to sell: goods, or its product.
+  supplyFor(b: PlacedBuilding): number {
+    return b.type.sells ? this.economy.product(b.type.sells) : this.economy.goods
+  }
+
   // Fill a shop's shelves from town storage, as far as both allow. Returns the units moved.
   restock(id: number): number {
     const b = this.city.get(id)
     if (!b || !b.type.goodsPerSale || !this.city.isBuilt(b)) return 0
-    const units = Math.min(this.stockCapacity(b) - b.stock, this.economy.goods)
+    const units = Math.min(this.stockCapacity(b) - b.stock, this.supplyFor(b))
     if (units <= 0) return 0
     b.stock += units
     this.emit({ kind: 'restocked', building: b, units })
-    this.economy.changeGoods(-units)
+    if (b.type.sells) this.economy.changeProduct(b.type.sells, -units)
+    else this.economy.changeGoods(-units)
     return units
+  }
+
+  // ---- Factories. A batch takes its goods when it starts (they're in the
+  // works, kept in building.stock as the units being made) and its products
+  // go into storage when it's collected; then the next batch starts.
+
+  factoryState(b: PlacedBuilding, now: number): 'idle' | 'working' | 'done' {
+    if (!b.type.factory || b.stock <= 0) return 'idle'
+    return now >= b.readyAt ? 'done' : 'working'
+  }
+
+  // Start a batch if the factory is idle, working (built, with a road and
+  // utilities), and storage has the goods. Returns whether it started.
+  startBatch(id: number, now: number): boolean {
+    const b = this.city.get(id)
+    const f = b?.type.factory
+    if (!b || !f || b.stock > 0 || !this.city.isOperating(b)) return false
+    if (this.economy.goods < f.input) return false
+    b.stock = f.output
+    b.readyAt = now + f.seconds * 1000
+    this.emit({ kind: 'batchStarted', building: b })
+    this.economy.changeGoods(-f.input)
+    return true
+  }
+
+  // Collect a finished batch into storage (if there's room), and start the
+  // next. Returns the units made (0 if not ready or no room).
+  collectBatch(id: number, now: number): number {
+    const b = this.city.get(id)
+    const f = b?.type.factory
+    if (!b || !f || this.factoryState(b, now) !== 'done' || this.economy.room() < b.stock) return 0
+    const units = b.stock
+    b.stock = 0
+    this.emit({ kind: 'made', building: b, product: f.product, units })
+    this.economy.changeProduct(f.product, units)
+    this.startBatch(id, now)
+    return units
+  }
+
+  // Start every idle factory that can (Game calls this now and then, so
+  // factories pick up goods as they arrive).
+  runFactories(now: number) {
+    for (const b of this.city.all()) if (b.type.factory && b.stock === 0) this.startBatch(b.id, now)
   }
 
   // Plant a crop on an empty farm plot, paying for the seeds.
@@ -112,7 +164,8 @@ export class ProductionSystem {
     plot.crop = null
     // Less without enough water; more in season.
     const goods = Math.round(state.crop.goods * this.city.incomeMultiplier(plot) * (1 + seasonBonus(state.crop, this.month())))
-    const hasShops = [...this.city.all()].some((b) => b.type.goodsPerSale && this.city.isBuilt(b))
+    // Goods are kept if anything uses them: a shop selling goods, or a factory.
+    const hasShops = [...this.city.all()].some((b) => ((b.type.goodsPerSale && !b.type.sells) || b.type.factory) && this.city.isBuilt(b))
     const stored = Math.min(goods, hasShops ? this.economy.room() : 0)
     const amount = goods > 0 ? Math.round((this.harvestValue(plot, state.crop) * (goods - stored)) / goods) : 0
     this.emit({ kind: 'harvested', building: plot, crop: state.crop, goods: stored, amount })

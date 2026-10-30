@@ -29,6 +29,7 @@ function check(state: GameState, where: string) {
   if (!(city.coins >= 0) || !Number.isFinite(city.coins)) fail(`coins ${city.coins}`)
   if (!(city.debt >= 0) || !Number.isFinite(city.debt)) fail(`debt ${city.debt}`)
   if (!(city.goods >= 0) || !Number.isFinite(city.goods)) fail(`goods ${city.goods}`)
+  for (const [id, n] of Object.entries(city.products)) if (!(n >= 0) || !Number.isInteger(n)) fail(`${id} ${n}`)
   if (!Number.isFinite(player.xp) || player.xp < 0) fail(`xp ${player.xp}`)
   for (const id of MATERIAL_IDS) if (!(state.inventory.count(id) >= 0)) fail(`${id} ${state.inventory.count(id)}`)
   // The map: every tile of every building says it's that building, and no
@@ -102,6 +103,8 @@ describe('Simulation: random play keeps the game consistent', () => {
             } else {
               state.city.production.restock(b.id)
               state.city.production.collect(b.id, now)
+              state.city.production.runFactories(now)
+              state.city.production.collectBatch(b.id, now)
             }
           } else if (roll < 0.42 && b) {
             finishConstruction(state.city, state.inventory, b, now)

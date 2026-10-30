@@ -13,6 +13,7 @@ import type { Settings } from './settings'
 import type { TaxesSave } from './Taxes'
 import type { ArmySave } from './Army'
 import type { TownEventsSave } from './TownEvents'
+import type { ProductId } from './products'
 import { TUTORIAL, type TutorialSave } from './tutorial'
 
 // Saving to the browser's localStorage. Everything stays on this device;
@@ -30,7 +31,7 @@ export interface SaveData {
   version: number
   savedAt: number // Date.now() when written
   player: PlayerSave & { level: number } // level is worked out from XP; saved for readability
-  resources: { coins: number; goods: number; debt?: number }
+  resources: { coins: number; goods: number; debt?: number; products?: Partial<Record<ProductId, number>> }
   // Worked out from the buildings on load; saved so the file reads on its own.
   population: { current: number; capacity: number }
   land: { parcels: CitySave['lots'] }
@@ -54,6 +55,7 @@ export function citySave(save: SaveData): CitySave {
     coins: save.resources.coins,
     goods: save.resources.goods,
     debt: save.resources.debt,
+    products: save.resources.products,
     nextId: save.buildings.nextId,
     buildings: save.buildings.list,
     lots: save.land.parcels,

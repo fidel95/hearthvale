@@ -404,6 +404,38 @@
       }
     },
     {
+      "id": "factory",
+      "title": "Made in Hearthvale",
+      "intro": "Factories turn goods into products that specialty shops sell for more. Keep the Cannery fed with goods from your farms or the docks, collect its preserves, and stock a Deli with them.",
+      "after": "tycoon",
+      "level": 12,
+      "tasks": [
+        {
+          "label": "Build a Cannery",
+          "count": 1,
+          "have": {
+            "building": "cannery"
+          }
+        },
+        {
+          "label": "Make products",
+          "count": 10,
+          "stat": "made"
+        },
+        {
+          "label": "Build a Deli",
+          "count": 1,
+          "have": {
+            "building": "deli"
+          }
+        }
+      ],
+      "reward": {
+        "coins": 1200,
+        "xp": 70
+      }
+    },
+    {
       "id": "buses",
       "title": "All Aboard the Bus",
       "intro": "Bus stops make the neighborhoods around them nicer, and buses run between them. Put a few near homes and shops, beside a road.",
