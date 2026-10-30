@@ -55,6 +55,10 @@ export type PlaceholderShape =
   | 'bigpark'
   | 'skiresort'
   | 'pen'
+  | 'arch'
+  | 'cart'
+  | 'pumpkins'
+  | 'fir'
 
 export interface BuildingType {
   id: string
@@ -116,6 +120,8 @@ export interface BuildingType {
   onShore?: boolean
   // Depreciation period in years, when it differs from its category's (taxRules.ts).
   recoveryYears?: number
+  // A festival prize (eventData.ts): never sold in the build menu; says where it was won.
+  prize?: string
   // How to draw it when there's no model (or the model fails to load).
   placeholder: { shape: PlaceholderShape; color: string; accent: string; height: number }
   // URL of a .glb model, e.g. suburban('building-type-a'). Optional: without it we draw the placeholder.
@@ -931,7 +937,31 @@ export const BUILDING_TYPES: BuildingType[] = [
   },
 ]
 
-export const BUILDINGS_BY_ID = new Map(BUILDING_TYPES.map((b) => [b.id, b]))
+// Festival prizes (eventData.ts): decorations you can only win, one per
+// season. Not in BUILDING_TYPES, so the build menu never sells them; their
+// cost is what they're worth (taxable as a prize, and their value for
+// depreciation). They brighten the neighborhood and draw a few visitors.
+const prize = (id: string, name: string, festival: string, size: { x: number; z: number }, placeholder: BuildingType['placeholder']): BuildingType => ({
+  id,
+  name,
+  category: 'decoration',
+  size,
+  cost: 300,
+  unlockLevel: 1,
+  amenity: { bonus: 0.06, radius: 2 },
+  visitors: 5,
+  prize: festival,
+  placeholder,
+})
+
+export const PRIZE_TYPES: BuildingType[] = [
+  prize('blossom-arch', 'Blossom Arch', 'Blossom Festival', { x: 2, z: 1 }, { shape: 'arch', color: '#f4efe6', accent: '#f28cb1', height: 1.1 }),
+  prize('ice-cream-cart', 'Ice Cream Cart', 'Summer Fair', { x: 1, z: 1 }, { shape: 'cart', color: '#7fd1e8', accent: '#f6a6c1', height: 0.8 }),
+  prize('pumpkin-patch', 'Pumpkin Patch', 'Harvest Fair', { x: 2, z: 1 }, { shape: 'pumpkins', color: '#7a5233', accent: '#f08a24', height: 0.8 }),
+  prize('festive-fir', 'Festive Fir', 'Winter Lights', { x: 1, z: 1 }, { shape: 'fir', color: '#2e7d4f', accent: '#ffd23f', height: 1.5 }),
+]
+
+export const BUILDINGS_BY_ID = new Map([...BUILDING_TYPES, ...PRIZE_TYPES].map((b) => [b.id, b]))
 
 // A crop plot: a farm building with no animals (animal pens are farm
 // buildings too, but earn like homes and shops instead of growing crops).

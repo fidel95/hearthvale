@@ -1872,3 +1872,26 @@ button {
   flex: none;
   padding: 4px 12px;
 }
+
+/* Quests → Events: the festival's prize. */
+.event-prize {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.event-prize .build-thumb {
+  width: 64px;
+  height: 64px;
+  flex: none;
+}
+
+.event-prize p {
+  margin: 2px 0 0;
+}
+
+.event-claimed {
+  margin: 2px 0 6px;
+  font-size: 13px;
+}

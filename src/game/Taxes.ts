@@ -140,6 +140,13 @@ export class Taxes {
             placedMonth: this.clock.monthIndex,
           })
           break
+        // A prize is taxable at what it's worth (IRC §74), and that value is
+        // also its cost basis for depreciation once it's in use.
+        case 'gifted':
+          this.assets.set(event.building.id, { basis: event.value, depreciated: 0, placedMonth: this.clock.monthIndex })
+          this.ledger.otherIncome += event.value
+          this.emit({ kind: 'changed' })
+          break
         case 'removed':
           // No deduction for demolishing: in the US (IRC §280B) the leftover
           // cost of a demolished building is added to the land's cost instead,

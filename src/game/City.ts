@@ -116,6 +116,8 @@ export type CityEvent =
   // Taken off the map into the inventory, and put back.
   | { kind: 'stored'; building: PlacedBuilding }
   | { kind: 'restored'; building: PlacedBuilding }
+  // Won (a festival prize): it arrives in storage; value is what it's worth.
+  | { kind: 'gifted'; building: PlacedBuilding; value: number }
   // A disaster damaged it, or it was repaired (Disasters.ts).
   | { kind: 'damaged'; building: PlacedBuilding; cause: string }
   | { kind: 'repaired'; building: PlacedBuilding; cost: number }
@@ -346,6 +348,26 @@ export class City {
     this.stored.set(id, b)
     this.emit({ kind: 'stored', building: b })
     return true
+  }
+
+  // A building that arrives in storage, ready to place: a prize.
+  gift(type: BuildingType, value = type.cost): PlacedBuilding {
+    const building: PlacedBuilding = {
+      id: this.nextId++,
+      type,
+      tile: { x: 0, z: 0 },
+      rotation: 0,
+      readyAt: 0,
+      lastCollectedAt: null,
+      crop: null,
+      level: 1,
+      stock: 0,
+      construction: null,
+      damaged: false,
+    }
+    this.stored.set(building.id, building)
+    this.emit({ kind: 'gifted', building, value })
+    return building
   }
 
   // Put a stored building back on the map, free.

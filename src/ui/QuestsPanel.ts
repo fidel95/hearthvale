@@ -1,4 +1,8 @@
+import { BUILDINGS_BY_ID } from '../game/buildings'
+import { EVENTS_UNLOCK_LEVEL, weekBonus, type Goal } from '../game/eventData'
 import { materialsText } from '../game/items'
+import type { TownEvents, Which } from '../game/TownEvents'
+import { thumbnail } from './thumbnails'
 import type { Player } from '../game/Player'
 import { unlocksAt, xpForLevel } from '../game/progression'
 import { ACHIEVEMENTS, ACHIEVEMENT_XP, type Quests, type Reward } from '../game/quests'
@@ -9,10 +13,10 @@ import { Sheet, button } from './Sheet'
 // what's coming next), your level and what the next levels unlock,
 // achievements, and quests you've finished.
 
-const TABS = ['Quests', 'Progress', 'Achievements', 'Done'] as const
+const TABS = ['Quests', 'Events', 'Progress', 'Achievements', 'Done'] as const
 type Tab = (typeof TABS)[number]
 
-function rewardText(r: Reward): string {
+function rewardText(r: { coins?: number; xp?: number; materials?: Reward['materials'] }): string {
   return [r.coins ? coins(r.coins) : '', r.xp ? `⭐ ${r.xp}` : '', r.materials ? materialsText(r.materials) : ''].filter(Boolean).join(' · ')
 }
 
@@ -31,10 +35,13 @@ export class QuestsPanel {
   private tab: Tab = 'Quests'
   private quests: Quests
   private player: Player
+  private events: TownEvents
 
-  constructor(container: HTMLElement, quests: Quests, player: Player) {
+  constructor(container: HTMLElement, quests: Quests, player: Player, events: TownEvents) {
     this.quests = quests
     this.player = player
+    this.events = events
+    events.onChange(() => this.sheet.isOpen && this.render())
     this.sheet = new Sheet(container, '📜 Quests')
     for (const tab of TABS) {
       const b = el('button', 'catalog-tab', tab)
@@ -85,6 +92,9 @@ export class QuestsPanel {
         if (this.quests.activeQuests().length === 0 && next.length === 0) parts.push(el('p', 'muted', 'Every quest is done. Well played!'))
         break
       }
+      case 'Events':
+        parts.push(...this.renderEvents())
+        break
       case 'Progress': {
         const level = this.player.level
         const from = xpForLevel(level)
@@ -131,4 +141,64 @@ export class QuestsPanel {
     }
     this.content.replaceChildren(...parts)
   }
+
+  // This season's festival and this week's challenges.
+  private renderEvents(): HTMLElement[] {
+    if (!this.events.unlocked) return [el('p', 'muted', `Festivals and weekly challenges start at level ${EVENTS_UNLOCK_LEVEL}.`)]
+    const parts: HTMLElement[] = []
+    const goals = (which: Which, list: Goal[], claimed: number[], card: HTMLElement) => {
+      const reward = this.events.rewardFor(which)
+      list.forEach((g, i) => {
+        const p = this.events.progress(which, i)
+        const done = p >= g.count
+        const row = el('div', 'quest-task')
+        row.append(el('span', done ? 'done' : '', `${done ? '✅' : '◻️'} ${g.label}`), el('span', 'muted', `${p.toLocaleString()}/${g.count.toLocaleString()}`))
+        card.append(row, bar(p / g.count))
+        if (claimed.includes(i)) card.append(el('p', 'muted event-claimed', 'Claimed ✓'))
+        else if (done) card.append(button(`Claim ${rewardText(reward)}`, () => this.events.claim(which, i)))
+      })
+    }
+
+    const fest = this.events.festival()
+    if (fest) {
+      const { festival, period, endsAt } = fest
+      const prize = BUILDINGS_BY_ID.get(festival.prize)!
+      const card = el('section', 'quest event-card')
+      card.append(el('strong', '', `${festival.icon} ${festival.name}`), el('p', 'muted', `${festival.intro} ${timeLeft(endsAt)}.`))
+      goals('festival', period.goals, period.claimed, card)
+      const prizeRow = el('div', 'event-prize')
+      const img = el('img', 'build-thumb')
+      img.alt = ''
+      thumbnail(prize).then((url) => (img.src = url))
+      const text = el('div', '')
+      text.append(
+        el('strong', '', `🏆 Prize: ${prize.name}`),
+        el('p', 'muted', period.bonus ? 'Won! Find it in your Inventory.' : 'Claim every goal to win it: only at this festival. It brightens the neighborhood and draws visitors.'),
+      )
+      prizeRow.append(img, text)
+      card.append(prizeRow)
+      if (this.events.bonusReady('festival')) card.append(button(`🏆 Claim the ${prize.name}`, () => this.events.claimBonus('festival')))
+      parts.push(card)
+    }
+
+    const week = this.events.week()
+    if (week) {
+      const card = el('section', 'quest event-card')
+      card.append(el('strong', '', '📅 Weekly challenges'), el('p', 'muted', `New ones every Monday. ${timeLeft(week.endsAt)}.`))
+      goals('week', week.period.goals, week.period.claimed, card)
+      const bonus = weekBonus(this.player.level)
+      if (this.events.bonusReady('week')) card.append(button(`All three done! Claim ${rewardText(bonus)} · ⚡ ${bonus.energy}`, () => this.events.claimBonus('week')))
+      else card.append(el('p', 'muted', week.period.bonus ? 'All three done this week ✓' : `Finish all three for a bonus: ${rewardText(bonus)} · ⚡ ${bonus.energy}`))
+      parts.push(card)
+    }
+    return parts
+  }
+}
+
+// "3 days left", "5 hours left".
+function timeLeft(endsAt: number): string {
+  const hours = Math.max(0, (endsAt - Date.now()) / 3_600_000)
+  if (hours >= 48) return `${Math.floor(hours / 24)} days left`
+  if (hours >= 1) return `${Math.floor(hours)} hour${Math.floor(hours) === 1 ? '' : 's'} left`
+  return 'Ends within the hour'
 }

@@ -625,6 +625,58 @@ function createPlaceholder(type: BuildingType): THREE.Group {
       for (const [x, z] of [[-1, 1], [1, 1]]) add(new THREE.IcosahedronGeometry(0.35, 0), '#3f8f3a', x * w * 0.3, 0.05, z * d * 0.3)
       break
     }
+    case 'arch': {
+      // Two white posts and a curved arch, covered in blossom.
+      for (const x of [-0.7, 0.7]) add(new THREE.BoxGeometry(0.12, height * 0.7, 0.12), color, x, 0, 0)
+      const arc = new THREE.TorusGeometry(0.7, 0.06, 6, 16, Math.PI)
+      add(arc, color, 0, height * 0.7 - 0.06, 0)
+      for (let i = 0; i <= 8; i++) {
+        const a = (i / 8) * Math.PI
+        add(new THREE.IcosahedronGeometry(0.11, 0), i % 2 ? accent : '#ffd6e5', Math.cos(a) * 0.7, height * 0.7 + Math.sin(a) * 0.7 - 0.06, 0)
+      }
+      for (const x of [-0.7, 0.7]) add(new THREE.IcosahedronGeometry(0.16, 0), '#3f8f3a', x, 0, 0.12)
+      break
+    }
+    case 'cart': {
+      // A little cart: wheels, a counter, an umbrella and a cone on top.
+      for (const x of [-0.22, 0.22]) add(new THREE.CylinderGeometry(0.1, 0.1, 0.04, 12).rotateX(Math.PI / 2), '#444444', x, 0, 0.2)
+      add(new THREE.BoxGeometry(0.6, height * 0.4, 0.4), color, 0, 0.08, 0)
+      add(new THREE.CylinderGeometry(0.015, 0.015, height * 0.55, 6), '#dddddd', 0, 0.08 + height * 0.4, 0)
+      add(new THREE.ConeGeometry(0.42, 0.18, 10), accent, 0, 0.08 + height * 0.95, 0)
+      add(new THREE.ConeGeometry(0.06, 0.14, 8).rotateX(Math.PI), '#e8b86a', 0.15, 0.08 + height * 0.4, 0)
+      add(new THREE.IcosahedronGeometry(0.06, 1), '#fff5e6', 0.15, 0.22 + height * 0.4, 0)
+      break
+    }
+    case 'pumpkins': {
+      // A soil patch of round pumpkins, and a scarecrow keeping watch.
+      add(new THREE.BoxGeometry(w * 0.9, 0.06, d * 0.8), color, 0, 0, 0)
+      for (const [x, z, r] of [[-0.6, -0.15, 0.17], [-0.25, 0.18, 0.13], [0.1, -0.12, 0.19], [0.55, 0.15, 0.14], [0.35, -0.2, 0.11]]) {
+        add(new THREE.SphereGeometry(r, 10, 6).scale(1, 0.75, 1), accent, x, 0.06, z)
+        add(new THREE.CylinderGeometry(0.02, 0.025, 0.06, 5), '#3f8f3a', x, 0.06 + r * 1.45, z)
+      }
+      add(new THREE.CylinderGeometry(0.025, 0.025, height, 5), '#8a5a36', -0.05, 0.06, 0.25)
+      add(new THREE.BoxGeometry(0.42, 0.04, 0.04), '#8a5a36', -0.05, 0.06 + height * 0.7, 0.25)
+      add(new THREE.BoxGeometry(0.18, 0.22, 0.1), '#c94d3f', -0.05, 0.06 + height * 0.55, 0.25)
+      add(new THREE.IcosahedronGeometry(0.08, 0), '#e8c98a', -0.05, 0.06 + height * 0.82, 0.25)
+      add(new THREE.ConeGeometry(0.12, 0.1, 8), '#d9b44a', -0.05, 0.06 + height * 0.93, 0.25)
+      break
+    }
+    case 'fir': {
+      // A fir in three tiers, hung with lights, a star on top.
+      add(new THREE.CylinderGeometry(0.06, 0.08, height * 0.15, 6), '#8a5a36', 0, 0, 0)
+      for (let i = 0; i < 3; i++) add(new THREE.ConeGeometry(0.42 - i * 0.1, height * 0.35, 8), color, 0, height * (0.12 + i * 0.22), 0)
+      const lights = ['#ff5c5c', '#ffd23f', '#4fc3f7', '#ffffff', '#b46cf0']
+      for (let i = 0; i < 14; i++) {
+        const y = 0.15 + (i / 14) * 0.65
+        const r = 0.4 * (1 - (i / 14) * 0.8)
+        const a = i * 2.3
+        const bulb = add(new THREE.IcosahedronGeometry(0.035, 0), lights[i % lights.length], Math.cos(a) * r, height * y, Math.sin(a) * r)
+        ;(bulb.material as THREE.MeshStandardMaterial).emissive.set(lights[i % lights.length])
+      }
+      const star = add(new THREE.OctahedronGeometry(0.09, 0), accent, 0, height * 0.88, 0)
+      ;(star.material as THREE.MeshStandardMaterial).emissive.set(accent)
+      break
+    }
     case 'tree': {
       add(new THREE.CylinderGeometry(0.07, 0.09, height * 0.4, 6), color, 0, 0, 0)
       add(new THREE.IcosahedronGeometry(0.38, 0), accent, 0, height * 0.35, 0)

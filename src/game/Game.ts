@@ -226,7 +226,7 @@ export class Game {
     const notice = (message: string) => this.hud.toast(message)
     const inventoryPanel = new InventoryPanel(container, this.city, this.inventory, (b) => builder.setMode({ kind: 'restore', building: b }), notice)
     const collectionsPanel = new CollectionsPanel(container, this.collections, this.inventory)
-    const questsPanel = new QuestsPanel(container, this.quests, this.player)
+    const questsPanel = new QuestsPanel(container, this.quests, this.player, this.state.townEvents)
     const landPanelForMap = (lot: Lot) => this.landPanel?.open(lot)
     const mapPanel: MapPanel = new MapPanel(
       container,
@@ -337,6 +337,7 @@ export class Game {
     this.saver = new AutoSaver(() => this.saves.toSave())
     this.settingsPanel = new SettingsPanel(container, this.settings, this.saver, (message, kind) => this.hud.toast(message, kind))
     const { savedAt: leftAt, problem } = this.saves.restoreOrStart()
+    this.state.townEvents.refresh()
     // From now on new buildings spring into place (unless motion is reduced).
     this.loaded = true
     this.cityView.popIn = !this.settings.values.reduceMotion
@@ -816,7 +817,16 @@ export class Game {
   }
 
   private showQuestEvents() {
-    const badge = () => this.hud.setBadge('Quests', this.quests.readyCount())
+    const events = this.state.townEvents
+    const badge = () => this.hud.setBadge('Quests', this.quests.readyCount() + events.readyCount())
+    events.onChange((e) => {
+      if (e.kind === 'goalDone') this.hud.toast(`🎉 ${e.where}: “${e.label}” done! Claim it in Quests → Events.`)
+      if (e.kind === 'prize') this.hud.toast(`🏆 You won the ${e.name}! It's in your Inventory, ready to place.`)
+      badge()
+    })
+    // A new festival or week can start while you play (the first check is
+    // after the town loads, in start()).
+    window.setInterval(() => events.refresh(), 60_000)
     this.quests.onChange((e) => {
       if (e.kind === 'questDone') this.hud.toast(`📜 Quest complete: ${e.quest.title}! Claim your reward in Quests.`)
       if (e.kind === 'achievement') this.hud.toast(`${e.achievement.icon} Achievement: ${e.achievement.name} ${'★'.repeat(e.tier)}`)

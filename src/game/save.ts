@@ -12,6 +12,7 @@ import type { QuestsSave } from './quests'
 import type { Settings } from './settings'
 import type { TaxesSave } from './Taxes'
 import type { ArmySave } from './Army'
+import type { TownEventsSave } from './TownEvents'
 import { TUTORIAL, type TutorialSave } from './tutorial'
 
 // Saving to the browser's localStorage. Everything stays on this device;
@@ -44,6 +45,7 @@ export interface SaveData {
   safetyNet: { lastGrantAt: number | null }
   neighbors?: NeighborsSave // friendship and today's helps, gifts and requests (added in Stage 11)
   army?: ArmySave // when the last parade was (added with parades)
+  events?: TownEventsSave // this season's festival and this week's challenges (added with events)
 }
 
 // The City's part of the save, pieced back together from the file's sections.

@@ -297,6 +297,12 @@ appear on the return as "Prizes (level-up rewards)" and are part of gross
 income, so they're taxed at your marginal rate like everything else. Reaching
 level 10 pays 250 coins; at a 12% marginal rate, 30 of those go to income tax.
 
+Event rewards are prizes too: coins for festival goals and weekly challenges,
+and a festival's prize decoration. A prize that isn't cash is taxed at its
+fair market value (Treas. Reg. §1.74-1), so the decoration counts as 300
+coins of income the moment it's won, and those 300 coins are also its cost
+basis: it depreciates like any decoration once it's on the map.
+
 ## 6b. Neighbors: pay for help vs. gifts
 
 **Real rules:**
