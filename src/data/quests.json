@@ -436,6 +436,146 @@
       }
     },
     {
+      "id": "safe-streets",
+      "title": "Safe Streets",
+      "intro": "A bigger town needs a police station. It makes room for more residents, brightens the neighborhood, and apartment buildings won't be happy without one nearby.",
+      "after": "tycoon",
+      "level": 12,
+      "tasks": [
+        {
+          "label": "Build a Police Station",
+          "count": 1,
+          "have": {
+            "building": "police-station"
+          }
+        },
+        {
+          "label": "Have 120 residents",
+          "count": 120,
+          "have": {
+            "population": true
+          }
+        }
+      ],
+      "reward": {
+        "coins": 900,
+        "xp": 60
+      }
+    },
+    {
+      "id": "healthy-town",
+      "title": "A Healthy Town",
+      "intro": "A hospital is a big project: it makes room for many more residents, and apartment buildings want one within reach.",
+      "after": "safe-streets",
+      "level": 13,
+      "tasks": [
+        {
+          "label": "Build a Hospital",
+          "count": 1,
+          "have": {
+            "building": "hospital"
+          }
+        },
+        {
+          "label": "Finish constructions",
+          "count": 3,
+          "stat": "finished"
+        }
+      ],
+      "reward": {
+        "coins": 1400,
+        "xp": 80,
+        "materials": {
+          "steel": 4,
+          "glass": 4
+        }
+      }
+    },
+    {
+      "id": "moving-up",
+      "title": "Moving Up",
+      "intro": "Apartment blocks house sixteen residents on a small lot. Give them shops, a park, a school, a hospital and a police station nearby and they'll pay top rent.",
+      "after": "healthy-town",
+      "level": 14,
+      "tasks": [
+        {
+          "label": "Build an Apartment Block",
+          "count": 1,
+          "have": {
+            "building": "apartment-block"
+          }
+        },
+        {
+          "label": "Have 200 residents",
+          "count": 200,
+          "have": {
+            "population": true
+          }
+        }
+      ],
+      "reward": {
+        "coins": 1800,
+        "xp": 90
+      }
+    },
+    {
+      "id": "mall",
+      "title": "Shop Till You Drop",
+      "intro": "A Shopping Center sells lots of goods at once and draws visitors from out of town. Keep its shelves full.",
+      "after": "moving-up",
+      "level": 15,
+      "tasks": [
+        {
+          "label": "Build a Shopping Center",
+          "count": 1,
+          "have": {
+            "building": "shopping-center"
+          }
+        },
+        {
+          "label": "Make shop sales",
+          "count": 30,
+          "stat": "sales"
+        },
+        {
+          "label": "Restock shops",
+          "count": 10,
+          "stat": "restocks"
+        }
+      ],
+      "reward": {
+        "coins": 2200,
+        "xp": 100
+      }
+    },
+    {
+      "id": "skyline",
+      "title": "A City Skyline",
+      "intro": "The tallest homes in town: a High-Rise houses twenty-eight residents. Keep the city running well while you build up.",
+      "after": "mall",
+      "level": 17,
+      "tasks": [
+        {
+          "label": "Build a High-Rise",
+          "count": 1,
+          "have": {
+            "building": "high-rise"
+          }
+        },
+        {
+          "label": "Reach a city rating of 75",
+          "count": 75,
+          "have": {
+            "rating": true
+          }
+        }
+      ],
+      "reward": {
+        "coins": 3000,
+        "xp": 150
+      }
+    },
+    {
       "id": "buses",
       "title": "All Aboard the Bus",
       "intro": "Bus stops make the neighborhoods around them nicer, and buses run between them. Put a few near homes and shops, beside a road.",

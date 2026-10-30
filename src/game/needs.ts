@@ -3,12 +3,13 @@ import { footprintGap } from './communityRules'
 import type { Tile } from './grid'
 
 // What residents want nearby. Every home wants somewhere to shop and some
-// green space; bigger family homes want a school too. A home's happiness is
+// green space; bigger family homes want a school too, and apartment
+// buildings a hospital and a police station. A home's happiness is
 // the share of its needs that are met, and it lifts the rent by up to 15%
 // (everything met). A reward, never a penalty: a new town with nothing
 // nearby earns just what it always did.
 
-export type NeedId = 'shopping' | 'green' | 'school'
+export type NeedId = 'shopping' | 'green' | 'school' | 'health' | 'safety'
 
 export interface Need {
   id: NeedId
@@ -22,6 +23,7 @@ export interface Need {
 }
 
 export const FAMILY_SIZE = 4 // homes with this many residents or more want a school
+export const APARTMENT_SIZE = 10 // apartment buildings also want a hospital and a police station
 
 export const NEEDS: Need[] = [
   {
@@ -53,6 +55,26 @@ export const NEEDS: Need[] = [
     tab: 'Community',
     meets: (t) => t.id === 'school' || t.id === 'library',
     wantedBy: (home) => (home.residents ?? 0) >= FAMILY_SIZE,
+  },
+  {
+    id: 'health',
+    icon: '🏥',
+    name: 'Healthcare',
+    reach: 14,
+    hint: 'a hospital within 14 tiles',
+    tab: 'Community',
+    meets: (t) => t.id === 'hospital',
+    wantedBy: (home) => (home.residents ?? 0) >= APARTMENT_SIZE,
+  },
+  {
+    id: 'safety',
+    icon: '👮',
+    name: 'Safety',
+    reach: 12,
+    hint: 'a police station within 12 tiles',
+    tab: 'Community',
+    meets: (t) => t.id === 'police-station',
+    wantedBy: (home) => (home.residents ?? 0) >= APARTMENT_SIZE,
   },
 ]
 

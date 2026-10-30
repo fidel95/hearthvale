@@ -62,6 +62,14 @@ export type PlaceholderShape =
   | 'pumpkins'
   | 'fir'
   | 'factory'
+  | 'apartment'
+  | 'hospital'
+  | 'police'
+  | 'mall'
+  | 'lamp'
+  | 'hedge'
+  | 'gazebo'
+  | 'pond'
 
 export interface BuildingType {
   id: string
@@ -358,6 +366,36 @@ export const BUILDING_TYPES: BuildingType[] = [
     model: suburban('building-type-t'),
     placeholder: { shape: 'house', color: '#f4f0e8', accent: '#3a6b4a', height: 1.6 },
   },
+  {
+    // Apartments: lots of residents on a small lot. Big buildings want a
+    // hospital and a police station nearby, as well as shops and parks (needs.ts).
+    id: 'apartment-block',
+    name: 'Apartment Block',
+    category: 'home',
+    size: { x: 2, z: 2 },
+    cost: 1300,
+    unlockLevel: 14,
+    build: { seconds: 300, materials: { bricks: 10, glass: 8, steel: 4 } },
+    income: { coins: 175, seconds: 210 },
+    residents: 16,
+    needs: { water: 10, power: 10, trash: 8 },
+    heightLimit: 2.4,
+    placeholder: { shape: 'apartment', color: '#e8d2b8', accent: '#8a5a44', height: 2.2 },
+  },
+  {
+    id: 'high-rise',
+    name: 'High-Rise',
+    category: 'home',
+    size: { x: 2, z: 2 },
+    cost: 2000,
+    unlockLevel: 17,
+    build: { seconds: 480, materials: { glass: 14, steel: 10, bricks: 6 } },
+    income: { coins: 250, seconds: 240 },
+    residents: 28,
+    needs: { water: 14, power: 16, trash: 12 },
+    heightLimit: 3.6,
+    placeholder: { shape: 'apartment', color: '#c9d9e6', accent: '#3d5a75', height: 3.4 },
+  },
 
   {
     id: 'bakery',
@@ -452,7 +490,25 @@ export const BUILDING_TYPES: BuildingType[] = [
     needs: { water: 4, power: 8, trash: 6 },
     customers: 20,
     placeholder: { shape: 'shop', color: '#d8f4ff', accent: '#1f7fe0', height: 1.3 },
+  },  {
+    id: 'shopping-center',
+    name: 'Shopping Center',
+    category: 'business',
+    size: { x: 4, z: 3 },
+    cost: 3400,
+    unlockLevel: 15,
+    requiresRoad: true,
+    build: { seconds: 420, materials: { steel: 8, glass: 10, bricks: 8 } },
+    income: { coins: 290, seconds: 180 },
+    goodsPerSale: 18,
+    stockCapacity: 160,
+    needs: { water: 5, power: 10, trash: 8 },
+    customers: 30,
+    attractsVisitors: { lingerSeconds: 10 },
+    visitors: 15,
+    placeholder: { shape: 'mall', color: '#f2ece2', accent: '#e0663a', height: 1.3 },
   },
+
 
   {
     // A plowed plot to plant crops on (crops.ts). It earns nothing by itself.
@@ -572,7 +628,48 @@ export const BUILDING_TYPES: BuildingType[] = [
     unlockLevel: 5,
     amenity: { bonus: 0.03, radius: 2 },
     placeholder: { shape: 'bench', color: '#8a6a4a', accent: '#3b3b3b', height: 0.25 },
+  },  {
+    id: 'lamp-post',
+    name: 'Lamp Post',
+    category: 'decoration',
+    size: { x: 1, z: 1 },
+    cost: 20,
+    unlockLevel: 3,
+    amenity: { bonus: 0.02, radius: 1 },
+    placeholder: { shape: 'lamp', color: '#3b3f46', accent: '#ffe08a', height: 0.9 },
   },
+  {
+    id: 'hedge',
+    name: 'Hedge',
+    category: 'decoration',
+    size: { x: 1, z: 1 },
+    cost: 15,
+    unlockLevel: 3,
+    amenity: { bonus: 0.01, radius: 1 },
+    placeholder: { shape: 'hedge', color: '#3f8f3a', accent: '#2e6e2b', height: 0.35 },
+  },
+  {
+    id: 'gazebo',
+    name: 'Gazebo',
+    category: 'decoration',
+    size: { x: 2, z: 2 },
+    cost: 140,
+    unlockLevel: 7,
+    amenity: { bonus: 0.05, radius: 2 },
+    placeholder: { shape: 'gazebo', color: '#f4efe6', accent: '#b8432f', height: 1.1 },
+  },
+  {
+    id: 'pond',
+    name: 'Duck Pond',
+    category: 'decoration',
+    size: { x: 2, z: 2 },
+    cost: 160,
+    unlockLevel: 8,
+    amenity: { bonus: 0.05, radius: 3 },
+    visitors: 3,
+    placeholder: { shape: 'pond', color: '#4fa3d9', accent: '#8a6a4a', height: 0.15 },
+  },
+
   {
     id: 'fountain',
     name: 'Fountain',
@@ -734,6 +831,34 @@ export const BUILDING_TYPES: BuildingType[] = [
     amenity: { bonus: 0.1, radius: 6 },
     populationCapacity: 30,
     placeholder: { shape: 'firestation', color: '#c8463a', accent: '#f0e6d8', height: 1.1 },
+  },
+  {
+    id: 'police-station',
+    name: 'Police Station',
+    category: 'community',
+    size: { x: 2, z: 2 },
+    cost: 700,
+    unlockLevel: 12,
+    build: { seconds: 180, materials: { bricks: 6, glass: 2, steel: 2 } },
+    needs: { water: 1, power: 3, trash: 1 },
+    upkeep: 25,
+    amenity: { bonus: 0.06, radius: 6 },
+    populationCapacity: 25,
+    placeholder: { shape: 'police', color: '#dfe6ee', accent: '#2f5aa8', height: 1.1 },
+  },
+  {
+    id: 'hospital',
+    name: 'Hospital',
+    category: 'community',
+    size: { x: 3, z: 3 },
+    cost: 1400,
+    unlockLevel: 13,
+    build: { seconds: 360, materials: { bricks: 10, glass: 8, steel: 4 } },
+    needs: { water: 6, power: 8, trash: 6 },
+    upkeep: 45,
+    amenity: { bonus: 0.08, radius: 8 },
+    populationCapacity: 70,
+    placeholder: { shape: 'hospital', color: '#f6f6f2', accent: '#d8343a', height: 1.8 },
   },
   {
     id: 'school',

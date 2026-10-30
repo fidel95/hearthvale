@@ -625,6 +625,95 @@ function createPlaceholder(type: BuildingType): THREE.Group {
       for (const [x, z] of [[-1, 1], [1, 1]]) add(new THREE.IcosahedronGeometry(0.35, 0), '#3f8f3a', x * w * 0.3, 0.05, z * d * 0.3)
       break
     }
+    case 'apartment': {
+      // A tall block: floors of windows, a parapet, a door and rooftop units.
+      add(new THREE.BoxGeometry(w * 0.82, height, d * 0.82), color, 0, 0, 0)
+      const floors = Math.max(3, Math.round(height / 0.36))
+      for (let f = 0; f < floors; f++) {
+        const y = 0.12 + (f * (height - 0.2)) / floors
+        for (const x of [-0.45, -0.15, 0.15, 0.45]) {
+          add(new THREE.BoxGeometry(0.16, 0.16, 0.02), '#9cc8e8', x * w * 0.9, y, d * 0.41 + 0.005)
+          add(new THREE.BoxGeometry(0.02, 0.16, 0.16), '#9cc8e8', w * 0.41 + 0.005, y, x * d * 0.9)
+        }
+        add(new THREE.BoxGeometry(w * 0.84, 0.03, d * 0.84), accent, 0, y - 0.05, 0)
+      }
+      add(new THREE.BoxGeometry(0.24, 0.3, 0.03), accent, 0, 0, d * 0.41 + 0.01)
+      add(new THREE.BoxGeometry(w * 0.86, 0.08, d * 0.86), accent, 0, height, 0)
+      add(new THREE.BoxGeometry(0.3, 0.16, 0.24), '#9aa0a8', -0.25, height + 0.08, -0.2)
+      break
+    }
+    case 'hospital': {
+      // A white main wing with a taller center block, a red cross and a canopy.
+      add(new THREE.BoxGeometry(w * 0.9, height * 0.5, d * 0.7), color, 0, 0, -d * 0.05)
+      add(new THREE.BoxGeometry(w * 0.4, height, d * 0.5), color, 0, 0, -d * 0.1)
+      for (const [x, y, z, sx, sy] of [[0, height * 0.72, d * 0.15 + 0.01, 0.36, 0.1], [0, height * 0.72, d * 0.15 + 0.01, 0.1, 0.36]] as const) {
+        add(new THREE.BoxGeometry(sx, sy, 0.03), accent, x, y - sy / 2, z)
+      }
+      add(new THREE.BoxGeometry(w * 0.3, 0.05, d * 0.25), '#dddddd', 0, height * 0.28, d * 0.4)
+      for (const x of [-0.18, 0.18]) add(new THREE.CylinderGeometry(0.025, 0.025, height * 0.28, 6), '#dddddd', x * w, 0, d * 0.5)
+      for (let i = 0; i < 6; i++) add(new THREE.BoxGeometry(0.14, 0.12, 0.02), '#9cc8e8', (-0.4 + i * 0.16) * w, height * 0.25, d * 0.3 + 0.01)
+      break
+    }
+    case 'police': {
+      // A blue-trimmed station with a flag and a light bar over the door.
+      add(new THREE.BoxGeometry(w * 0.85, height * 0.7, d * 0.75), color, 0, 0, 0)
+      add(new THREE.BoxGeometry(w * 0.9, 0.12, d * 0.8), accent, 0, height * 0.7, 0)
+      add(new THREE.BoxGeometry(w * 0.85 + 0.02, 0.1, d * 0.75 + 0.02), accent, 0, height * 0.3, 0)
+      add(new THREE.BoxGeometry(0.3, 0.38, 0.03), '#2a3a5a', 0, 0, d * 0.375 + 0.01)
+      add(new THREE.BoxGeometry(0.1, 0.05, 0.05), '#e0383e', -0.06, 0.42, d * 0.4)
+      add(new THREE.BoxGeometry(0.1, 0.05, 0.05), '#2f7fe0', 0.06, 0.42, d * 0.4)
+      add(new THREE.CylinderGeometry(0.015, 0.015, height * 0.9, 6), '#cccccc', w * 0.35, height * 0.82, d * 0.2)
+      add(new THREE.BoxGeometry(0.22, 0.13, 0.01), accent, w * 0.35 + 0.11, height * 1.55, d * 0.2)
+      break
+    }
+    case 'mall': {
+      // A long low hall with a glass front, an entrance tower and a sign.
+      add(new THREE.BoxGeometry(w * 0.92, height * 0.6, d * 0.8), color, 0, 0, 0)
+      add(new THREE.BoxGeometry(w * 0.8, height * 0.4, 0.02), '#9cc8e8', 0, 0.05, d * 0.4 + 0.01)
+      add(new THREE.BoxGeometry(w * 0.25, height, d * 0.3), accent, 0, 0, d * 0.28)
+      add(new THREE.BoxGeometry(w * 0.3, 0.16, 0.04), '#ffffff', 0, height * 0.75, d * 0.44)
+      add(new THREE.BoxGeometry(w * 0.94, 0.06, d * 0.82), '#d9cbb0', 0, height * 0.6, 0)
+      break
+    }
+    case 'lamp': {
+      // A street lamp with a glowing head.
+      add(new THREE.CylinderGeometry(0.05, 0.07, 0.06, 8), color, 0, 0, 0)
+      add(new THREE.CylinderGeometry(0.025, 0.03, height, 8), color, 0, 0.06, 0)
+      const glass = add(new THREE.IcosahedronGeometry(0.08, 1), accent, 0, height + 0.02, 0)
+      ;(glass.material as THREE.MeshStandardMaterial).emissive.set(accent)
+      add(new THREE.ConeGeometry(0.1, 0.06, 8), color, 0, height + 0.15, 0)
+      break
+    }
+    case 'hedge': {
+      // A clipped box hedge.
+      add(new THREE.BoxGeometry(0.85, height, 0.5), color, 0, 0, 0)
+      add(new THREE.BoxGeometry(0.8, 0.04, 0.45), accent, 0, height, 0)
+      break
+    }
+    case 'gazebo': {
+      // An octagonal floor, posts, and a peaked roof.
+      add(new THREE.CylinderGeometry(w * 0.4, w * 0.42, 0.08, 8), '#d9c79a', 0, 0, 0)
+      for (let i = 0; i < 8; i++) {
+        const a = (i / 8) * Math.PI * 2
+        add(new THREE.CylinderGeometry(0.03, 0.03, height * 0.6, 6), color, Math.cos(a) * w * 0.36, 0.08, Math.sin(a) * w * 0.36)
+      }
+      add(new THREE.ConeGeometry(w * 0.5, height * 0.4, 8), accent, 0, 0.08 + height * 0.6, 0)
+      break
+    }
+    case 'pond': {
+      // Water in a ring of stones, with reeds and a duck.
+      add(new THREE.CylinderGeometry(w * 0.44, w * 0.46, 0.06, 16), accent, 0, 0, 0)
+      add(new THREE.CylinderGeometry(w * 0.38, w * 0.38, 0.03, 16), color, 0, 0.05, 0)
+      for (let i = 0; i < 10; i++) {
+        const a = (i / 10) * Math.PI * 2
+        add(new THREE.IcosahedronGeometry(0.07, 0), '#a7a7a0', Math.cos(a) * w * 0.43, 0.02, Math.sin(a) * w * 0.43)
+      }
+      for (const [x, z] of [[-0.5, -0.3], [-0.45, -0.4], [0.5, 0.35]]) add(new THREE.CylinderGeometry(0.012, 0.012, 0.3, 4), '#5d8a3a', x, 0.05, z)
+      add(new THREE.SphereGeometry(0.07, 8, 6).scale(1.3, 0.8, 1), '#ffffff', 0.15, 0.08, 0.1)
+      add(new THREE.SphereGeometry(0.04, 8, 6), '#3f8f3a', 0.24, 0.15, 0.1)
+      add(new THREE.ConeGeometry(0.02, 0.05, 6).rotateZ(-Math.PI / 2), '#f2a33a', 0.3, 0.15, 0.1)
+      break
+    }
     case 'factory': {
       // A brick hall with a sawtooth roof, a chimney, and loading doors.
       add(new THREE.BoxGeometry(w * 0.88, height * 0.6, d * 0.8), color, 0, 0, 0)

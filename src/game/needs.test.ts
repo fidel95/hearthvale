@@ -13,6 +13,13 @@ describe('Resident needs', () => {
     expect(homeNeeds(placed('manor', 0, 0), []).map((n) => n.need.id)).toEqual(['shopping', 'green', 'school'])
   })
 
+  it('apartment buildings also want a hospital and a police station; smaller homes never do', () => {
+    expect(homeNeeds(placed('apartment-block', 0, 0), []).map((n) => n.need.id)).toEqual(['shopping', 'green', 'school', 'health', 'safety'])
+    expect(homeNeeds(placed('manor', 0, 0), []).map((n) => n.need.id)).not.toContain('health')
+    const met = homeNeeds(placed('apartment-block', 0, 0), [placed('hospital', 5, 5), placed('police-station', 0, 5)])
+    expect(met.filter((n) => n.met).map((n) => n.need.id)).toEqual(['health', 'safety'])
+  })
+
   it('are met by the right buildings within reach', () => {
     const home = placed('cottage', 0, 0)
     const needs = homeNeeds(home, [placed('bakery', 4, 0), placed('park', 15, 15)])
