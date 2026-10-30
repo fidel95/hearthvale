@@ -173,12 +173,12 @@ export class Hud {
       toolbar.append(b)
     }
 
-    builder.onModeChange = (mode) => {
+    builder.onModeChange((mode) => {
       hintText.textContent = hintFor(mode)
       hint.hidden = mode.kind === 'select'
       removeRoads.hidden = mode.kind !== 'removeRoads'
       done.textContent = mode.kind === 'removeRoads' ? 'Cancel' : 'Done'
-    }
+    })
     builder.onNotice = (message) => this.toast(message)
 
     // ---- Keeping the numbers current

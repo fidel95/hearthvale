@@ -66,6 +66,7 @@ import { DisasterView } from './DisasterView'
 import { ShipView } from './ShipView'
 import { AutoSaver } from './save'
 import { PRODUCTS } from './products'
+import { LotView } from './LotView'
 import { UTILITY_INFO } from './utilityRules'
 
 // Admin "max level": the level where the last content unlocks.
@@ -129,6 +130,7 @@ export class Game {
   private ambientView: AmbientView
   private roadNetworks: RoadNetworkView
   private builder!: Builder
+  private lotView: LotView
   private openBuildMenu?: (tab: string) => void
   private devFrames = 0
   private flights = 0 // fly-to-counter icons started this second (kept few)
@@ -155,11 +157,18 @@ export class Game {
     this.renderer = new THREE.WebGLRenderer({ antialias: true })
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
     this.renderer.shadowMap.enabled = true
+    // Soft-edged shadows, and colors mapped the way a camera would (bright
+    // sun without washed-out whites).
+    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap
+    this.renderer.toneMapping = THREE.NeutralToneMapping
+    this.renderer.toneMappingExposure = 1.05
     container.appendChild(this.renderer.domElement)
     this.labelRenderer.domElement.className = 'labels'
     container.appendChild(this.labelRenderer.domElement)
 
     this.scene.background = new THREE.Color('#9fd4f0')
+    // A light haze far away gives the view depth (WeatherView keeps its color matched to the sky).
+    this.scene.fog = new THREE.Fog('#9fd4f0', 48, 105)
 
     // An orthographic camera has no perspective: far things are not smaller.
     // CameraController places it looking down at an angle from a corner,
@@ -173,6 +182,7 @@ export class Game {
     // or it misses the 'added' events.
     const landView = new LandView(this.scene, this.city)
     this.landView = landView
+    this.lotView = new LotView(this.scene, this.city)
     this.shipView = new ShipView(this.scene, this.city, this.docks)
     this.cityView = new CityView(this.scene, this.city)
     this.peopleView = new PeopleView(this.scene, this.city)
@@ -285,11 +295,14 @@ export class Game {
     new TipCard(container, this.state.tips, this.settings)
     this.controls.onMove = () => this.tutorial.complete('camera')
     this.hud.onGoHome = () => this.endVisit()
+    // The tile grid shows while building (or always, if that's turned on).
+    const showGrid = () => landView.setGridVisible(this.settings.values.alwaysGrid || this.builder.mode.kind !== 'select')
+    this.builder.onModeChange(showGrid)
     // Apply settings now and whenever they change.
     this.settings.onChange((s) => {
       this.sound.setVolume(s.soundVolume)
       this.sound.setMusic(s.music)
-      landView.setGridVisible(s.showGrid)
+      showGrid()
       landView.calmSea = s.reduceMotion
       this.peopleView.setVisible(s.showPeople)
       this.trafficView.setVisible(s.showTraffic)
@@ -444,6 +457,7 @@ export class Game {
       document.body.dataset.triangles = String(this.renderer.info.render.triangles)
     }
     const seconds = frameTime / 1000
+    this.lotView.update()
     this.landView.update(seconds)
     this.shipView.update(Math.min(dt, 100) / 1000, seconds, now)
     // Capped, so a tab coming back from the background doesn't teleport everyone.

@@ -17,13 +17,25 @@ import { Scenery } from './scenery'
 import { coastZ, isWater } from './terrain'
 
 // Draws the ground: the whole world as muted land, the lots the town owns as
-// bright grass with a tile grid, a sandy beach along the coast, the sea with
+// lush grass (a tile grid shows while building), a sandy beach along the coast, the sea with
 // gentle waves, and a "for sale" sign on every lot you could buy next. The
 // land is rebuilt whenever it changes (rare), so it can be simple.
 
-// Owned grass alternates two greens tile by tile, like a mown lawn; land
-// beyond the town is a paler green, still clearly not yours.
-const COLORS = { owned: ['#7bd163', '#71c75a'], unowned: '#a8dc8c', grid: '#5aa24a', sand: '#f6e3a4', sea: '#2fa3e0' }
+// Owned grass is a natural lawn: greens that drift softly across the land,
+// with darker and sunnier patches. Land beyond the town is a paler green,
+// still clearly not yours.
+const COLORS = { owned: ['#69c055', '#93db6e', '#4ea544'], unowned: '#a8dc8c', grid: '#ffffff', sand: '#f6e3a4', sea: '#2fa3e0' }
+
+// Smooth noise (0 to 1) over the ground, so the grass varies gently instead
+// of tile by tile: a few overlapping waves at different angles.
+function grassNoise(x: number, z: number): number {
+  const n =
+    Math.sin(x * 0.37 + z * 0.23) * 0.35 +
+    Math.sin(x * -0.19 + z * 0.43 + 1.7) * 0.3 +
+    Math.sin(x * 0.71 - z * 0.59 + 4.1) * 0.25 +
+    Math.sin(x * 1.9 + z * 1.6) * 0.1
+  return Math.min(1, Math.max(0, n * 0.75 + 0.5))
+}
 // How far the sea reaches past the edges of the world, so it fades into the distance.
 const SEA_BEYOND = 40
 
@@ -82,7 +94,11 @@ export class LandView {
     // plane, each tile colored by vertex colors in one of two greens.
     const squares: THREE.BufferGeometry[] = []
     const lines: number[] = []
-    const shades = COLORS.owned.map((c) => new THREE.Color(c))
+    const [base, sunny, shady] = COLORS.owned.map((c) => new THREE.Color(c))
+    const shadeAt = (x: number, z: number) => {
+      const n = grassNoise(x, z)
+      return n > 0.5 ? base.clone().lerp(sunny, (n - 0.5) * 2) : base.clone().lerp(shady, (0.5 - n) * 2)
+    }
     for (const { lot } of this.city.ownedLots()) {
       const center = footprintCenter(lotCorner(lot), LOT_FOOTPRINT)
       // Grass up to the shore (the sea covers the rest).
@@ -92,8 +108,11 @@ export class LandView {
           if (tile.z >= coastZ(tile.x)) continue
           const c = tileToWorld(tile)
           const square = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2).translate(c.x, 0.005, c.z)
-          const shade = shades[(tile.x + tile.z) % 2]
-          square.setAttribute('color', new THREE.Float32BufferAttribute(Array.from({ length: 4 }, () => shade.toArray()).flat(), 3))
+          // Each corner takes the grass color at its spot, so colors blend smoothly across tiles.
+          const pos = square.getAttribute('position')
+          const colors: number[] = []
+          for (let v = 0; v < pos.count; v++) colors.push(...shadeAt(pos.getX(v), pos.getZ(v)).toArray())
+          square.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3))
           squares.push(square)
         }
       }
@@ -110,7 +129,8 @@ export class LandView {
     for (const g of squares) g.dispose()
     const lineGeometry = new THREE.BufferGeometry()
     lineGeometry.setAttribute('position', new THREE.Float32BufferAttribute(lines, 3))
-    this.grid = new THREE.LineSegments(lineGeometry, new THREE.LineBasicMaterial({ color: COLORS.grid }))
+    // Faint white lines: there to build by, not to look at.
+    this.grid = new THREE.LineSegments(lineGeometry, new THREE.LineBasicMaterial({ color: COLORS.grid, transparent: true, opacity: 0.28 }))
     this.grid.visible = this.gridVisible
     this.scene.add(this.owned, this.grid)
     // Scenery everywhere that isn't the town's, the sea or the beach.

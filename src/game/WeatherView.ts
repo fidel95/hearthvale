@@ -101,6 +101,7 @@ export class WeatherView {
     for (const { light, base } of this.lights) light.intensity = base * (1 - (this.snow ? 0.2 : 0.4) * this.intensity)
     if (this.scene.background instanceof THREE.Color) {
       this.scene.background.copy(SKY.clear).lerp(SKY.winter, this.snowCover * 0.7).lerp(SKY.rain, this.intensity * (this.snow ? 0.4 : 1))
+      if (this.scene.fog) this.scene.fog.color.copy(this.scene.background)
     }
 
     this.flakes.visible = this.snow && this.intensity > 0.01 && this.showDrops

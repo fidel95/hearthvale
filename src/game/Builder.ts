@@ -35,7 +35,12 @@ function anchorFor(type: BuildingType, tile: Tile, rotation: Rotation): Tile {
 // and moving them. Shows the colored footprint under the pointer.
 export class Builder {
   mode: Mode = { kind: 'select' }
-  onModeChange?: (mode: Mode) => void
+  private modeListeners: ((mode: Mode) => void)[] = []
+
+  // Called whenever the mode changes (the HUD's hint bar, the tile grid).
+  onModeChange(listener: (mode: Mode) => void) {
+    this.modeListeners.push(listener)
+  }
   // While picking roads to remove: how many are picked.
   onRoadsPicked?: (count: number) => void
   onHoverBuilding?: (building: PlacedBuilding | null) => void
@@ -250,7 +255,7 @@ export class Builder {
     this.showPicked()
 
     this.refresh()
-    this.onModeChange?.(mode)
+    for (const listener of this.modeListeners) listener(mode)
   }
 
   // Turn the building being placed or moved a quarter turn.

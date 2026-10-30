@@ -5,7 +5,7 @@ import { Emitter } from './events'
 // here, a row in the Settings sheet, and one line where it applies.
 
 export interface Settings {
-  showGrid: boolean // tile grid lines on your land
+  alwaysGrid: boolean // tile grid lines on your land all the time (they always show while building)
   showPeople: boolean // residents walking around town
   showTraffic: boolean // cars, buses, trains and the army on the move
   confirmPurchases: boolean // the ✓ step before buying a building
@@ -34,7 +34,7 @@ export interface AdminSettings {
 export type SwitchSetting = { [K in keyof Settings]: Settings[K] extends boolean ? K : never }[keyof Settings]
 
 export const DEFAULT_SETTINGS: Settings = {
-  showGrid: true,
+  alwaysGrid: false,
   showPeople: true,
   showTraffic: true,
   confirmPurchases: true,
@@ -51,7 +51,7 @@ export const DEFAULT_SETTINGS: Settings = {
 }
 
 export const SETTING_LABELS: Record<SwitchSetting, string> = {
-  showGrid: 'Show the tile grid',
+  alwaysGrid: 'Always show the tile grid (it shows while building anyway)',
   showPeople: 'Show residents walking around',
   showTraffic: 'Show cars, buses, trains, planes and soldiers',
   confirmPurchases: 'Confirm (✓) before buying a building',

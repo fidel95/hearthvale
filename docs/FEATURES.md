@@ -148,6 +148,7 @@ with rewards; counts never go below 0; saved.
 | Financial report | ✅ | Tap the coins: income, running costs, profit and investment for this year or last, profit per month (tap a month), income by source, spending by kind, top earners; sales tax left out as pass-through (`Finances.ts`, `FinancePanel.ts`) |
 | Stage 4 content | ✅ | Apartment Block (L14, 16 residents), High-Rise (L17, 28), Police Station (L12), Hospital (L13), Shopping Center (L15); crops: carrots (L4), tomatoes (L6), grapes (L11); decorations: lamp post, hedge, gazebo, duck pond; apartments want a hospital and police nearby; quests Safe Streets → A Healthy Town → Moving Up → Shop Till You Drop → A City Skyline |
 | Stage 5 polish | ✅ | One-time tips for newer systems (`tips.ts`, `TipCard.ts`, setting to turn off); older-save tests; simple-shape buildings merged by color (986 → 369 draw calls in a big town) and freed on demolish |
+| Polished look | ✅ | Natural grass (no checkerboard), grid only while building (or always, in Settings), soft shadows, tone mapping, distance haze; yards/paving and ground shadows under buildings in two instanced batches (`LotView.ts`); zebra crossings, curb edges and street lamps merged into the road batches |
 | Civic buildings and decorations add to it | ✅ | Neighborhoods and Greenery parts |
 | Minimum rating for some buildings | ✅ | Landmarks |
 | Explained, no hidden penalties | ✅ | Town window: every part, its points and what raises it; nothing but landmarks depends on it |
