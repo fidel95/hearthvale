@@ -26,6 +26,8 @@ export class CityView {
   private bounces = new Map<number, number>()
   // Cranes swinging round on construction sites.
   private cranes = new Map<number, THREE.Object3D>()
+  // Bulldozers working on construction sites.
+  private dozers = new Map<number, THREE.Object3D>()
 
   constructor(scene: THREE.Scene, city: City) {
     this.scene = scene
@@ -61,6 +63,12 @@ export class CityView {
     this.animatePops()
     this.animateBounces()
     for (const jib of this.cranes.values()) jib.rotation.y = Math.sin(performance.now() / 2600 + jib.id) * 1.4
+    // Back and forth across the site, turning at each end (the model faces +z).
+    for (const dozer of this.dozers.values()) {
+      const t = performance.now() / 1000 * 0.6 + dozer.id
+      dozer.position.x = Math.sin(t) * dozer.userData.range
+      dozer.rotation.y = Math.cos(t) >= 0 ? Math.PI / 2 : -Math.PI / 2
+    }
     for (const b of this.city.all()) {
       if (!isPlot(b.type)) continue
       const state = cropState(b.crop, now)
@@ -130,6 +138,8 @@ export class CityView {
     this.objects.set(b.id, obj)
     const jib = obj.getObjectByName('crane-jib')
     if (jib) this.cranes.set(b.id, jib)
+    const dozer = obj.getObjectByName('site-dozer')
+    if (dozer) this.dozers.set(b.id, dozer)
     this.scene.add(obj)
     this.position(b)
   }
@@ -175,6 +185,7 @@ export class CityView {
     this.pops.delete(id)
     this.bounces.delete(id)
     this.cranes.delete(id)
+    this.dozers.delete(id)
     const obj = this.objects.get(id)
     if (obj) {
       this.scene.remove(obj)

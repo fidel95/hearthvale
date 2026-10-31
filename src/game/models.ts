@@ -197,23 +197,6 @@ export async function loadMeshParts(url: string, name: string): Promise<{ geomet
   return parts
 }
 
-// A character with its animations (Kenney's Mini Characters): one load per
-// file; copies are made with SkeletonUtils.clone, which shares the shapes.
-const characterCache = new Map<string, Promise<{ scene: THREE.Object3D; animations: THREE.AnimationClip[] }>>()
-export function loadCharacter(url: string): Promise<{ scene: THREE.Object3D; animations: THREE.AnimationClip[] }> {
-  let character = characterCache.get(url)
-  if (!character) {
-    character = loader.loadAsync(url).then((gltf) => {
-      gltf.scene.traverse((o) => {
-        if (o instanceof THREE.Mesh) sharedGeometries.add(o.geometry)
-      })
-      return { scene: gltf.scene, animations: gltf.animations }
-    })
-    characterCache.set(url, character)
-  }
-  return character
-}
-
 // A copy of a model at a given scale, standing where it was modelled (for
 // boats and containers, whose packs model them centered at the waterline or
 // ground). Returns a group right away and fills it in once the model has
@@ -962,8 +945,33 @@ export function createConstructionSite(type: BuildingType): THREE.Group {
   }
   add(new THREE.BoxGeometry(w * 0.8, 0.05, 0.06), '#d9a85e', 0, h, -d * 0.38)
   add(new THREE.BoxGeometry(w * 0.8, 0.05, 0.06), '#d9a85e', 0, h, d * 0.38)
-  add(new THREE.ConeGeometry(0.07, 0.18, 8), '#f07a2a', w * 0.42, 0.04, d * 0.45)
-  add(new THREE.ConeGeometry(0.07, 0.18, 8), '#f07a2a', -w * 0.42, 0.04, d * 0.45)
+  // Traffic cones at the front corners and a stack of crates (Kenney's Car
+  // Kit), and a bulldozer working to and fro across the front (named, so
+  // CityView can drive it).
+  const carKit = (name: string) => `${import.meta.env.BASE_URL}models/cars/${name}.glb`
+  const coneShape = () => {
+    const cone = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.18, 8).translate(0, 0.09, 0), new THREE.MeshStandardMaterial({ color: '#f07a2a', flatShading: true }))
+    cone.castShadow = true
+    return cone
+  }
+  for (const side of [-1, 1]) {
+    const cone = modelCopy(carKit('cone'), 0.3, coneShape)
+    cone.position.set(side * w * 0.42, 0.04, d * 0.45)
+    group.add(cone)
+  }
+  for (const [x, y, z] of [[0, 0, 0], [0.19, 0, 0.02], [0.09, 0.18, 0.01]]) {
+    const crate = modelCopy(carKit('box'), 0.25, () => new THREE.Group())
+    crate.position.set(w * 0.22 + x, 0.04 + y, -d * 0.36 + z)
+    group.add(crate)
+  }
+  const dozer = new THREE.Group()
+  dozer.name = 'site-dozer'
+  dozer.userData.range = w * 0.28
+  dozer.position.set(0, 0.04, d * 0.39)
+  const machine = modelCopy(carKit('tractor-shovel'), 0.17, () => new THREE.Group())
+  machine.position.y = 0.68 * 0.17 // the kit's wheels hang below its origin
+  dozer.add(machine)
+  group.add(dozer)
   // A tower crane at the back corner. Its jib (named, so CityView can turn
   // it) swings slowly round with a load hanging from it.
   const mast = Math.max(w, d) * 0.55 + 0.6
@@ -1136,7 +1144,7 @@ export function disposeBuildingObject(obj: THREE.Object3D) {
   obj.traverse((o) => {
     if (!o.userData.ownsResources) return
     o.traverse((part) => {
-      if (!(part instanceof THREE.Mesh)) return
+      if (!(part instanceof THREE.Mesh) || isSharedGeometry(part.geometry)) return // a loaded model's: shared
       part.geometry.dispose()
       for (const m of Array.isArray(part.material) ? part.material : [part.material]) m.dispose()
     })

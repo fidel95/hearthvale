@@ -4,14 +4,11 @@ import { edgeTiles } from './communityRules'
 import { footprintCenter, tileToWorld } from './grid'
 import { SKI_LIFT, SKI_SLOPE, slopeHeight } from './models'
 import { isWater } from './terrain'
-import { createCharacter, playClip, releaseCharacter } from './characters'
 
-// People enjoying themselves, for looks only: sunbathers on the towels (one
-// sitting up, one lying back) and swimmers bobbing just off each Public Beach
-// (everyone goes home when it rains), and skiers at the Ski Resort, crouched
-// as they zigzag down the slope and sitting on the chairlift back up. Worked
-// out again whenever buildings change. Everyone is one of the townspeople
-// (characters.ts), with simple shapes standing in until they load.
+// People enjoying themselves, for looks only: sunbathers on the towels and
+// swimmers bobbing just off each Public Beach (everyone goes home when it
+// rains), and skiers at the Ski Resort, zigzagging down the slope and riding
+// the chairlift back up. Worked out again whenever buildings change.
 
 const SKIN = ['#f1c9a5', '#d9a47c', '#a86f4c', '#6b4430']
 const BRIGHT = ['#ff5c8a', '#2f7fe0', '#ffd23f', '#3fae6b', '#ff7043', '#b46cf0', '#2bb3b1']
@@ -43,13 +40,6 @@ function figure(parts: [THREE.BufferGeometry, string][]): THREE.Group {
 }
 
 const up = new THREE.Vector3(0, 1, 0)
-const HEIGHT = 0.36 // the same size as the people walking about town
-
-// Every animated person here, so their animations can be moved on each frame.
-interface Animated {
-  object: THREE.Object3D
-  clip: string
-}
 
 interface Swimmer {
   object: THREE.Group
@@ -77,7 +67,6 @@ export class LeisureView {
   private swimmers: Swimmer[] = []
   private skiers: Skier[] = []
   private extras: THREE.Object3D[] = [] // lift cables
-  private animated: Animated[] = []
   private time = 0
   raining = false
 
@@ -108,12 +97,9 @@ export class LeisureView {
       s.object.position.y = 0.0 + Math.sin(this.time * 2 + s.phase) * 0.025
     }
     for (const s of this.skiers) this.moveSkier(s, dt)
-    for (const a of this.animated) playClip(a.object, a.clip, dt)
   }
 
   private clear() {
-    for (const a of this.animated) releaseCharacter(a.object)
-    this.animated = []
     this.beachGroup.clear()
     this.swimmers = []
     for (const s of this.skiers) this.scene.remove(s.object)
@@ -132,13 +118,6 @@ export class LeisureView {
     }
   }
 
-  // A townsperson playing an animation (or the simple figure, if they can't load).
-  private character(clip: string, fallback: () => THREE.Object3D): THREE.Group {
-    const person = createCharacter({ height: HEIGHT, clip, fallback })
-    this.animated.push({ object: person, clip })
-    return person
-  }
-
   // A point in a building's own coordinates (center at the origin), in the world.
   private toWorld(b: PlacedBuilding, x: number, y: number, z: number): THREE.Vector3 {
     return new THREE.Vector3(x, y, z).applyAxisAngle(up, (-b.rotation * Math.PI) / 2).add(footprintCenter(b.tile, sizeOf(b)))
@@ -147,21 +126,14 @@ export class LeisureView {
   // ---- The beach
 
   private planBeach(b: PlacedBuilding) {
-    // Sunbathers on the two towels (where the model draws them): one sits up
-    // looking out to sea, the other lies back.
-    ;[[-0.6, 0.05], [0.55, 0.05]].forEach(([x, z], i) => {
-      const holder = new THREE.Group()
-      holder.rotation.y = (-b.rotation * Math.PI) / 2
-      const lying = i === 1
-      const person = this.character(lying ? 'static' : 'sit', () => figure([[SHAPES.legs, pick(BRIGHT)], [SHAPES.body, pick(BRIGHT)], [SHAPES.head, pick(SKIN)]]))
-      if (lying) {
-        person.rotation.x = -Math.PI / 2 // on their back, head up the towel
-        person.position.set(0, 0.04, 0.2)
-      }
-      holder.add(person)
-      holder.position.copy(this.toWorld(b, x, 0.07, z + (lying ? 0 : 0.1)))
-      this.beachGroup.add(holder)
-    })
+    // Sunbathers lie on the two towels (where the model draws them).
+    for (const [x, z] of [[-0.6, 0.05], [0.55, 0.05]]) {
+      const person = figure([[SHAPES.legs, pick(BRIGHT)], [SHAPES.body, pick(BRIGHT)], [SHAPES.head, pick(SKIN)]])
+      person.rotation.order = 'YXZ'
+      person.rotation.set(Math.PI / 2, (-b.rotation * Math.PI) / 2, 0) // lying down, along the towel
+      person.position.copy(this.toWorld(b, x, 0.07, z + 0.18))
+      this.beachGroup.add(person)
+    }
     // Swimmers out in the water, off whichever side of the beach faces the sea.
     const center = footprintCenter(b.tile, sizeOf(b))
     const water = edgeTiles(b).filter(isWater).map(tileToWorld)
@@ -170,12 +142,7 @@ export class LeisureView {
     out.normalize()
     const along = new THREE.Vector3(-out.z, 0, out.x)
     for (let i = 0; i < 4; i++) {
-      // Up to their shoulders in the water, facing the beach.
-      const swimmer = new THREE.Group()
-      const person = this.character('idle', () => figure([[SHAPES.shoulders, pick(SKIN)], [SHAPES.head, pick(SKIN)], [SHAPES.cap, pick(BRIGHT)]]))
-      person.position.y = -HEIGHT * 0.42
-      swimmer.add(person)
-      swimmer.rotation.y = Math.atan2(-out.x, -out.z)
+      const swimmer = figure([[SHAPES.shoulders, pick(SKIN)], [SHAPES.head, pick(SKIN)], [SHAPES.cap, pick(BRIGHT)]])
       const base = center.clone().addScaledVector(out, reach + 0.4 + Math.random() * 1.6).addScaledVector(along, (Math.random() - 0.5) * 2.4)
       swimmer.position.copy(base)
       this.beachGroup.add(swimmer)
@@ -193,14 +160,8 @@ export class LeisureView {
     this.scene.add(cable)
     this.extras.push(cable)
     for (let i = 0; i < 5; i++) {
-      // Skis under a person turned to face along them (+x).
-      const skier = new THREE.Group()
-      const skis = new THREE.Mesh(SHAPES.skis, material('#2b2d33'))
-      skis.scale.setScalar(1.4)
-      const person = this.character('crouch', () => figure([[SHAPES.legs, '#2b3a4a'], [SHAPES.body, pick(BRIGHT)], [SHAPES.head, pick(SKIN)], [SHAPES.cap, pick(BRIGHT)]]))
-      person.rotation.y = Math.PI / 2
-      person.name = 'person'
-      skier.add(skis, person)
+      const skier = figure([[SHAPES.skis, '#2b2d33'], [SHAPES.legs, '#2b3a4a'], [SHAPES.body, pick(BRIGHT)], [SHAPES.head, pick(SKIN)], [SHAPES.cap, pick(BRIGHT)]])
+      skier.scale.setScalar(1.1)
       this.scene.add(skier)
       this.skiers.push({ object: skier, resort: b, t: (i * (DOWN_SECONDS + LIFT_SECONDS)) / 5, start: (i % 3) - 1 })
     }
@@ -233,9 +194,6 @@ export class LeisureView {
       heading = new THREE.Vector3(SKI_LIFT.to.x - SKI_LIFT.from.x, 0, SKI_LIFT.to.z - SKI_LIFT.from.z)
     }
     const b = s.resort
-    const person = s.object.getObjectByName('person')!
-    const riding = this.animated.find((a) => a.object === person)
-    if (riding) riding.clip = lift > 0 ? 'sit' : 'crouch'
     s.object.position.copy(this.toWorld(b, x, slopeHeight(x, z) + lift, z))
     const h = heading.applyAxisAngle(up, (-b.rotation * Math.PI) / 2)
     s.object.rotation.y = Math.atan2(-h.z, h.x)
