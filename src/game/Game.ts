@@ -38,11 +38,10 @@ import { CROPS_BY_ID, CROP_TYPES } from './crops'
 import { BUILDING_TYPES, isTrack } from './buildings'
 import { FEATURE_LEVELS } from './UnlockSystem'
 import { MONTH_NAMES } from './GameClock'
-import { xpForLevel } from './progression'
 import { QualityGovernor, type QualityLevel } from './quality'
 import { GameState } from './GameState'
 import { SaveSystem } from './SaveSystem'
-import { LOT_FOOTPRINT, footprintCenter, lotCorner, tileToWorld, worldToTile, type Lot, type Tile } from './grid'
+import { LOTS_PER_SIDE, LOT_FOOTPRINT, footprintCenter, lotCorner, tileToWorld, worldToTile, type Lot, type Tile } from './grid'
 import { IncomeView } from './IncomeView'
 import { LandView } from './LandView'
 import { WELCOME_BACK_AFTER_MS, awaySummary } from './offline'
@@ -60,13 +59,15 @@ import { EffectsView } from './EffectsView'
 import { flyToHud } from '../ui/flyToHud'
 import { PARADE } from './Army'
 import { repairCost } from './Disasters'
+import { canUpgrade } from './construction'
+import { COLLECTIONS } from './collections'
 import { addMountains } from './MountainView'
 import { WeatherView } from './WeatherView'
 import { DisasterView } from './DisasterView'
 import { PortView } from './PortView'
 import { ShipView } from './ShipView'
 import { AutoSaver } from './save'
-import { PRODUCTS } from './products'
+import { PRODUCTS, PRODUCT_IDS } from './products'
 import { LotView } from './LotView'
 import { UTILITY_INFO } from './utilityRules'
 
@@ -661,15 +662,48 @@ export class Game {
 
   private adminPanel(container: HTMLElement): AdminPanel {
     this.admin ??= new AdminPanel(container, this.settings, {
-      coins: (amount) => this.city.economy.adjust(amount),
-      levelUp: () => this.player.grantXp(xpForLevel(this.player.level + 1) - this.player.xp),
-      maxLevel: () => this.player.grantXp(Math.max(0, xpForLevel(MAX_CONTENT_LEVEL) - this.player.xp)),
-      materials: () => {
-        for (const id of MATERIAL_IDS) this.inventory.add(id, 10)
+      level: () => this.player.level,
+      setLevel: (level) => this.player.setLevel(level),
+      maxLevel: MAX_CONTENT_LEVEL,
+      coins: (amount) => this.city.economy.adjust(Math.max(amount, -this.city.coins)),
+      clearDebt: () => this.city.economy.adjust(this.city.debt),
+      materials: (each) => {
+        for (const id of MATERIAL_IDS) this.inventory.add(id, each)
       },
-      goods: () => this.city.economy.addGoods(100, 0),
+      goods: (amount) => this.city.economy.addGoods(amount, 0),
+      fillStorage: () => this.city.economy.addGoods(this.city.economy.room(), 0),
+      products: (each) => {
+        for (const id of PRODUCT_IDS) this.city.economy.changeProduct(id, each)
+      },
+      collections: () => {
+        for (const c of COLLECTIONS) for (const item of c.items) this.inventory.add(item.id, 1)
+      },
       energy: () => this.fillEnergy(),
+      allLand: () => this.buyAllLand(),
       finishTimers: () => this.finishTimers(),
+      repairAll: () => {
+        let repaired = 0
+        for (const b of this.city.all()) {
+          if (!b.damaged) continue
+          this.city.economy.adjust(repairCost(b), { payDebt: false })
+          if (this.state.disasters.repair(b.id)) repaired++
+        }
+        return repaired
+      },
+      upgradeAll: () => {
+        let upgrades = 0
+        for (const b of [...this.city.all()]) while (this.city.isBuilt(b) && canUpgrade(b.type, b.level) && this.city.production.upgrade(b.id, 0)) upgrades++
+        return upgrades
+      },
+      unlockEverything: () => {
+        this.player.setLevel(MAX_CONTENT_LEVEL)
+        this.buyAllLand()
+        this.city.economy.adjust(1_000_000)
+        for (const id of MATERIAL_IDS) this.inventory.add(id, 200)
+        this.city.economy.addGoods(this.city.economy.room(), 0)
+        this.fillEnergy()
+      },
+      notice: (message) => this.hud.toast(message),
       toggleRain: () => this.weather.toggle(),
       toggleSnow: () => this.settings.set('snowMode', !this.settings.values.snowMode),
       disaster: (kind) => this.disasterView.trigger(kind),
@@ -800,12 +834,29 @@ export class Game {
     if (missing > 0) this.player.grantEnergy(missing)
   }
 
+  // Admin: every lot that can be bought, each paid for with coins given just before (so it's free).
+  private buyAllLand(): number {
+    let bought = 0
+    for (let more = true; more; ) {
+      more = false
+      for (let x = 0; x < LOTS_PER_SIDE; x++) {
+        for (let z = 0; z < LOTS_PER_SIDE; z++) {
+          if (!this.city.canBuyLot({ x, z })) continue
+          this.city.economy.adjust(this.city.nextLotPrice, { payDebt: false })
+          if (this.city.buyLot({ x, z })) (bought++, (more = true))
+        }
+      }
+    }
+    return bought
+  }
+
   // Admin powers that work continuously (checked twice a second).
   private applyPowers() {
     const admin = this.settings.values.admin
     if (!admin.enabled) return
     if (admin.infiniteEnergy) this.fillEnergy()
     if (admin.instantTimers) this.finishTimers()
+    if (admin.infiniteCoins && this.city.coins < 1_000_000) this.city.economy.adjust(1_000_000 - this.city.coins)
   }
 
   private startVisit(container: HTMLElement, builder: Builder, n: Neighbor) {

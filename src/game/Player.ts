@@ -151,6 +151,17 @@ export class Player {
     this.addXp(amount, this.now())
   }
 
+  // Admin tools: jump to a level, up (with each level's reward, as if
+  // earned) or down (to the start of that level; rewards aren't paid twice).
+  setLevel(level: number) {
+    if (level > this.level) this.grantXp(xpForLevel(level) - this._xp)
+    else if (level < this.level) {
+      this._xp = xpForLevel(level)
+      this.emit({ kind: 'xp', amount: 0 })
+      this.emit({ kind: 'energy' })
+    }
+  }
+
   // Bonus energy can go above the maximum; it just won't refill past it.
   grantEnergy(amount: number) {
     const now = this.now()

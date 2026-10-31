@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import { sizeOf, type City, type PlacedBuilding } from './City'
 import { footprintCenter } from './grid'
+import { modelCopy } from './models'
 
 // Planes at the airport, for looks only (like TrafficView). One plane flies
 // a full circuit, over and over: it lines up at one end of the runway, rolls
@@ -32,10 +33,27 @@ const ROLL_TO = 2.2 // lift-off
 const LAND_AT = -3.1 // touchdown
 const STOP_AT = 2.9
 
-// ---- The plane: built along +x, wheels at y = 0.
+// ---- The plane: a business jet (Jet by Poly by Google, CC-BY) along +x,
+// wheels at y = 0, with simple shapes standing in if it can't load.
+
+const JET_URL = `${import.meta.env.BASE_URL}models/aircraft/jet.glb`
+const JET_SCALE = 0.13 // about 1.1 long
+function makePlane(stripe: string): THREE.Group {
+  const plane = new THREE.Group()
+  const jet = modelCopy(JET_URL, JET_SCALE, () => {
+    const simple = makeSimplePlane(stripe)
+    simple.rotation.y = -Math.PI / 2 // undone below
+    return simple
+  })
+  jet.rotation.y = Math.PI / 2 // the model's nose points along +z
+  jet.position.y = 0.07 * JET_SCALE
+  plane.add(jet)
+  plane.rotation.order = 'YZX' // turn (yaw), then nose up/down (pitch), then bank (roll)
+  return plane
+}
 
 const material = (color: string) => new THREE.MeshLambertMaterial({ color })
-function makePlane(stripe: string): THREE.Group {
+function makeSimplePlane(stripe: string): THREE.Group {
   const white = material('#f4f6f8')
   const parts: [THREE.BufferGeometry, THREE.Material][] = [
     [new THREE.CylinderGeometry(0.075, 0.06, 1, 10).rotateZ(Math.PI / 2).translate(0, 0.14, 0), white],

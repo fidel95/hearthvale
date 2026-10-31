@@ -2,6 +2,7 @@ import * as THREE from 'three'
 import { sizeOf, type City, type PlacedBuilding } from './City'
 import { footprintCenter } from './grid'
 import { FBXLoader } from 'three/addons/loaders/FBXLoader.js'
+import { modelCopy } from './models'
 import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js'
 
 // Farm animals in their pens, for looks: chickens peck about, pigs root
@@ -26,6 +27,9 @@ const PACK: Partial<Record<Kind, { file: string; length: number }>> = {
 // Companions: one per pen of these kinds.
 const COMPANION: Partial<Record<string, Kind>> = { 'cow-pasture': 'horse', 'sheep-meadow': 'dog' }
 const animalFile = (name: string) => `${import.meta.env.BASE_URL}models/animals/${name}.fbx`
+// Chickens are a separate model (Chicken by jeremy, CC-BY), facing -x.
+const CHICKEN_URL = `${import.meta.env.BASE_URL}models/farm/chicken.glb`
+const CHICKEN_SCALE = 0.2 / 190 // about 0.2 tall
 const loaded = new Map<Kind, { model: THREE.Group; clips: THREE.AnimationClip[]; scale: number }>()
 
 const materials = new Map<string, THREE.MeshLambertMaterial>()
@@ -40,7 +44,21 @@ const material = (color: string) => {
 // animal is a copy sharing its shapes (so rebuilding the herds when the town
 // changes doesn't keep making new shapes on the graphics card).
 const templates = new Map<Kind, THREE.Group>()
-function makeAnimal(kind: Kind): { root: THREE.Group; head: THREE.Group; mixer: THREE.AnimationMixer | null; clips: THREE.AnimationClip[] } {
+function makeAnimal(kind: Kind): { root: THREE.Group; head: THREE.Group; mixer: THREE.AnimationMixer | null; clips: THREE.AnimationClip[]; peck: number } {
+  if (kind === 'chicken') {
+    // The whole chicken tips forward to peck (from its feet).
+    const root = new THREE.Group()
+    const tilt = new THREE.Group()
+    const chicken = modelCopy(CHICKEN_URL, CHICKEN_SCALE, () => {
+      const simple = buildAnimal('chicken')
+      simple.rotation.y = Math.PI // undone below
+      return simple
+    })
+    chicken.rotation.y = Math.PI
+    tilt.add(chicken)
+    root.add(tilt)
+    return { root, head: tilt, mixer: null, clips: [], peck: 0.45 }
+  }
   const pack = loaded.get(kind)
   if (pack) {
     // The pack's animals face +z; turned to face +x, like the rest here.
@@ -52,12 +70,12 @@ function makeAnimal(kind: Kind): { root: THREE.Group; head: THREE.Group; mixer: 
       if (o instanceof THREE.Mesh) o.castShadow = true
     })
     root.add(model)
-    return { root, head: new THREE.Group(), mixer: new THREE.AnimationMixer(model), clips: pack.clips }
+    return { root, head: new THREE.Group(), mixer: new THREE.AnimationMixer(model), clips: pack.clips, peck: 0 }
   }
   let template = templates.get(kind)
   if (!template) templates.set(kind, (template = buildAnimal(kind)))
   const root = template.clone(true)
-  return { root, head: root.getObjectByName('head') as THREE.Group, mixer: null, clips: [] }
+  return { root, head: root.getObjectByName('head') as THREE.Group, mixer: null, clips: [], peck: 1 }
 }
 
 function buildAnimal(kind: Kind): THREE.Group {
@@ -125,6 +143,7 @@ interface Animal {
   mixer: THREE.AnimationMixer | null
   clips: THREE.AnimationClip[]
   clip: string | null // the animation playing
+  peck: number // how far the head (or a model chicken) dips to eat
 }
 
 export class AnimalView {
@@ -187,10 +206,10 @@ export class AnimalView {
       const kinds: Kind[] = Array.from({ length: herd.count }, () => herd.kind)
       if (companion && loaded.has(companion)) kinds.push(companion)
       for (const kind of kinds) {
-        const { root, head, mixer, clips } = makeAnimal(kind)
+        const { root, head, mixer, clips, peck } = makeAnimal(kind)
         const at = this.spot(pen)
         this.scene.add(root)
-        this.animals.push({ kind, root, head, pen, at, to: this.spot(pen), pause: Math.random() * 3, phase: Math.random() * 10, mixer, clips, clip: null })
+        this.animals.push({ kind, root, head, pen, at, to: this.spot(pen), pause: Math.random() * 3, phase: Math.random() * 10, mixer, clips, clip: null, peck })
       }
     }
   }
@@ -223,7 +242,7 @@ export class AnimalView {
     this.animate(a, eating, dt)
     // Head down to eat (chickens peck quickly, the others graze slowly).
     const peck = a.kind === 'chicken' ? Math.max(0, Math.sin(a.phase * 9)) * 0.9 : 0.5 + Math.sin(a.phase * 1.5) * 0.1
-    a.head.rotation.z = eating ? -peck : 0
+    a.head.rotation.z = eating ? -peck * a.peck : 0
     const turn = (-a.pen.rotation * Math.PI) / 2
     const local = new THREE.Vector3(a.at.x, 0, a.at.y).applyAxisAngle(new THREE.Vector3(0, 1, 0), turn)
     a.root.position.copy(footprintCenter(a.pen.tile, sizeOf(a.pen)).add(local)).setY(eating ? 0.03 : 0.03 + Math.abs(Math.sin(a.phase * 10)) * 0.01)

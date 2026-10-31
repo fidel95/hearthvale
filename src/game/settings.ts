@@ -27,7 +27,8 @@ export interface AdminSettings {
   freeBuild: boolean // build anything for free, instantly, at any level
   infiniteEnergy: boolean
   instantTimers: boolean // everything is ready the moment it starts
-  calendarSpeed: number // 1, 10 or 60 times as fast
+  infiniteCoins: boolean // coins topped up to 1,000,000
+  calendarSpeed: number // 1, 10, 60 or 600 times as fast
 }
 
 // The settings that are on/off switches, for the checkbox rows.
@@ -47,7 +48,7 @@ export const DEFAULT_SETTINGS: Settings = {
   tips: true,
   uiScale: 1,
   soundVolume: 0.6,
-  admin: { enabled: false, freeBuild: false, infiniteEnergy: false, instantTimers: false, calendarSpeed: 1 },
+  admin: { enabled: false, freeBuild: false, infiniteEnergy: false, instantTimers: false, infiniteCoins: false, calendarSpeed: 1 },
 }
 
 export const SETTING_LABELS: Record<SwitchSetting, string> = {

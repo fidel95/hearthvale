@@ -316,4 +316,6 @@ docs/                     the docs linked above
 - Townspeople and wheelchairs: [Mini Characters](https://kenney.nl/assets/mini-characters) by Kenney, CC0 (see `public/models/people/License.txt`).
 - Locomotives, coaches and wagons: [Train Kit](https://kenney.nl/assets/train-kit) by Kenney, CC0 (see `public/models/trains/License.txt`).
 - Pigs, sheep, cows, the horse and the farm dog: [Farm Animals Pack](https://quaternius.com/packs/farmanimal.html) by Quaternius, CC0 (see `public/models/animals/License.txt`).
+- The planes: [Jet](https://poly.pizza/m/bgUY8zN2Bq9) by Poly by Google, [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) (texture reduced to 512 px).
+- The chickens: [Chicken](https://poly.pizza/m/1YE8U35HXsI) by jeremy, [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/).
 - Built with [three.js](https://threejs.org), [Vite](https://vite.dev) and [Vitest](https://vitest.dev).
