@@ -149,8 +149,9 @@ export class Visit {
   }
 
   // Called every frame instead of drawing your town.
-  update(dt: number, seconds: number, now: number) {
-    this.cityView.update(now)
+  // dt and lifeTime are at the town's pace (Game's PACE); seconds is real time.
+  update(dt: number, seconds: number, now: number, lifeTime: number) {
+    this.cityView.update(now, lifeTime)
     this.roadView.update()
     this.landView.update(seconds)
     this.peopleView.update(dt)

@@ -138,7 +138,7 @@ function toAndFro(vehicle: THREE.Object3D, from: number, to: number, speed: numb
   return (seconds) => {
     const s = Math.sin(seconds * speed)
     vehicle.position.x = (from + to) / 2 + ((to - from) / 2) * s
-    vehicle.rotation.y = Math.cos(seconds * speed) >= 0 ? Math.PI / 2 : -Math.PI / 2
+    vehicle.rotation.y = (Math.PI / 2) * Math.max(-1, Math.min(1, Math.cos(seconds * speed) * 4)) // swinging round at each end
   }
 }
 

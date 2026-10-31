@@ -4,6 +4,7 @@ import { inBounds, tileToWorld, type Tile } from './grid'
 import { levelFactor } from './construction'
 import { findPath } from './pathfinding'
 import { isTrack } from './buildings'
+import { turnToward } from './motion'
 import { SIDEWALK } from './RoadView'
 
 // Residents walking around town. Purely for looks: nothing here changes the
@@ -315,7 +316,7 @@ export class PeopleView {
         break
       }
     }
-    this.place(walker)
+    this.place(walker, dt)
   }
 
   // Where a walker stands on the i-th tile of their path. On grass, near the
@@ -346,8 +347,9 @@ export class PeopleView {
     return c.add(new THREE.Vector3(nx * scale * walker.side, 0, nz * scale * walker.side))
   }
 
-  // Put the walker's model where it is along its path, facing where it's going.
-  private place(walker: Walker) {
+  // Put the walker's model where it is along its path, facing where it's
+  // going (turning toward it over dt seconds; at once without dt).
+  private place(walker: Walker, dt = 0) {
     const a = this.spot(walker, walker.step)
     const next = walker.path[walker.step + 1]
     const walking = next !== undefined && walker.pause <= 0
@@ -355,7 +357,8 @@ export class PeopleView {
     walker.object.position.set(pos.x, walking ? Math.abs(Math.sin(walker.phase)) * 0.03 : 0, pos.z)
     if (walking) {
       const b = this.spot(walker, walker.step + 1)
-      walker.object.rotation.y = Math.atan2(b.x - a.x, b.z - a.z)
+      const heading = Math.atan2(b.x - a.x, b.z - a.z)
+      walker.object.rotation.y = dt > 0 ? turnToward(walker.object.rotation.y, heading, 9, dt) : heading
     }
   }
 

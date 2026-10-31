@@ -3,6 +3,7 @@ import { sizeOf, type City, type PlacedBuilding } from './City'
 import { footprintCenter } from './grid'
 import { FBXLoader } from 'three/addons/loaders/FBXLoader.js'
 import { modelCopy } from './models'
+import { turnToward } from './motion'
 import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js'
 
 // Farm animals in their pens, for looks: chickens peck about, pigs root
@@ -246,7 +247,7 @@ export class AnimalView {
     const turn = (-a.pen.rotation * Math.PI) / 2
     const local = new THREE.Vector3(a.at.x, 0, a.at.y).applyAxisAngle(new THREE.Vector3(0, 1, 0), turn)
     a.root.position.copy(footprintCenter(a.pen.tile, sizeOf(a.pen)).add(local)).setY(eating ? 0.03 : 0.03 + Math.abs(Math.sin(a.phase * 10)) * 0.01)
-    if (!eating && distance > 0.03) a.root.rotation.y = Math.atan2(-toward.y, toward.x) + turn
+    if (!eating && distance > 0.03) a.root.rotation.y = turnToward(a.root.rotation.y, Math.atan2(-toward.y, toward.x) + turn, 5, dt)
   }
 
   // The pack's animals: walking when they move (those that have a walk),

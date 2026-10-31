@@ -62,18 +62,19 @@ export class CityView {
   // Called every frame. Crops change look as they grow, ripen and wither,
   // which depends only on the time, so we check each plot's look and rebuild
   // its crop model only when the look actually changes (a few times per crop).
-  update(now: number) {
+  // lifeTime: seconds of town life (Game's PACE), for the machines at work.
+  update(now: number, lifeTime: number) {
     this.animatePops()
     this.animateBounces()
-    for (const jib of this.cranes.values()) jib.rotation.y = Math.sin(performance.now() / 2600 + jib.id) * 1.4
+    for (const jib of this.cranes.values()) jib.rotation.y = Math.sin(lifeTime / 2.6 + jib.id) * 1.4
     // Back and forth across the site, turning at each end (the model faces +z).
     for (const dozer of this.dozers.values()) {
-      const t = performance.now() / 1000 * 0.6 + dozer.id
+      const t = lifeTime * 0.6 + dozer.id
       dozer.position.x = Math.sin(t) * dozer.userData.range
-      dozer.rotation.y = Math.cos(t) >= 0 ? Math.PI / 2 : -Math.PI / 2
+      // Swinging round as it slows at each end, rather than flipping.
+      dozer.rotation.y = (Math.PI / 2) * Math.max(-1, Math.min(1, Math.cos(t) * 4))
     }
-    const seconds = performance.now() / 1000
-    for (const [id, parts] of this.animated) for (const animate of parts) animate(seconds + id * 1.7)
+    for (const [id, parts] of this.animated) for (const animate of parts) animate(lifeTime + id * 1.7)
     for (const b of this.city.all()) {
       if (!isPlot(b.type)) continue
       const state = cropState(b.crop, now)

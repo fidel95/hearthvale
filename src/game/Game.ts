@@ -79,6 +79,11 @@ function devSpeed(): number {
   return import.meta.env.DEV ? Number(new URLSearchParams(location.search).get('speed')) || 1 : 1
 }
 
+// Everything that moves about town (cars, buses, trains, people, planes,
+// animals, boats and machines) runs at this share of real time: calmer, and
+// easier on the eye. (Game timers, like crops and rent, run at full time.)
+const PACE = 0.65
+
 // How many world units of the map fit vertically on screen at zoom 1.
 const VIEW_SIZE = 24
 // Where the sun sits relative to the point the camera looks at.
@@ -151,6 +156,7 @@ export class Game {
   private hud: Hud
   private saver: AutoSaver
   private lastFrame = performance.now()
+  private lifeTime = 0 // seconds of town life so far, at PACE
   private loaded = false
   private quality = new QualityGovernor()
 
@@ -428,23 +434,28 @@ export class Game {
     this.followSun()
 
     const now = Date.now()
-    this.cityView.update(now)
+    // A frame's step, capped so a tab coming back from the background
+    // doesn't teleport everyone; and the same step for things moving about town.
+    const step = Math.min(dt, 100) / 1000
+    const life = step * PACE
+    this.lifeTime += life
+    this.cityView.update(now, this.lifeTime)
     this.contextMenu.update(now)
     this.buildingPanel.update(now)
     this.roadView.update()
     this.railView.update()
-    this.trafficView.update(Math.min(dt, 100) / 1000)
-    this.flightView.update(Math.min(dt, 100) / 1000)
-    this.leisureView.update(Math.min(dt, 100) / 1000)
-    this.armyView.update(Math.min(dt, 100) / 1000)
-    this.animalView.update(Math.min(dt, 100) / 1000)
+    this.trafficView.update(life)
+    this.flightView.update(life)
+    this.leisureView.update(life)
+    this.armyView.update(life)
+    this.animalView.update(life)
     this.effects.update(Math.min(dt, 100) / 1000)
     // Road networks: while drawing or removing roads, or when switched on.
     const mode = this.builder.mode
     const roading = (mode.kind === 'build' && mode.type.category === 'road') || mode.kind === 'removeRoads'
     this.roadNetworks.setShown(roading || this.settings.values.roadOverlay)
     this.roadNetworks.update()
-    this.ambientView.update(Math.min(dt, 100) / 1000)
+    this.ambientView.update(life)
     if (this.effects.enabled) this.landView.sway(frameTime / 1000)
     this.weather.update(Math.min(dt, 100) / 1000)
     this.disasterView.raining = this.weather.isRaining && !this.weather.snow
@@ -469,15 +480,15 @@ export class Game {
     const seconds = frameTime / 1000
     this.lotView.update()
     this.landView.update(seconds)
-    this.shipView.update(Math.min(dt, 100) / 1000, seconds)
-    this.portView.update(Math.min(dt, 100) / 1000, seconds, now)
-    // Capped, so a tab coming back from the background doesn't teleport everyone.
-    this.peopleView.update(Math.min(dt, 100) / 1000)
+    this.shipView.update(life, this.lifeTime)
+    // (The port's ships and crane keep to the docks' own timetable.)
+    this.portView.update(life, seconds, now)
+    this.peopleView.update(life)
     this.incomeView.update(now)
     this.hud.update(this.clock, now)
     // Visiting a neighbor: draw their town instead (yours carries on underneath).
     if (this.visit) {
-      this.visit.update(Math.min(dt, 100) / 1000, seconds, now)
+      this.visit.update(life, seconds, now, this.lifeTime)
       this.visit.render(this.renderer, this.camera)
       return
     }

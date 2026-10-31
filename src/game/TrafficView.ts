@@ -5,6 +5,7 @@ import { tileToWorld, type Tile } from './grid'
 import { findPath } from './pathfinding'
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
 import { modelCopy } from './models'
+import { easeShare, turnToward } from './motion'
 import { nextTile, pathToFarthest, Polyline } from './routes'
 
 // Everything that moves along roads and track: cars, buses, trains, and the
@@ -22,7 +23,8 @@ import { nextTile, pathToFarthest, Polyline } from './routes'
 
 const MAX_CARS = 16
 const LANE = 0.17 // how far right of the middle of the road vehicles drive
-const SPEED = { car: 1.8, bus: 1.3, train: 2.2 } // tiles per second
+const SPEED = { car: 1.8, bus: 1.3, train: 2.2 } // tiles per second (at Game's PACE)
+const CORNERING = 7 // how quickly cars settle into a new lane and heading
 const PAUSE = { bus: 2.5, train: 3 } // seconds stopped at each stop or end
 const CAR_COLORS = ['#e0453a', '#2f7fe0', '#f2c230', '#f5f5f5', '#3fae6b', '#8a56d6', '#f08a24', '#2b2d33', '#e85d9b']
 const OLIVE = '#5f6b3a'
@@ -167,6 +169,7 @@ const place = (obj: THREE.Object3D, pose: { x: number; z: number; angle: number 
 
 interface Wanderer {
   object: THREE.Group
+  placed?: boolean // shown at least once (from then on it eases round corners)
   from: Tile | null
   at: Tile
   to: Tile
@@ -293,8 +296,21 @@ export class TrafficView {
     const b = center(car.to)
     const dx = b.x - a.x
     const dz = b.z - a.z
-    car.object.position.set(a.x + dx * car.t - dz * LANE, 0, a.z + dz * car.t + dx * LANE)
-    car.object.rotation.y = Math.atan2(-dz, dx)
+    // Eased toward that spot and heading, so at a corner it swings round
+    // into the new lane rather than jumping across.
+    const x = a.x + dx * car.t - dz * LANE
+    const z = a.z + dz * car.t + dx * LANE
+    const heading = Math.atan2(-dz, dx)
+    if (!car.placed) {
+      car.object.position.set(x, 0, z)
+      car.object.rotation.y = heading
+      car.placed = true
+      return
+    }
+    const share = easeShare(CORNERING, dt)
+    car.object.position.x += (x - car.object.position.x) * share
+    car.object.position.z += (z - car.object.position.z) * share
+    car.object.rotation.y = turnToward(car.object.rotation.y, heading, CORNERING, dt)
   }
 
   // ---- Buses
