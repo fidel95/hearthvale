@@ -1,11 +1,12 @@
 import * as THREE from 'three'
 import { sizeOf, type City, type PlacedBuilding } from './City'
-import { footprintCenter } from './grid'
+import { footprintCenter, GRID_SIZE } from './grid'
 import { modelCopy } from './models'
 
 // Planes at the airport, for looks only (like TrafficView). One plane flies
 // a full circuit, over and over: it lines up at one end of the runway, rolls
-// and lifts off, climbs out and banks round the town, lands from the far end,
+// and lifts off, climbs out and flies a lap round the edge of the whole map,
+// lands from the far end,
 // slows to a stop, turns round, and next time goes the other way. A second
 // plane waits at the terminal.
 //
@@ -14,20 +15,27 @@ import { modelCopy } from './models'
 
 const RUNWAY_Z = 0.69 // the runway's center line (3-tile airport: d * 0.23)
 const GROUND = 0.1 // wheels on the runway
-const CRUISE = 5 // world units per second in the air
+const CRUISE = 8 // world units per second in the air
 const TIMES = { wait: 4, roll: 3.5, landing: 3, turn: 2 } // seconds
 
-// The flight, going +x: from lift-off round to touchdown. Mirrored for -x.
-const FLIGHT = [
+// The flight going +x: lift-off and the climb out along the runway, then
+// (worked out in replan, since it depends on where the airport is) a lap
+// round the map, then the approach from the far end and touchdown.
+// Mirrored for -x.
+const CLIMB = [
   [2.2, 0.15, 0],
   [6, 1.4, 0],
-  [11, 3.8, -2.5],
-  [9, 5.5, -10],
-  [-7, 5.5, -10],
-  [-12.5, 3.8, -3],
+  [12, 4.5, 0],
+]
+const APPROACH = [
+  [-14, 4.5, 0],
   [-8, 1.4, 0],
   [-3.1, 0.15, 0],
 ]
+const LAP_RADIUS = GRID_SIZE * 0.43 // just inside the map's edge
+const LAP_HEIGHT = 7
+const LAP_STEP = Math.PI / 8 // a point on the lap every 22.5°
+const JOIN = 0.6 // how far round (radians) it joins and leaves the lap
 const ROLL_FROM = -3
 const ROLL_TO = 2.2 // lift-off
 const LAND_AT = -3.1 // touchdown
@@ -35,6 +43,8 @@ const STOP_AT = 2.9
 
 // ---- The plane: a business jet (Jet by Poly by Google, CC-BY) along +x,
 // wheels at y = 0, with simple shapes standing in if it can't load.
+
+const UP = new THREE.Vector3(0, 1, 0)
 
 const JET_URL = `${import.meta.env.BASE_URL}models/aircraft/jet.glb`
 const JET_SCALE = 0.13 // about 1.1 long
@@ -97,7 +107,57 @@ export class FlightView {
     city.onChange((e) => {
       if (['added', 'removed', 'moved', 'finished', 'stored', 'restored'].includes(e.kind)) this.dirty = true
     })
-    this.curves = ([1, -1] as const).map((d) => new THREE.CatmullRomCurve3(FLIGHT.map(([x, y, z]) => new THREE.Vector3(x * d, y, z))))
+  }
+
+  // The whole flight going d along the runway, in the airport's coordinates:
+  // the climb out, then round the map's edge the way the plane is already
+  // turning (at least three quarters of a lap and usually more, so it
+  // always goes round the whole map),
+  // and in from the far end to land.
+  private flight(d: 1 | -1): THREE.CatmullRomCurve3 {
+    const local = (points: number[][]) => points.map(([x, y, z]) => new THREE.Vector3(x * d, y, z))
+    const climb = local(CLIMB)
+    const approach = local(APPROACH)
+    const out = this.toWorld(climb[climb.length - 1])
+    const back = this.toWorld(approach[0])
+    const ahead = this.toWorld(climb[climb.length - 1].clone().add(new THREE.Vector3(d, 0, 0))).sub(out)
+    // Counterclockwise (seen from above, angles measured from +x toward -z)
+    // if the plane is heading that way round the map's center.
+    const ccw = out.x * -ahead.z - -out.z * ahead.x >= 0
+    const sense = ccw ? 1 : -1
+    // It joins the lap a little ahead of where it climbs out, and leaves it a
+    // little before the approach, so it eases on and off rather than
+    // swerving out to the edge and back.
+    const from = Math.atan2(-out.z, out.x) + sense * JOIN
+    const to = Math.atan2(-back.z, back.x) - sense * JOIN
+    let span = (((to - from) * sense) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI)
+    if (span < 1.5 * Math.PI) span += 2 * Math.PI
+    const lap: THREE.Vector3[] = []
+    const steps = Math.ceil(span / LAP_STEP)
+    for (let i = 0; i <= steps; i++) {
+      const angle = from + (sense * span * i) / steps
+      lap.push(this.toLocal(new THREE.Vector3(Math.cos(angle) * LAP_RADIUS, LAP_HEIGHT, -Math.sin(angle) * LAP_RADIUS)))
+    }
+    return new THREE.CatmullRomCurve3([...climb, ...lap, ...approach])
+  }
+
+  // From the airport's coordinates to the world's, and back.
+  private toWorld(local: THREE.Vector3): THREE.Vector3 {
+    const a = this.airport!
+    return local
+      .clone()
+      .add(new THREE.Vector3(0, 0, RUNWAY_Z))
+      .applyAxisAngle(UP, (-a.rotation * Math.PI) / 2)
+      .add(footprintCenter(a.tile, sizeOf(a)))
+  }
+
+  private toLocal(world: THREE.Vector3): THREE.Vector3 {
+    const a = this.airport!
+    return world
+      .clone()
+      .sub(footprintCenter(a.tile, sizeOf(a)))
+      .applyAxisAngle(UP, (a.rotation * Math.PI) / 2)
+      .sub(new THREE.Vector3(0, 0, RUNWAY_Z))
   }
 
   setVisible(visible: boolean) {
@@ -167,11 +227,8 @@ export class FlightView {
 
   // Place a plane in airport coordinates, nose along heading, banking into turns.
   private pose(plane: THREE.Group, local: THREE.Vector3, heading: THREE.Vector3, dt: number) {
-    const a = this.airport!
-    const turn = (-a.rotation * Math.PI) / 2
-    const up = new THREE.Vector3(0, 1, 0)
-    const world = local.clone().add(new THREE.Vector3(0, 0, RUNWAY_Z)).applyAxisAngle(up, turn).add(footprintCenter(a.tile, sizeOf(a)))
-    const h = heading.clone().applyAxisAngle(up, turn)
+    const world = this.toWorld(local)
+    const h = heading.clone().applyAxisAngle(UP, (-this.airport!.rotation * Math.PI) / 2)
     const yaw = Math.atan2(-h.z, h.x)
     const pitch = Math.atan2(h.y, Math.hypot(h.x, h.z))
     // Bank by how fast the heading is turning (only in the air). The change
@@ -194,6 +251,7 @@ export class FlightView {
     this.airport = airport
     if (!airport) return
     this.placed = `${airport.tile.x},${airport.tile.z},${airport.rotation}`
+    this.curves = [this.flight(1), this.flight(-1)]
     this.planes = [makePlane('#2f7fe0'), makePlane('#e0453a')]
     for (const p of this.planes) this.scene.add(p)
     // The second plane, a little smaller, waits on the apron beside the
