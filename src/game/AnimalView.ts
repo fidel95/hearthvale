@@ -1,12 +1,32 @@
 import * as THREE from 'three'
 import { sizeOf, type City, type PlacedBuilding } from './City'
 import { footprintCenter } from './grid'
+import { FBXLoader } from 'three/addons/loaders/FBXLoader.js'
+import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js'
 
 // Farm animals in their pens, for looks: chickens peck about, pigs root
-// around, sheep and cows graze. Each wanders to a spot in the yard, stops
-// to eat for a bit, and wanders on. Worked out again when pens change.
+// around, sheep and cows graze, a horse keeps the cows company and a dog
+// minds the sheep. Each wanders to a spot in the yard, stops to eat for a
+// bit, and wanders on. Worked out again when pens change.
+//
+// Pigs, sheep, cows, the horse and the dog are Quaternius's Farm Animals
+// (CC0), with their idle and walk animations; chickens (which the pack
+// doesn't have) and anyone still loading are simple shapes.
 
-type Kind = 'chicken' | 'pig' | 'sheep' | 'cow'
+type Kind = 'chicken' | 'pig' | 'sheep' | 'cow' | 'horse' | 'dog'
+
+// The pack's animal for each kind, and how long it is from nose to tail.
+const PACK: Partial<Record<Kind, { file: string; length: number }>> = {
+  pig: { file: 'Pig', length: 0.45 },
+  sheep: { file: 'Sheep', length: 0.42 },
+  cow: { file: 'Cow', length: 0.68 },
+  horse: { file: 'Horse', length: 0.7 },
+  dog: { file: 'Pug', length: 0.26 },
+}
+// Companions: one per pen of these kinds.
+const COMPANION: Partial<Record<string, Kind>> = { 'cow-pasture': 'horse', 'sheep-meadow': 'dog' }
+const animalFile = (name: string) => `${import.meta.env.BASE_URL}models/animals/${name}.fbx`
+const loaded = new Map<Kind, { model: THREE.Group; clips: THREE.AnimationClip[]; scale: number }>()
 
 const materials = new Map<string, THREE.MeshLambertMaterial>()
 const material = (color: string) => {
@@ -20,11 +40,24 @@ const material = (color: string) => {
 // animal is a copy sharing its shapes (so rebuilding the herds when the town
 // changes doesn't keep making new shapes on the graphics card).
 const templates = new Map<Kind, THREE.Group>()
-function makeAnimal(kind: Kind): { root: THREE.Group; head: THREE.Group } {
+function makeAnimal(kind: Kind): { root: THREE.Group; head: THREE.Group; mixer: THREE.AnimationMixer | null; clips: THREE.AnimationClip[] } {
+  const pack = loaded.get(kind)
+  if (pack) {
+    // The pack's animals face +z; turned to face +x, like the rest here.
+    const root = new THREE.Group()
+    const model = cloneSkinned(pack.model)
+    model.scale.setScalar(pack.scale)
+    model.rotation.y = Math.PI / 2
+    model.traverse((o) => {
+      if (o instanceof THREE.Mesh) o.castShadow = true
+    })
+    root.add(model)
+    return { root, head: new THREE.Group(), mixer: new THREE.AnimationMixer(model), clips: pack.clips }
+  }
   let template = templates.get(kind)
   if (!template) templates.set(kind, (template = buildAnimal(kind)))
   const root = template.clone(true)
-  return { root, head: root.getObjectByName('head') as THREE.Group }
+  return { root, head: root.getObjectByName('head') as THREE.Group, mixer: null, clips: [] }
 }
 
 function buildAnimal(kind: Kind): THREE.Group {
@@ -78,7 +111,7 @@ function buildAnimal(kind: Kind): THREE.Group {
   return root
 }
 
-const SPEED: Record<Kind, number> = { chicken: 0.5, pig: 0.3, sheep: 0.25, cow: 0.2 }
+const SPEED: Record<Kind, number> = { chicken: 0.5, pig: 0.3, sheep: 0.25, cow: 0.2, horse: 0.3, dog: 0.5 }
 
 interface Animal {
   kind: Kind
@@ -89,6 +122,9 @@ interface Animal {
   to: THREE.Vector2
   pause: number
   phase: number
+  mixer: THREE.AnimationMixer | null
+  clips: THREE.AnimationClip[]
+  clip: string | null // the animation playing
 }
 
 export class AnimalView {
@@ -105,6 +141,19 @@ export class AnimalView {
     city.onChange((e) => {
       if (['added', 'removed', 'moved', 'finished', 'stored', 'restored'].includes(e.kind)) this.dirty = true
     })
+    // Load the pack once; then the herds are worked out again with it.
+    const loader = new FBXLoader()
+    for (const kind of Object.keys(PACK) as Kind[]) {
+      const { file, length } = PACK[kind]!
+      loader
+        .loadAsync(animalFile(file))
+        .then((model) => {
+          const size = new THREE.Box3().setFromObject(model).getSize(new THREE.Vector3())
+          loaded.set(kind, { model, clips: model.animations, scale: length / Math.max(0.001, size.z) })
+          this.dirty = true
+        })
+        .catch((err) => console.warn(`Couldn't load the ${kind}; a simple one stands in`, err))
+    }
   }
 
   setVisible(visible: boolean) {
@@ -121,7 +170,10 @@ export class AnimalView {
   }
 
   private clear() {
-    for (const a of this.animals) this.scene.remove(a.root)
+    for (const a of this.animals) {
+      this.scene.remove(a.root)
+      a.mixer?.stopAllAction()
+    }
     this.animals = []
   }
 
@@ -131,11 +183,14 @@ export class AnimalView {
     for (const pen of this.city.all()) {
       const herd = pen.type.animals
       if (!herd || !this.city.isBuilt(pen)) continue
-      for (let i = 0; i < herd.count; i++) {
-        const { root, head } = makeAnimal(herd.kind)
+      const companion = COMPANION[pen.type.id]
+      const kinds: Kind[] = Array.from({ length: herd.count }, () => herd.kind)
+      if (companion && loaded.has(companion)) kinds.push(companion)
+      for (const kind of kinds) {
+        const { root, head, mixer, clips } = makeAnimal(kind)
         const at = this.spot(pen)
         this.scene.add(root)
-        this.animals.push({ kind: herd.kind, root, head, pen, at, to: this.spot(pen), pause: Math.random() * 3, phase: Math.random() * 10 })
+        this.animals.push({ kind, root, head, pen, at, to: this.spot(pen), pause: Math.random() * 3, phase: Math.random() * 10, mixer, clips, clip: null })
       }
     }
   }
@@ -165,6 +220,7 @@ export class AnimalView {
     } else {
       a.at.addScaledVector(toward.normalize(), Math.min(distance, SPEED[a.kind] * dt))
     }
+    this.animate(a, eating, dt)
     // Head down to eat (chickens peck quickly, the others graze slowly).
     const peck = a.kind === 'chicken' ? Math.max(0, Math.sin(a.phase * 9)) * 0.9 : 0.5 + Math.sin(a.phase * 1.5) * 0.1
     a.head.rotation.z = eating ? -peck : 0
@@ -172,5 +228,25 @@ export class AnimalView {
     const local = new THREE.Vector3(a.at.x, 0, a.at.y).applyAxisAngle(new THREE.Vector3(0, 1, 0), turn)
     a.root.position.copy(footprintCenter(a.pen.tile, sizeOf(a.pen)).add(local)).setY(eating ? 0.03 : 0.03 + Math.abs(Math.sin(a.phase * 10)) * 0.01)
     if (!eating && distance > 0.03) a.root.rotation.y = Math.atan2(-toward.y, toward.x) + turn
+  }
+
+  // The pack's animals: walking when they move (those that have a walk),
+  // otherwise their idle, which has them look about and graze.
+  private animate(a: Animal, eating: boolean, dt: number) {
+    if (!a.mixer) return
+    const want = !eating && a.clips.some((c) => c.name.endsWith('|WalkSlow')) ? 'WalkSlow' : 'Idle'
+    if (a.clip !== want) {
+      const clip = a.clips.find((c) => c.name.endsWith(`|${want}`))
+      if (clip) {
+        const action = a.mixer.clipAction(clip)
+        action.reset().play()
+        if (a.clip) {
+          const before = a.clips.find((c) => c.name.endsWith(`|${a.clip}`))
+          if (before) a.mixer.clipAction(before).crossFadeTo(action, 0.3, false)
+        } else action.time = Math.random() * clip.duration
+        a.clip = want
+      }
+    }
+    a.mixer.update(dt)
   }
 }

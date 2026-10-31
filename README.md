@@ -275,7 +275,7 @@ src/
     NeighborsList.ts      the neighbors tab of the Map
     dom.ts                small DOM helpers
 scripts/                  generators run with Vitest (npm run balance)
-public/models/            3D models served as-is (Kenney's City Kits, Car Kit, Train Kit, Mini Characters, Mini Forest and Watercraft Kit, CC0)
+public/models/            3D models served as-is (Kenney's City Kits, Car Kit, Train Kit, Mini Characters, Mini Forest and Watercraft Kit, and Quaternius's Farm Animals, all CC0)
 assets-src/               raw downloaded asset packs (git-ignored)
 docs/                     the docs linked above
 ```
@@ -315,4 +315,5 @@ docs/                     the docs linked above
 - Cars, service vehicles and the docks' trucks: [Car Kit](https://kenney.nl/assets/car-kit) by Kenney, CC0 (see `public/models/cars/License.txt`).
 - Townspeople and wheelchairs: [Mini Characters](https://kenney.nl/assets/mini-characters) by Kenney, CC0 (see `public/models/people/License.txt`).
 - Locomotives, coaches and wagons: [Train Kit](https://kenney.nl/assets/train-kit) by Kenney, CC0 (see `public/models/trains/License.txt`).
+- Pigs, sheep, cows, the horse and the farm dog: [Farm Animals Pack](https://quaternius.com/packs/farmanimal.html) by Quaternius, CC0 (see `public/models/animals/License.txt`).
 - Built with [three.js](https://threejs.org), [Vite](https://vite.dev) and [Vitest](https://vitest.dev).
