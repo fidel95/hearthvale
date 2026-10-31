@@ -58,6 +58,8 @@ export type PlaceholderShape =
   | 'sportsfield'
   | 'bigpark'
   | 'skiresort'
+  | 'mine'
+  | 'landfill'
   | 'pen'
   | 'arch'
   | 'cart'
@@ -160,6 +162,19 @@ const industrial = (name: string) => `${import.meta.env.BASE_URL}models/industri
 
 export const BUILDING_TYPES: BuildingType[] = [
   // ---- Industry: factories turn goods into products for specialty shops.
+  {
+    id: 'coal-mine',
+    name: 'Coal Mine',
+    category: 'industry',
+    size: { x: 4, z: 4 },
+    cost: 1200,
+    unlockLevel: 12,
+    requiresRoad: true,
+    build: { seconds: 150, materials: { steel: 3, lumber: 2 } },
+    income: { coins: 150, seconds: 300 },
+    needs: { power: 3, water: 2 },
+    placeholder: { shape: 'mine', color: '#a4825c', accent: '#262322', height: 0.35 },
+  },
   {
     id: 'cannery',
     name: 'Cannery',
@@ -851,6 +866,19 @@ export const BUILDING_TYPES: BuildingType[] = [
     recoveryYears: 20, // electric utility steam production plant
     model: industrial('building-f'),
     placeholder: { shape: 'plant', color: '#b9b4ab', accent: '#d9a441', height: 1.1 },
+  },
+  {
+    id: 'landfill',
+    name: 'Landfill',
+    category: 'utility',
+    size: { x: 3, z: 3 },
+    cost: 200,
+    unlockLevel: 6,
+    build: { seconds: 90, materials: { lumber: 2 } },
+    supplies: { utility: 'trash', amount: 30 },
+    upkeep: 12,
+    recoveryYears: 15, // land improvements
+    placeholder: { shape: 'landfill', color: '#7d6a52', accent: '#7da35a', height: 0.3 },
   },
   {
     id: 'recycling-center',

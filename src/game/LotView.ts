@@ -13,7 +13,7 @@ const LAWN = new THREE.Color('#5aa94a')
 const PAVING = new THREE.Color('#d9d2c2')
 
 // Green places (parks, gardens, playing fields, the beach) keep their own ground.
-const OPEN_AIR = new Set(['park', 'bigpark', 'garden', 'beach', 'playground', 'sportsfield', 'skiresort'])
+const OPEN_AIR = new Set(['park', 'bigpark', 'garden', 'beach', 'playground', 'sportsfield', 'skiresort', 'mine', 'landfill'])
 
 function padFor(type: BuildingType): THREE.Color | null {
   if (OPEN_AIR.has(type.placeholder.shape)) return null

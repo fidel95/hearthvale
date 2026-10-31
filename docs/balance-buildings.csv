@@ -1,4 +1,5 @@
 id,name,category,role,unlockLevel,quests,footprint,tiles,cost,materials,materialsValue,totalCost,buildSeconds,cycleSeconds,coinsPerCycle,goodsPerCycle,netPerCycle,xpPerCycle,buildXp,residents,needs,upkeepPerMonth,effect,paybackCycles,paybackMinutes,coinsPerMinute,coinsPerEnergy,roads,upgrades
+coal-mine,Coal Mine,industry,late,12,,4×4,16,1200,🪵 2 🔩 3,99,1299,150,300,150,0,150,10,84,0,💧2 🔌3,0,,8.66,45.8,30,150,—,—
 cannery,Cannery,industry,late,12,Made in Hearthvale,3×2,6,600,🧱 4 🔩 1,85,685,90,,,0,,,42,0,💧4 🔌4 🗑️3,0,,,,,,—,—
 textile-mill,Textile Mill,industry,late,13,,3×3,9,900,🧱 6 🪟 2 🔩 2,180,1080,150,,,0,,,63,0,💧5 🔌6 🗑️3,0,,,,,,—,—
 furniture-workshop,Furniture Workshop,industry,late,16,,3×2,6,1100,🪵 8 🔩 2,146,1246,180,,,0,,,77,0,💧2 🔌6 🗑️4,0,,,,,,—,—
@@ -29,6 +30,15 @@ pine-tree,Pine Tree,decoration,early,1,,1×1,1,15,,0,15,0,,,0,,,0,0,,0,+1% withi
 tall-pine,Tall Pine,decoration,early,2,,1×1,1,25,,0,25,0,,,0,,,1,0,,0,+2% within 1 tiles; looks nice,,,,,—,—
 stone-pile,Stone Pile,decoration,early,2,,1×1,1,15,,0,15,0,,,0,,,0,0,,0,+1% within 1 tiles; looks nice,,,,,—,—
 boulders,Boulders,decoration,middle,4,,1×1,1,40,,0,40,0,,,0,,,2,0,,0,+3% within 1 tiles; looks nice,,,,,—,—
+leafy-tree,Leafy Tree,decoration,early,1,,1×1,1,20,,0,20,0,,,0,,,1,0,,0,+2% within 1 tiles; looks nice,,,,,—,—
+round-tree,Round Tree,decoration,early,2,,1×1,1,20,,0,20,0,,,0,,,1,0,,0,+2% within 1 tiles; looks nice,,,,,—,—
+autumn-oak,Autumn Oak,decoration,early,3,,1×1,1,30,,0,30,0,,,0,,,1,0,,0,+2% within 1 tiles; looks nice,,,,,—,—
+golden-birch,Golden Birch,decoration,middle,4,,1×1,1,30,,0,30,0,,,0,,,1,0,,0,+2% within 1 tiles; looks nice,,,,,—,—
+palm-tree,Palm Tree,decoration,middle,5,,1×1,1,35,,0,35,0,,,0,,,1,0,,0,+3% within 1 tiles; looks nice,,,,,—,—
+bush,Bush,decoration,early,1,,1×1,1,10,,0,10,0,,,0,,,0,0,,0,+1% within 1 tiles; looks nice,,,,,—,—
+log-pile,Log Pile,decoration,early,2,,1×1,1,15,,0,15,0,,,0,,,0,0,,0,+1% within 1 tiles; looks nice,,,,,—,—
+stone-column,Stone Column,decoration,middle,6,,1×1,1,120,,0,120,0,,,0,,,6,0,,0,+4% within 2 tiles; looks nice,,,,,—,—
+obelisk,Obelisk,decoration,late,9,,1×1,1,300,,0,300,0,,,0,,,15,0,,0,+7.000000000000001% within 3 tiles; looks nice,,,,,—,—
 planter,Planter,decoration,early,3,,1×1,1,30,,0,30,0,,,0,,,1,0,,0,+3% within 1 tiles; looks nice,,,,,—,—
 flower-bed,Flower Bed,decoration,early,2,,1×1,1,25,,0,25,0,,,0,,,1,0,,0,+2% within 1 tiles; looks nice,,,,,—,—
 stone-path,Stone Path,decoration,early,2,,1×1,1,15,,0,15,0,,,0,,,0,0,,0,+1% within 0 tiles; looks nice,,,,,—,—
@@ -42,6 +52,7 @@ fountain,Fountain,decoration,middle,7,,2×2,4,250,,0,250,0,,,0,,,12,0,,0,+6% wit
 statue,Statue,decoration,late,10,,1×1,1,400,,0,400,0,,,0,,,20,0,,0,+8% within 4 tiles; looks nice,,,,,—,—
 water-tower,Water Tower,utility,middle,4,Keep the Taps Running,2×2,4,250,🔩 4,100,350,90,,,0,,,17,0,,15,supplies 💧 20,,,,,—,—
 power-plant,Power Plant,utility,middle,4,,3×2,6,500,🧱 4 🔩 6,210,710,180,,,0,,,35,0,,30,supplies 🔌 30,,,,,—,—
+landfill,Landfill,utility,middle,6,,3×3,9,200,🪵 2,24,224,90,,,0,,,14,0,,12,supplies 🗑️ 30,,,,,—,—
 recycling-center,Recycling Center,utility,middle,4,,2×2,4,300,🧱 3 🔩 3,120,420,120,,,0,,,21,0,,20,supplies 🗑️ 20,,,,,—,—
 solar-farm,Solar Farm,utility,late,11,,3×3,9,1200,🪟 8 🔩 4,260,1460,240,,,0,,,84,0,,5,supplies 🔌 25,,,,,—,—
 barn,Barn,storage,middle,5,Room for the Harvest,2×2,4,150,🪵 6,72,222,60,,,0,,,10,0,,0,stores 📦 150,,,,,—,—

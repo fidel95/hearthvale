@@ -3,6 +3,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
 import type { BuildingType } from './buildings'
 import type { CropState, CropType } from './crops'
+import { buildCoalMine, buildLandfill } from './quarryModels'
 
 // Tallest a model may be, in world units per tile of its footprint's longer side.
 const MAX_HEIGHT_PER_TILE = 1.2
@@ -218,6 +219,12 @@ export function createBuildingObject(type: BuildingType, overrideMaterial?: THRE
   const scheme = kind === 'shop' ? colorKey % SHOP_SCHEMES.length : kind === 'home' ? colorKey % HOME_SCHEMES.length : null
 
   const fill = (content: THREE.Object3D) => {
+    // The see-through ghost leaves out the machines at work (they load in later, solid).
+    if (overrideMaterial) {
+      const live: THREE.Object3D[] = []
+      content.traverse((o) => o.userData.liveOnly && live.push(o))
+      for (const o of live) o.removeFromParent()
+    }
     content.traverse((obj) => {
       if (!(obj instanceof THREE.Mesh)) return
       obj.castShadow = !overrideMaterial
@@ -307,6 +314,12 @@ function createPlaceholder(type: BuildingType): THREE.Group {
   }
 
   switch (shape) {
+    case 'mine':
+      buildCoalMine(group, add, w, d, modelCopy)
+      break
+    case 'landfill':
+      buildLandfill(group, add, w, d, modelCopy)
+      break
     case 'house': {
       add(new THREE.BoxGeometry(w * 0.8, height, d * 0.8), color, 0, 0, 0)
       // A cone with 4 sides is a pyramid. Turned 45°, its edges line up with the walls.
