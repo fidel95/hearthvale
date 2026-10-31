@@ -104,6 +104,26 @@ export function makeKitCar(name: string): THREE.Group {
   g.add(model)
   return g
 }
+// Trains from Kenney's Train Kit (CC0): a steam locomotive and its coaches,
+// pointing along +z with their rails' top at the origin's height (wheels below).
+const trainKit = (name: string) => `${import.meta.env.BASE_URL}models/trains/${name}.glb`
+const TRAIN_SCALE = 0.27
+function makeKitTrain(name: string, fallback: () => THREE.Group): THREE.Group {
+  const g = new THREE.Group()
+  const model = modelCopy(trainKit(name), TRAIN_SCALE, () => {
+    const simple = fallback()
+    simple.rotation.y = -Math.PI / 2 // undone below
+    return simple
+  })
+  model.rotation.y = Math.PI / 2 // face +x, like every vehicle here
+  model.position.y = 0.36 * TRAIN_SCALE + 0.02
+  g.add(model)
+  return g
+}
+const LOCOMOTIVES = ['train-locomotive-a', 'train-locomotive-b', 'train-locomotive-c']
+const COACHES = ['train-locomotive-passenger-a', 'train-locomotive-passenger-b'] // the pack's passenger coaches
+const WAGONS = ['train-carriage-container-red', 'train-carriage-container-blue', 'train-carriage-lumber', 'train-carriage-tank', 'train-carriage-coal']
+
 const CAR_MODELS = ['sedan', 'suv', 'hatchback-sports', 'van', 'taxi', 'suv-luxury', 'sedan-sports', 'truck', 'sedan', 'suv']
 // Service vehicles join the traffic once the town has where they work from.
 const SERVICE_VEHICLES: [(id: string, category: string) => boolean, string][] = [
@@ -333,7 +353,12 @@ export class TrafficView {
     const back = new Polyline([...path].reverse().map(center))
     const spacing = 0.8
     const carriages = Math.max(1, Math.min(3, Math.floor(out.length / spacing) - 1))
-    const objects = [makeLoco(), ...Array.from({ length: carriages }, (_, i) => makeCarriage(['#3f8f5c', '#2f6fbf', '#3f8f5c'][i]))]
+    // Coaches behind the engine, and now and then a goods wagon at the end.
+    const cars = Array.from({ length: carriages }, (_, i) => (i === carriages - 1 && carriages > 1 && Math.random() < 0.5 ? pick(WAGONS) : pick(COACHES)))
+    const objects = [
+      makeKitTrain(pick(LOCOMOTIVES), makeLoco),
+      ...cars.map((name, i) => makeKitTrain(name, () => makeCarriage(['#3f8f5c', '#2f6fbf', '#3f8f5c'][i]))),
+    ]
     for (const o of objects) this.scene.add(o)
     const length = spacing * (objects.length - 1)
     this.shuttles.push({
