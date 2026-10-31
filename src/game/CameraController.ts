@@ -295,6 +295,11 @@ export class CameraController {
     this.centerOn(point)
   }
 
+  // Zoom to a level (1 is the default).
+  zoomTo(zoom: number) {
+    this.setZoom(zoom)
+  }
+
   // Jump the view to look at a point on the ground.
   centerOn(point: THREE.Vector3) {
     this.target.set(point.x, 0, point.z)

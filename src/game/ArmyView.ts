@@ -3,6 +3,7 @@ import type { Army } from './Army'
 import { sizeOf, type City, type PlacedBuilding } from './City'
 import { edgeTiles } from './communityRules'
 import { footprintCenter, tileToWorld } from './grid'
+import { bonesOf, createCharacter } from './characters'
 import { ARMY_BASE } from './models'
 import { pathToFarthest, Polyline } from './routes'
 
@@ -17,6 +18,7 @@ import { pathToFarthest, Polyline } from './routes'
 // with the model) and turned and moved to where the base stands.
 
 const OLIVE = '#5f6b3a'
+const SOLDIER_HEIGHT = 0.26 // in the soldier's own units (scaled up by 1.4), like the townspeople
 const DARK_OLIVE = '#3b4226'
 const SKIN = ['#f1c9a5', '#d9a47c', '#a86f4c', '#6b4430']
 const up = new THREE.Vector3(0, 1, 0)
@@ -47,6 +49,7 @@ const GEO = {
   torso: new THREE.CylinderGeometry(0.06, 0.07, 0.15, 6).translate(0, 0.205, 0),
   head: new THREE.IcosahedronGeometry(0.055, 0).translate(0, 0.33, 0),
   helmet: new THREE.SphereGeometry(0.066, 8, 4, 0, Math.PI * 2, 0, Math.PI / 2).translate(0, 0.345, 0),
+  bigHelmet: new THREE.SphereGeometry(0.085, 10, 5, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 0.7, 1).translate(0, 0.222, 0), // on a townsperson's head
   drum: new THREE.CylinderGeometry(0.05, 0.05, 0.05, 10).rotateX(Math.PI / 2).translate(0.07, 0.17, 0),
   pole: new THREE.CylinderGeometry(0.006, 0.006, 0.4, 4).translate(0.05, 0.3, 0.09),
   pennant: new THREE.PlaneGeometry(0.14, 0.09).translate(0.12, 0.44, 0.09),
@@ -54,6 +57,11 @@ const GEO = {
 
 interface Soldier {
   root: THREE.Group
+  // The townsperson in olive (characters.ts), its bones following the drill
+  // pose set on the stand-in figure's limbs; the stand-in shows until it loads.
+  person: THREE.Group
+  simple: THREE.Object3D[]
+  helmet: THREE.Object3D
   legs: [THREE.Object3D, THREE.Object3D]
   arms: [THREE.Object3D, THREE.Object3D] // left, right
   props: THREE.Object3D[] // the parade flag or drum, shown only on parade
@@ -74,23 +82,57 @@ function makeSoldier(role: 'flag' | 'drum' | null): Soldier {
   root.rotation.order = 'YZX' // face a way, then lean (for push-ups)
   const body = new THREE.Group()
   root.add(body)
+  const simple: THREE.Object3D[] = []
   for (const [g, c] of [[GEO.torso, OLIVE], [GEO.head, SKIN[Math.floor(Math.random() * SKIN.length)]], [GEO.helmet, DARK_OLIVE]] as const) {
     const m = new THREE.Mesh(g, material(c))
     m.castShadow = true
     body.add(m)
+    simple.push(m)
   }
   const legs: [THREE.Object3D, THREE.Object3D] = [pivot(GEO.leg, DARK_OLIVE, 0, 0.13, -0.025), pivot(GEO.leg, DARK_OLIVE, 0, 0.13, 0.025)]
   const arms: [THREE.Object3D, THREE.Object3D] = [pivot(GEO.arm, OLIVE, 0, 0.27, -0.078), pivot(GEO.arm, OLIVE, 0, 0.27, 0.078)]
   body.add(...legs, ...arms)
+  simple.push(...[...legs, ...arms].map((limb) => limb.children[0]))
+  // The townsperson faces +z; turned to face +x, like the drill.
+  const person = createCharacter({ height: SOLDIER_HEIGHT, tint: OLIVE, fallback: () => new THREE.Group() })
+  person.rotation.y = Math.PI / 2
+  const helmet = new THREE.Mesh(GEO.bigHelmet, material(DARK_OLIVE))
+  helmet.castShadow = true
+  helmet.visible = false
+  body.add(person, helmet)
+  // The parade flag and drum, sized for the stand-in figure.
+  const kit = new THREE.Group()
+  kit.scale.setScalar(SOLDIER_HEIGHT / 0.375)
+  body.add(kit)
   const props: THREE.Object3D[] = []
   if (role === 'drum') props.push(new THREE.Mesh(GEO.drum, material('#c8463a')))
   if (role === 'flag') props.push(new THREE.Mesh(GEO.pole, material('#dddddd')), new THREE.Mesh(GEO.pennant, material('#2f7fe0')))
   for (const p of props) {
     p.visible = false
-    body.add(p)
+    kit.add(p)
   }
   root.scale.setScalar(1.4)
-  return { root, legs, arms, props, from: { pos: new THREE.Vector3(), yaw: 0 } }
+  return { root, person, simple, helmet, legs, arms, props, from: { pos: new THREE.Vector3(), yaw: 0 } }
+}
+
+// Once the townsperson has loaded, swap out the stand-in figure and give
+// its bones the drill pose. The stand-in's limbs swing about z (forward)
+// and x (sideways) facing +x; the person faces +z, so forward is about -x
+// and sideways (to its left, +x) about +z.
+function syncSoldier(s: Soldier) {
+  const bones = bonesOf(s.person)
+  if (!bones) return
+  if (!s.helmet.visible) {
+    for (const o of s.simple) o.visible = false
+    s.helmet.visible = true
+  }
+  const pairs: [THREE.Object3D, THREE.Object3D][] = [
+    [bones['leg-left'], s.legs[0]],
+    [bones['leg-right'], s.legs[1]],
+    [bones['arm-left'], s.arms[0]],
+    [bones['arm-right'], s.arms[1]],
+  ]
+  for (const [bone, limb] of pairs) bone.rotation.set(-limb.rotation.z, 0, limb.rotation.x)
 }
 
 function makeHelicopter() {
@@ -308,6 +350,7 @@ export class ArmyView {
       soldier.root.position.set(pos.x, 0, pos.z)
       soldier.root.rotation.set(0, soldier.from.yaw + turn * blend, 0)
       this.pose(soldier, phase, marching, life.step, life.phaseTime)
+      syncSoldier(soldier)
     })
 
     // The parade's over and the squad is back where it started: back to drill.
@@ -405,6 +448,7 @@ export class ArmyView {
     s.arms[0].rotation.z = s.arms[1].rotation.z = looking ? 2.3 : 0
     s.arms[0].rotation.x = looking ? -0.4 : 0
     s.arms[1].rotation.x = looking ? 0.4 : 0
+    syncSoldier(s)
   }
 
   // ---- The helicopter: parked, spin up, lift off, a lap of the town, land, spin down.

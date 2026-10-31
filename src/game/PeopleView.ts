@@ -5,8 +5,7 @@ import { levelFactor } from './construction'
 import { findPath } from './pathfinding'
 import { isTrack } from './buildings'
 import { SIDEWALK } from './RoadView'
-import { loadCharacter } from './models'
-import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js'
+import { createCharacter, hasCharacter, playClip, releaseCharacter } from './characters'
 
 // Residents walking around town. Purely for looks: nothing here changes the
 // game, and nothing is saved. Each home sends out about one walker per two
@@ -82,21 +81,12 @@ function createTourist(): THREE.Group {
   return person
 }
 
-// The people are Kenney's Mini Characters (CC0): twelve townspeople, each
-// with a walk and an idle animation; one in ten residents gets about in a
-// wheelchair. Until they load (or if they can't), simple shapes stand in.
-const CHARACTERS = ['female-a', 'female-b', 'female-c', 'female-d', 'female-e', 'female-f', 'male-a', 'male-b', 'male-c', 'male-d', 'male-e', 'male-f']
-const people = (name: string) => `${import.meta.env.BASE_URL}models/people/${name}.glb`
+// The people are Kenney's Mini Characters (characters.ts), walking and
+// standing about; one in ten residents gets about in a wheelchair. Until they
+// load (or if they can't), simple shapes stand in.
 
-// What a person is doing, for their animation.
-type Pose = 'walk' | 'idle'
-interface Animated {
-  mixer: THREE.AnimationMixer
-  actions: Record<Pose, THREE.AnimationAction>
-  pose: Pose
-}
-
-function createSimplePerson(person: THREE.Group) {
+function createSimplePerson(): THREE.Group {
+  const person = new THREE.Group()
   for (const [shape, color] of [
     [SHAPES.legs, pick(PANTS)],
     [SHAPES.body, pick(SHIRTS)],
@@ -106,6 +96,7 @@ function createSimplePerson(person: THREE.Group) {
     mesh.castShadow = true
     person.add(mesh)
   }
+  return person
 }
 
 function createPerson(wheelchair = false): THREE.Group {
@@ -117,48 +108,18 @@ function createPerson(wheelchair = false): THREE.Group {
   umbrella.visible = false
   umbrella.name = 'umbrella'
   person.add(umbrella)
+  const body = createCharacter({ height: HEIGHT, clip: wheelchair ? 'wheelchair-move-forward' : 'walk', wheelchair, fallback: createSimplePerson })
+  body.name = 'body'
+  person.add(body)
   person.scale.setScalar(1.4) // a little larger than true scale, so they read at a glance
-  Promise.all([loadCharacter(people(`character-${pick(CHARACTERS)}`)), wheelchair ? loadCharacter(people('wheelchair')) : null])
-    .then(([character, chair]) => {
-      if (person.userData.gone) return
-      const body = new THREE.Group()
-      const model = cloneSkinned(character.scene)
-      model.traverse((o) => {
-        if (o instanceof THREE.Mesh) o.castShadow = true
-      })
-      body.add(model)
-      if (chair) body.add(chair.scene.clone())
-      const size = new THREE.Box3().setFromObject(character.scene).getSize(new THREE.Vector3())
-      body.scale.setScalar(HEIGHT / Math.max(0.01, size.y))
-      person.add(body)
-      const mixer = new THREE.AnimationMixer(model)
-      const clip = (name: string) => THREE.AnimationClip.findByName(character.animations, name) ?? character.animations[0]
-      const actions = {
-        walk: mixer.clipAction(clip(wheelchair ? 'wheelchair-move-forward' : 'walk')),
-        idle: mixer.clipAction(clip(wheelchair ? 'wheelchair-sit' : 'idle')),
-      }
-      actions.walk.time = Math.random() // not everyone in step
-      actions.walk.play()
-      person.userData.animated = { mixer, actions, pose: 'walk' } satisfies Animated
-    })
-    .catch((err) => {
-      console.warn("Couldn't load the townspeople; simple shapes stand in", err)
-      if (!person.userData.gone) createSimplePerson(person)
-    })
   return person
 }
 
-// Play the walk or the idle animation (blending between them), and move it on.
-function animate(person: THREE.Object3D, pose: Pose, dt: number) {
-  const a = person.userData.animated as Animated | undefined
-  if (!a) return
-  if (a.pose !== pose) {
-    const to = a.actions[pose]
-    to.reset().play()
-    a.actions[a.pose].crossFadeTo(to, 0.25, false)
-    a.pose = pose
-  }
-  a.mixer.update(dt)
+// Walking or standing still, in a wheelchair or on foot.
+function animate(person: THREE.Object3D, walking: boolean, dt: number) {
+  const chair = person.userData.wheelchair as boolean
+  const clip = walking ? (chair ? 'wheelchair-move-forward' : 'walk') : chair ? 'wheelchair-sit' : 'idle'
+  playClip(person.getObjectByName('body')!, clip, dt)
 }
 
 export class PeopleView {
@@ -205,7 +166,7 @@ export class PeopleView {
     }
     for (const walker of [...this.walkers]) {
       this.move(walker, dt)
-      if (walker.object.parent) animate(walker.object, walker.pause > 0 ? 'idle' : 'walk', dt)
+      if (walker.object.parent) animate(walker.object, walker.pause <= 0, dt)
     }
   }
 
@@ -417,7 +378,7 @@ export class PeopleView {
     const walking = next !== undefined && walker.pause <= 0
     const pos = walking ? a.clone().lerp(this.spot(walker, walker.step + 1), walker.t) : a
     // The simple stand-ins bob as they walk; the characters have a walk animation.
-    const bob = walking && !walker.object.userData.animated ? Math.abs(Math.sin(walker.phase)) * 0.03 : 0
+    const bob = walking && !hasCharacter(walker.object.getObjectByName('body')!) ? Math.abs(Math.sin(walker.phase)) * 0.03 : 0
     walker.object.position.set(pos.x, bob, pos.z)
     if (walking) {
       const b = this.spot(walker, walker.step + 1)
@@ -427,8 +388,7 @@ export class PeopleView {
 
   private remove(walker: Walker) {
     walker.object.removeFromParent()
-    walker.object.userData.gone = true
-    ;(walker.object.userData.animated as Animated | undefined)?.mixer.stopAllAction()
+    releaseCharacter(walker.object.getObjectByName('body')!)
     this.walkers.splice(this.walkers.indexOf(walker), 1)
   }
 }

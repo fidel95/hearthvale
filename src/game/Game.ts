@@ -366,6 +366,12 @@ export class Game {
     this.settingsPanel = new SettingsPanel(container, this.settings, this.saver, (message, kind) => this.hud.toast(message, kind))
     const { savedAt: leftAt, problem } = this.saves.restoreOrStart()
     this.state.townEvents.refresh()
+    // In development, ?focus=x,z,zoom points the camera at a tile (for browser checks).
+    const focus = import.meta.env.DEV ? new URLSearchParams(location.search).get('focus')?.split(',').map(Number) : undefined
+    if (focus && focus.length >= 2) {
+      this.controls.centerOn(tileToWorld({ x: focus[0], z: focus[1] }))
+      if (focus[2]) this.controls.zoomTo(focus[2])
+    }
     // From now on new buildings spring into place (unless motion is reduced).
     this.loaded = true
     this.cityView.popIn = !this.settings.values.reduceMotion

@@ -3,6 +3,7 @@ import type { City, PlacedBuilding } from './City'
 import { edgeTiles } from './communityRules'
 import { tileToWorld, type Tile } from './grid'
 import { findPath } from './pathfinding'
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
 import { modelCopy } from './models'
 import { nextTile, pathToFarthest, Polyline } from './routes'
 
@@ -33,8 +34,25 @@ const GEOMETRY = {
   wheel: new THREE.CylinderGeometry(0.04, 0.04, 0.03, 8).rotateX(Math.PI / 2),
   carBody: box(0.38, 0.1, 0.2, 0, 0.03),
   carCabin: box(0.2, 0.09, 0.18, -0.03, 0.13),
-  busBody: box(0.8, 0.2, 0.24, 0, 0.04),
-  busWindows: box(0.7, 0.06, 0.246, 0.02, 0.15),
+  busBody: box(0.8, 0.11, 0.24, 0, 0.035),
+  busStripe: box(0.8, 0.012, 0.243, 0, 0.1),
+  busWindows: box(0.74, 0.085, 0.236, 0.01, 0.145),
+  busPillars: (() => {
+    // Thin pillars between the side windows, both sides at once.
+    const parts: THREE.BufferGeometry[] = []
+    for (let x = -0.33; x <= 0.3; x += 0.11) parts.push(box(0.014, 0.085, 0.244, x, 0.145))
+    return mergeGeometries(parts)!
+  })(),
+  busRoof: box(0.8, 0.03, 0.24, 0, 0.23),
+  busRoofUnit: box(0.24, 0.03, 0.14, -0.12, 0.26),
+  busWindshield: box(0.012, 0.11, 0.22, 0.396, 0.115),
+  busSign: box(0.014, 0.026, 0.16, 0.398, 0.2),
+  busBumpers: box(0.83, 0.03, 0.245, 0, 0.025),
+  busLights: (() => {
+    const parts = [-0.08, 0.08].map((z) => box(0.012, 0.022, 0.035, 0.405, 0.06, z))
+    return mergeGeometries(parts)!
+  })(),
+  busDoor: box(0.09, 0.14, 0.006, 0.26, 0.04, 0.122), // on the right, the kerb side
   jeepBody: box(0.36, 0.1, 0.2, 0, 0.03),
   jeepBar: box(0.03, 0.1, 0.2, -0.05, 0.13),
   locoBody: box(0.72, 0.18, 0.22, 0, 0.06),
@@ -96,7 +114,23 @@ const SERVICE_VEHICLES: [(id: string, category: string) => boolean, string][] = 
   [(id, category) => category === 'industry' || id === 'warehouse' || id === 'supermarket', 'delivery'],
 ]
 const makeJeep = () => build([[GEOMETRY.jeepBody, OLIVE], [GEOMETRY.jeepBar, '#3b4226']], [-0.12, 0.12])
-const makeBus = () => build([[GEOMETRY.busBody, '#f2c230'], [GEOMETRY.busWindows, '#2b3a4a']], [-0.25, 0.25])
+const makeBus = () =>
+  build(
+    [
+      [GEOMETRY.busBody, '#f2c230'],
+      [GEOMETRY.busStripe, '#ffffff'],
+      [GEOMETRY.busWindows, '#2b3a4a'],
+      [GEOMETRY.busPillars, '#f2c230'],
+      [GEOMETRY.busRoof, '#f7f2e6'],
+      [GEOMETRY.busRoofUnit, '#c9ccd2'],
+      [GEOMETRY.busWindshield, '#2b3a4a'],
+      [GEOMETRY.busSign, '#ffb238'],
+      [GEOMETRY.busBumpers, '#3a3d42'],
+      [GEOMETRY.busLights, '#fff6d6'],
+      [GEOMETRY.busDoor, '#3a4a5a'],
+    ],
+    [-0.26, 0.24],
+  )
 const makeLoco = () => build([[GEOMETRY.locoBody, '#d23c32'], [GEOMETRY.locoCab, '#8f2a24'], [GEOMETRY.locoChimney, '#2b2d33']], [-0.22, 0.22])
 const makeCarriage = (color: string) => build([[GEOMETRY.carriage, color], [GEOMETRY.carriageWindows, '#fff4d6']], [-0.22, 0.22])
 
