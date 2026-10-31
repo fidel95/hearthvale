@@ -81,6 +81,7 @@ the right on a wide screen) so the town stays in view.
 | Action | Mouse | Touch |
 |---|---|---|
 | Pan / zoom | Drag / scroll wheel | Drag / pinch |
+| Turn the view | 🔄, or Q / E | 🔄, or twist two fingers |
 | Collect, harvest, restock, finish, unload | Click the building or its bubble | Tap |
 | Select a building (context menu) | Click it when it has nothing ready | Tap |
 | Draw roads | Drag with Road selected | Drag |

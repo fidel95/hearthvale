@@ -40,6 +40,7 @@ export interface HudCallbacks {
   onOpenSettings: () => void
   onOpenHelp: () => void
   onRecenter: () => void
+  onRotate: () => void
   onOpenAdmin: () => void // shown when admin tools are on (always in development builds)
   onRemoveRoads: () => void // remove the roads picked in removeRoads mode
 }
@@ -116,6 +117,7 @@ export class Hud {
       return b
     }
     const recenter = iconButton('🎯', 'Back to my town (Home key)', callbacks.onRecenter)
+    const rotate = iconButton('🔄', 'Turn the view (Q and E keys, or twist two fingers)', callbacks.onRotate)
     const help = iconButton('❓', 'Help', callbacks.onOpenHelp)
     const settings = iconButton('⚙️', 'Settings', callbacks.onOpenSettings)
     this.adminButton = iconButton('🛠️', 'Admin tools', callbacks.onOpenAdmin)
@@ -128,7 +130,7 @@ export class Hud {
     const stats = el('div', 'topbar-stats')
     stats.append(this.coins.button, this.goods.button, this.people.button, this.energy.button, this.level.button)
     const right = el('div', 'topbar-right')
-    right.append(this.date.button, recenter, help, settings, this.adminButton)
+    right.append(this.date.button, rotate, recenter, help, settings, this.adminButton)
     topbar.append(stats, right)
 
     // ---- Under the top bar: what the current tool does (with a way out on

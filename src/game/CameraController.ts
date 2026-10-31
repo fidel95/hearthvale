@@ -1,9 +1,14 @@
 import * as THREE from 'three'
 import { GRID_SIZE } from './grid'
 
-// Where the camera sits relative to the ground point it looks at.
-// Equal X, Y and Z = looking down diagonally from a corner = isometric.
+// Where the camera sits relative to the ground point it looks at (before
+// turning the view). Equal X, Y and Z = looking down diagonally from a
+// corner = isometric.
 const OFFSET = new THREE.Vector3(20, 20, 20)
+// How far two fingers must twist (radians) before a pinch also turns the view,
+// so an ordinary pinch to zoom doesn't wobble it.
+const TWIST_THRESHOLD = 0.2
+const QUARTER = Math.PI / 2
 
 const MIN_ZOOM = 0.4 // far enough out to see the whole 60×60 world
 const MAX_ZOOM = 3
@@ -25,8 +30,9 @@ export interface Carry {
   cancel(): void
 }
 
-// Pans and zooms the camera with mouse (drag + wheel) or touch (drag + pinch),
-// and reports clicks/taps that weren't part of a drag.
+// Pans, zooms and turns the camera with mouse (drag + wheel), touch (drag +
+// pinch, twist two fingers to turn) or keys (Q and E turn), and reports
+// clicks/taps that weren't part of a drag.
 export class CameraController {
   // The ground point at the center of the screen. Panning moves this.
   readonly target = new THREE.Vector3()
@@ -54,7 +60,11 @@ export class CameraController {
   private gesture: { start: ScreenPoint; moved: boolean; multiTouch: boolean } | null = null
   // The ground point that should stay under the pointer (or between two fingers).
   private grabPoint: THREE.Vector3 | null = null
-  private pinchStart: { distance: number; zoom: number } | null = null
+  private pinchStart: { distance: number; zoom: number; angle: number; yaw: number; twisting: boolean } | null = null
+  // How far the view is turned around the target (0 = the usual corner view),
+  // and where a turn from the rotate button is heading (it glides there).
+  private yaw = 0
+  private yawGoal: number | null = null
   private carry: Carry | null = null
   // Flick the map and it glides on, slowing to a stop (off with Reduce motion).
   inertia = true
@@ -78,21 +88,22 @@ export class CameraController {
     window.addEventListener('keydown', (e) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
       const step = 2 / this.camera.zoom
-      // Screen directions on the isometric map: "up" is toward −x −z.
-      const moves: Record<string, [number, number]> = {
-        ArrowUp: [-step, -step], w: [-step, -step],
-        ArrowDown: [step, step], s: [step, step],
-        ArrowLeft: [-step, step], a: [-step, step],
-        ArrowRight: [step, -step], d: [step, -step],
+      const { up, right } = this.screenAxes()
+      const moves: Record<string, THREE.Vector3> = {
+        ArrowUp: up, w: up,
+        ArrowDown: up.clone().negate(), s: up.clone().negate(),
+        ArrowLeft: right.clone().negate(), a: right.clone().negate(),
+        ArrowRight: right, d: right,
       }
       const move = moves[e.key]
       if (move) {
-        this.target.x += move[0] * 0.7
-        this.target.z += move[1] * 0.7
+        this.target.addScaledVector(move, step)
         this.apply()
         this.onMove?.()
         e.preventDefault()
-      } else if (e.key === '+' || e.key === '=') this.setZoom(this.camera.zoom * 1.15)
+      } else if (e.key === 'q' || e.key === 'Q') this.rotate(-1)
+      else if (e.key === 'e' || e.key === 'E') this.rotate(1)
+      else if (e.key === '+' || e.key === '=') this.setZoom(this.camera.zoom * 1.15)
       else if (e.key === '-' || e.key === '_') this.setZoom(this.camera.zoom / 1.15)
     })
 
@@ -152,6 +163,14 @@ export class CameraController {
       const [a, b] = [...this.pointers.values()]
       const zoom = this.pinchStart.zoom * (distance(a, b) / this.pinchStart.distance)
       this.setZoom(zoom)
+      // Twisting the fingers turns the view with them.
+      const twist = wrapAngle(angle(a, b) - this.pinchStart.angle)
+      if (Math.abs(twist) > TWIST_THRESHOLD) this.pinchStart.twisting = true
+      if (this.pinchStart.twisting) {
+        this.yawGoal = null
+        this.yaw = this.pinchStart.yaw + twist
+        this.apply()
+      }
       const mid = midpoint(a, b)
       this.keepGrabPointUnder(mid.x, mid.y)
       return
@@ -230,6 +249,14 @@ export class CameraController {
   // Called every frame: while carrying something near the screen's edge,
   // scroll the map that way so it can go anywhere.
   update(dtSeconds: number) {
+    if (this.yawGoal !== null) {
+      // Glide round to the goal (or jump there with Reduce motion).
+      const left = this.yawGoal - this.yaw
+      this.yaw = !this.inertia || Math.abs(left) < 0.002 ? this.yawGoal : this.yaw + left * Math.min(1, dtSeconds * 9)
+      if (this.yaw === this.yawGoal) this.yawGoal = null
+      this.apply()
+      this.onMove?.()
+    }
     if (!this.gesture && this.velocity.lengthSq() > 0.0004) {
       this.target.addScaledVector(this.velocity, dtSeconds)
       this.velocity.multiplyScalar(Math.exp(-dtSeconds * 4))
@@ -242,10 +269,9 @@ export class CameraController {
     const right = push(rect.right - x) - push(x - rect.left)
     const down = push(rect.bottom - y) - push(y - rect.top)
     if (right === 0 && down === 0) return
-    // Screen right is world (+x, −z); screen down is (+x, +z) on this isometric view.
-    const step = (EDGE_SPEED * dtSeconds) / this.camera.zoom / Math.SQRT2
-    this.target.x += (right + down) * step
-    this.target.z += (down - right) * step
+    const axes = this.screenAxes()
+    const step = (EDGE_SPEED * dtSeconds) / this.camera.zoom
+    this.target.addScaledVector(axes.right, right * step).addScaledVector(axes.up, -down * step)
     this.apply()
     this.carry.move(x, y)
   }
@@ -264,7 +290,7 @@ export class CameraController {
 
   private startPinch() {
     const [a, b] = [...this.pointers.values()]
-    this.pinchStart = { distance: Math.max(1, distance(a, b)), zoom: this.camera.zoom }
+    this.pinchStart = { distance: Math.max(1, distance(a, b)), zoom: this.camera.zoom, angle: angle(a, b), yaw: this.yaw, twisting: false }
     const mid = midpoint(a, b)
     this.grabPoint = this.groundPointAt(mid.x, mid.y)
   }
@@ -295,6 +321,25 @@ export class CameraController {
     this.centerOn(point)
   }
 
+  // Turn the view a quarter turn (1 = the town turns clockwise, −1 = the other way), gliding
+  // round. From a twisted view, it turns to the next quarter that way.
+  rotate(direction: 1 | -1) {
+    const from = this.yawGoal ?? this.yaw
+    const quarters = direction > 0 ? Math.floor(from / QUARTER + 0.01) + 1 : Math.ceil(from / QUARTER - 0.01) - 1
+    this.yawGoal = quarters * QUARTER
+    this.velocity.set(0, 0, 0)
+  }
+
+  // Ground directions for the screen's up and right, as the view is turned.
+  private screenAxes(): { up: THREE.Vector3; right: THREE.Vector3 } {
+    const up = this.offset().setY(0).normalize().negate()
+    return { up, right: new THREE.Vector3(-up.z, 0, up.x) }
+  }
+
+  private offset(): THREE.Vector3 {
+    return OFFSET.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), this.yaw)
+  }
+
   // Zoom to a level (1 is the default).
   zoomTo(zoom: number) {
     this.setZoom(zoom)
@@ -318,7 +363,7 @@ export class CameraController {
     this.target.x = THREE.MathUtils.clamp(this.target.x, -half, half)
     this.target.z = THREE.MathUtils.clamp(this.target.z, -half, half)
 
-    this.camera.position.copy(this.target).add(OFFSET)
+    this.camera.position.copy(this.target).add(this.offset())
     this.camera.lookAt(this.target)
     // three.js normally refreshes this during render. We raycast between
     // renders, so refresh it now or the next ray uses the old camera position.
@@ -328,6 +373,16 @@ export class CameraController {
 
 function distance(a: ScreenPoint, b: ScreenPoint): number {
   return Math.hypot(a.x - b.x, a.y - b.y)
+}
+
+// The direction from one finger to the other, as an angle on the screen. It
+// grows as the fingers twist clockwise, and so does yaw turn the town clockwise.
+function angle(a: ScreenPoint, b: ScreenPoint): number {
+  return Math.atan2(b.y - a.y, b.x - a.x)
+}
+
+function wrapAngle(a: number): number {
+  return Math.atan2(Math.sin(a), Math.cos(a))
 }
 
 function midpoint(a: ScreenPoint, b: ScreenPoint): ScreenPoint {

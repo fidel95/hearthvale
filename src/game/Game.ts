@@ -304,6 +304,7 @@ export class Game {
       onOpenSettings: () => this.settingsPanel.open(),
       onOpenHelp: () => help.open(),
       onRecenter: () => this.recenter(),
+      onRotate: () => this.controls.rotate(1),
       onOpenAdmin: () => this.adminPanel(container).open(),
       onRemoveRoads: () => this.removePickedRoads(),
     })

@@ -5,7 +5,7 @@ import { Sheet } from './Sheet'
 // bar, so the tutorial's tips can be looked up again any time.
 
 const TOPICS: [string, string][] = [
-  ['🖱️ Moving around', 'Drag to pan, scroll or pinch to zoom. Arrow keys or WASD pan, + and − zoom. 🎯 brings you back to your town.'],
+  ['🖱️ Moving around', 'Drag to pan, scroll or pinch to zoom. Arrow keys or WASD pan, + and − zoom. 🔄 turns the view (or Q and E, or twist two fingers). 🎯 brings you back to your town.'],
   ['🪙 Collecting', 'A bubble over a building means something is ready: tap it (or the building) to collect rent, harvest, restock or unload. Collecting uses ⚡ energy, which refills by 1 a minute.'],
   ['🔨 Building', 'Tap an empty tile and 🔨 Build here, or tap Build, pick a card, tap Place, then tap the map: a green outline and "✓ Fits here" mean it fits. Want several? Keep tapping spots (tap one again to take it back), then ✓ or "Buy N" buys them all at once. Press ⟳ (or R) to turn the next one. Nothing is paid until you confirm.'],
   ['✋ Moving buildings', 'Press and hold a building until it lifts, then drag it and let go. Or tap it once to select it, then drag it. The outline turns green where it fits; drag near the edge of the screen to go further. If it doesn\'t fit where you let go, it stays where it was. Moving is free.'],
