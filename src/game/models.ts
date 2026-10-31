@@ -79,6 +79,10 @@ export const SHOP_SCHEMES: { walls: string; trim: string }[] = [
 
 const schemeMaterials = new Map<string, THREE.Material>()
 
+// The Nature Kit's leaves and grass are a teal green; ours are greener.
+export const NATURE_GREENS = new Set(['leafsGreen', 'grass'])
+const natureGreen = new THREE.MeshStandardMaterial({ color: '#5cb85c', flatShading: true })
+
 // The material for a building's colors: a copy of the model's material using
 // a repainted texture. One per scheme (and original material), shared by
 // every building using it.
@@ -157,34 +161,13 @@ function repaintSwatch(pixels: ImageData, swatch: { column: number; row: number 
   }
 }
 
-// A model's single mesh, ready to be drawn many times at once (instancing):
-// its shape moved so it stands centered on the origin and scaled to a given
-// height, and its material. For the countryside's trees and rocks (scenery.ts).
-export async function loadInstanceable(url: string, height: number): Promise<{ geometry: THREE.BufferGeometry; material: THREE.MeshStandardMaterial }> {
+// The meshes of one part of a model (found by name; the whole model without
+// one), each with its shape baked into the part's own coordinates: for
+// drawing many copies at once (instancing), one batch per material. The shapes are shared, never freed.
+export async function loadMeshParts(url: string, name?: string): Promise<{ geometry: THREE.BufferGeometry; material: THREE.Material }[]> {
   const model = await loadModel(url)
   model.updateMatrixWorld(true)
-  let found: THREE.Mesh | null = null
-  model.traverse((o) => {
-    if (!found && o instanceof THREE.Mesh) found = o
-  })
-  const mesh = found as unknown as THREE.Mesh
-  const geometry = mesh.geometry.clone().applyMatrix4(mesh.matrixWorld)
-  geometry.computeBoundingBox()
-  const box = geometry.boundingBox!
-  const center = box.getCenter(new THREE.Vector3())
-  geometry.translate(-center.x, -box.min.y, -center.z)
-  const scale = height / (box.max.y - box.min.y)
-  geometry.scale(scale, scale, scale)
-  return { geometry, material: (mesh.material as THREE.MeshStandardMaterial).clone() }
-}
-
-// The meshes of one part of a model (found by name), each with its shape
-// baked into the part's own coordinates: for drawing many copies at once
-// (instancing), one batch per material. The shapes are shared, never freed.
-export async function loadMeshParts(url: string, name: string): Promise<{ geometry: THREE.BufferGeometry; material: THREE.Material }[]> {
-  const model = await loadModel(url)
-  model.updateMatrixWorld(true)
-  const node = model.getObjectByName(name)
+  const node = name === undefined ? model : model.getObjectByName(name)
   if (!node) throw new Error(`${name} isn't in ${url}`)
   const toNode = node.matrixWorld.clone().invert()
   const parts: { geometry: THREE.BufferGeometry; material: THREE.Material }[] = []
@@ -240,6 +223,7 @@ export function createBuildingObject(type: BuildingType, overrideMaterial?: THRE
       obj.castShadow = !overrideMaterial
       obj.receiveShadow = !overrideMaterial
       if (overrideMaterial) obj.material = overrideMaterial
+      else if (obj.material instanceof THREE.MeshStandardMaterial && NATURE_GREENS.has(obj.material.name)) obj.material = natureGreen
       else if (scheme !== null && obj.material instanceof THREE.MeshStandardMaterial && obj.material.map) {
         obj.material = schemeMaterial(obj.material, kind!, scheme)
       }
