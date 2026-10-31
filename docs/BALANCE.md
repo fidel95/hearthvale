@@ -143,6 +143,10 @@ reached 17 in a few days and then had nothing left to aim for. Now:
   collects everything ready within 2 tiles of it, one energy each. The reach
   grows by a tile every 3 levels, up to 6. The energy cost is the same; only
   the taps are fewer.
+- **A bigger world.** It grew from 6×6 to 8×8 lots, east and south of the
+  old one (so older towns stay put). The east is the Highlands: mountain
+  peaks you can't build on, with valleys between them you can. After the
+  first ten lots, each new lot needs one more level every two lots.
 - **Tested:** levels 1–10 need the same XP as before and every later level
   needs more than the one before; old XP converts to the same level; mastery
   stars pay at their counts; loading a save never pays milestones twice.

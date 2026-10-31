@@ -14,7 +14,7 @@ import {
   type Lot,
 } from './grid'
 import { Scenery } from './scenery'
-import { coastZ, isWater } from './terrain'
+import { coastZ, isRock, isWater } from './terrain'
 
 // Draws the ground: the whole world as muted land, the lots the town owns as
 // lush grass (a tile grid shows while building), a sandy beach along the coast, the sea with
@@ -134,7 +134,7 @@ export class LandView {
     this.grid.visible = this.gridVisible
     this.scene.add(this.owned, this.grid)
     // Scenery everywhere that isn't the town's, the sea or the beach.
-    this.scenery.rebuild((t) => !this.city.ownsTile(t) && t.z < coastZ(t.x) - 2)
+    this.scenery.rebuild((t) => !this.city.ownsTile(t) && t.z < coastZ(t.x) - 2 && !isRock(t))
 
     // A sign on every lot that could be bought next.
     for (const sign of this.signs.values()) sign.removeFromParent()

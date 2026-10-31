@@ -1,6 +1,6 @@
 import { sizeOf, type City } from '../game/City'
 import { GRID_SIZE, lotOf, type Lot, type Tile } from '../game/grid'
-import { isWater } from '../game/terrain'
+import { isRock, isWater } from '../game/terrain'
 import { el } from './dom'
 import { Sheet } from './Sheet'
 
@@ -10,6 +10,7 @@ import { Sheet } from './Sheet'
 
 const COLORS: Record<string, string> = {
   sea: '#3d8fc6',
+  rock: '#8f948c',
   owned: '#7cc46a',
   unowned: '#b9c7a6',
   sale: '#f1e4b0',
@@ -60,6 +61,7 @@ export class MapPanel {
     for (const [label, color] of [
       ['Your land', COLORS.owned],
       ['For sale', COLORS.sale],
+      ['Mountains', COLORS.rock],
       ['Homes', COLORS.home],
       ['Shops', COLORS.business],
       ['Farms', COLORS.farm],
@@ -146,6 +148,7 @@ export class MapPanel {
       for (let z = 0; z < GRID_SIZE; z++) {
         const t = { x, z }
         if (isWater(t)) tile(x, z, COLORS.sea)
+        else if (isRock(t)) tile(x, z, COLORS.rock)
         else if (this.city.ownsTile(t)) tile(x, z, COLORS.owned)
         else tile(x, z, this.city.canBuyLot(lotOf(t)) ? COLORS.sale : COLORS.unowned)
       }

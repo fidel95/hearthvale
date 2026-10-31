@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import { forest, nature } from './buildings'
 import { GRID_SIZE, tileToWorld, type Tile } from './grid'
+import { nearMountain } from './terrain'
 import { loadMeshParts, NATURE_GREENS } from './models'
 
 // Trees, bushes, rocks and flowers scattered over land the town doesn't own
@@ -56,6 +57,9 @@ type KindName = keyof typeof KINDS
 // Which kinds a roll can pick, with how often.
 const TREES: [KindName, number][] = [['pine', 3], ['tallPine', 2], ['leafy', 3], ['oak', 3], ['round', 2], ['branchy', 2], ['slim', 2], ['fallOak', 1], ['fallBirch', 1]]
 const ROCKS: [KindName, number][] = [['boulders', 2], ['rock', 2], ['stump', 1], ['logs', 1]]
+// On the mountainsides: pine woods and scree.
+const MOUNTAIN_TREES: [KindName, number][] = [['pine', 4], ['tallPine', 4], ['slim', 1]]
+const MOUNTAIN_ROCKS: [KindName, number][] = [['boulders', 3], ['rock', 2]]
 const BUSHES: [KindName, number][] = [['bush', 2], ['shrub', 1]]
 const FLOWERS: KindName[] = ['red', 'yellow', 'purple']
 
@@ -164,7 +168,8 @@ export class Scenery {
     for (let x = 0; x < GRID_SIZE; x++) {
       for (let z = 0; z < GRID_SIZE; z++) {
         if (!open({ x, z })) continue
-        const roll = noise(x, z, 1)
+        const mountainside = nearMountain({ x, z }, 2.5)
+        const roll = noise(x, z, 1) * (mountainside ? 0.55 : 1)
         const c = tileToWorld({ x, z })
         const jitter = new THREE.Vector3(noise(x, z, 2) - 0.5, 0, noise(x, z, 3) - 0.5).multiplyScalar(0.5)
         const at = c.clone().add(jitter)
@@ -172,10 +177,10 @@ export class Scenery {
         const turn = noise(x, z, 6) * Math.PI * 2
         const green = new THREE.Color(LEAVES[Math.floor(noise(x, z, 5) * LEAVES.length)])
         if (roll < 0.08) {
-          if (loaded) put(pick(TREES, noise(x, z, 7)), { at, size, turn, green })
+          if (loaded) put(pick(mountainside ? MOUNTAIN_TREES : TREES, noise(x, z, 7)), { at, size, turn, green })
           else trees.push({ at, size, turn, green, color: CROWNS[Math.floor(noise(x, z, 5) * CROWNS.length)] })
         } else if (roll < 0.1 && loaded) {
-          put(pick(ROCKS, noise(x, z, 7)), { at, size: 0.7 + noise(x, z, 4) * 0.7, turn, green })
+          put(pick(mountainside ? MOUNTAIN_ROCKS : ROCKS, noise(x, z, 7)), { at, size: 0.7 + noise(x, z, 4) * 0.7, turn, green })
         } else if (roll < 0.13) {
           if (loaded) put(pick(BUSHES, noise(x, z, 7)), { at, size: 0.8 + noise(x, z, 4) * 0.5, turn, green })
           else bushes.push({ at, size: 0.6 + noise(x, z, 4) * 0.4 })

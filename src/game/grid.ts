@@ -1,10 +1,13 @@
 import * as THREE from 'three'
 
 // The whole world is GRID_SIZE x GRID_SIZE tiles, 1 world unit per tile.
-// It's divided into square lots of land; you start owning a few in the middle
-// and buy the rest as the town grows (land.ts).
+// It's divided into square lots of land; you start owning a few near the
+// middle and buy the rest as the town grows (land.ts). The world grew from 6
+// to 8 lots a side in Stage 13: the new land is east and south of the old, so
+// every tile of an older town stays where it was. The east is the Highlands
+// (terrain.ts); the south is mostly sea.
 export const LOT_SIZE = 10
-export const LOTS_PER_SIDE = 6
+export const LOTS_PER_SIDE = 8
 export const GRID_SIZE = LOT_SIZE * LOTS_PER_SIDE
 
 const HALF = GRID_SIZE / 2

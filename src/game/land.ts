@@ -4,7 +4,7 @@ import type { Materials } from './items'
 // The rules for owning and buying land. Like buildings.ts and taxRules.ts,
 // it's plain data and pure functions; City applies them.
 
-// The town starts on the four lots in the middle of the world (tiles 20–39).
+// The town starts on four lots near the middle of the world (tiles 20–39).
 export const START_LOTS: Lot[] = [
   { x: 2, z: 2 },
   { x: 3, z: 2 },
@@ -34,9 +34,11 @@ export function expansionPrice(n: number): number {
 }
 
 // The first expansion comes at level 8: the starting 20×20 tiles hold a town
-// comfortably until then, and buying land is that level's new mechanic.
+// comfortably until then, and buying land is that level's new mechanic. One
+// more level for each of the first ten, then one every two levels (the world
+// has room for fifty-odd lots, and late levels take longer).
 export function expansionLevel(n: number): number {
-  return 7 + n
+  return n <= 10 ? 7 + n : 17 + Math.ceil((n - 10) / 2)
 }
 
 // Clearing and fencing new land takes materials too, more for each lot.

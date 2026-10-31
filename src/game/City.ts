@@ -19,7 +19,7 @@ import {
 import { START_LOTS, START_LOT_VALUE, expansionPrice } from './land'
 import { edgeTiles } from './communityRules'
 import type { ProductId } from './products'
-import { isWater } from './terrain'
+import { isRock, isWater } from './terrain'
 
 // The city's state: coins, which buildings exist and which tiles they cover.
 // No three.js in here. CityView watches for changes and draws them, which
@@ -255,11 +255,11 @@ export class City {
   }
 
   // A lot can be bought if it's in the world, not owned yet, next to land you
-  // own, and not entirely sea.
+  // own, and not entirely sea or mountain.
   canBuyLot(lot: Lot): boolean {
     if (!lotInWorld(lot) || this.ownsLot(lot) || !lotNeighbors(lot).some((n) => this.ownsLot(n))) return false
     const corner = lotCorner(lot)
-    return footprintTiles(corner, LOT_FOOTPRINT).some((t) => !isWater(t))
+    return footprintTiles(corner, LOT_FOOTPRINT).some((t) => !isWater(t) && !isRock(t))
   }
 
   // materialsCost: what the materials used to clear it had cost, added to the
@@ -283,7 +283,7 @@ export class City {
   // ignoreId lets a building being moved (or turned) overlap its own current spot.
   canPlace(type: BuildingType, tile: Tile, ignoreId?: number, rotation: Rotation = 0): boolean {
     const fits = footprintTiles(tile, footprint(type, rotation)).every((t) => {
-      if (!inBounds(t) || !this.ownsTile(t) || isWater(t)) return false
+      if (!inBounds(t) || !this.ownsTile(t) || isWater(t) || isRock(t)) return false
       const id = this.occupied[t.z * GRID_SIZE + t.x]
       return id === null || id === ignoreId
     })
