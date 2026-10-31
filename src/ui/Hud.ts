@@ -92,6 +92,12 @@ export class Hud {
     this.level = chip('⭐', 'Level and quests', callbacks.onOpenQuests)
     this.date = chip('📅', 'Calendar and taxes', callbacks.onOpenTaxes)
     this.date.button.classList.add('chip-date')
+    // Each counter's icon sits in a bubble of its own color (style.css).
+    this.coins.button.classList.add('chip-coins')
+    this.goods.button.classList.add('chip-goods')
+    this.people.button.classList.add('chip-people')
+    this.energy.button.classList.add('chip-energy')
+    this.level.button.classList.add('chip-level')
     const xp = el('div', 'chip-bar')
     xp.append(this.xpBar)
     this.level.button.append(xp)
@@ -163,7 +169,7 @@ export class Hud {
       ['🗺️', 'Map', callbacks.onOpenMap],
     ]
     for (const [icon, label, onClick] of tools) {
-      const b = el('button', 'tool')
+      const b = el('button', label === 'Build' ? 'tool tool-build' : 'tool')
       b.append(el('span', 'tool-icon', icon), el('span', 'tool-label', label))
       b.addEventListener('click', onClick)
       const badge = el('span', 'tool-badge')
@@ -205,7 +211,7 @@ export class Hud {
     }
     const showLevel = () => {
       this.level.value.textContent = String(player.level)
-      this.level.extra.textContent = ` · ${player.xp.toLocaleString()} XP`
+      this.level.extra.textContent = `${player.xp.toLocaleString()} XP`
       this.xpBar.style.width = `${player.levelProgress * 100}%`
     }
     city.onChange((e) => {

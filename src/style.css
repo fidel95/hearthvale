@@ -9,6 +9,11 @@
   --good: #3a8f5c;
   --bad: #c2412d;
   --gold: #ffd84d;
+  /* Bright, toy-like controls: a light top, a darker bottom edge that the
+     button sinks into when pressed. */
+  --font: 'Fredoka Variable', 'Fredoka', system-ui, sans-serif;
+  --raised: 0 3px 0 rgba(120, 82, 36, 0.28), 0 5px 12px rgba(0, 0, 0, 0.12);
+  --cream: linear-gradient(#fffdf6, #f5e8cc);
 }
 
 * {
@@ -21,7 +26,7 @@ body {
   height: 100%;
   overflow: hidden;
   background: #9fd4f0;
-  font-family: system-ui, sans-serif;
+  font-family: var(--font);
   color: var(--ink);
 }
 
@@ -90,18 +95,100 @@ button {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 4px;
-  min-height: 36px;
-  padding: 6px 10px;
-  border: 1px solid var(--border);
+  gap: 5px;
+  min-height: 38px;
+  padding: 4px 12px 4px 4px;
+  border: 2px solid #fff;
   border-radius: 999px;
-  background: var(--panel);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  font-weight: 700;
-  font-size: 15px;
+  background: var(--cream);
+  box-shadow: var(--raised);
+  font-weight: 600;
+  font-size: 16px;
   font-variant-numeric: tabular-nums; /* digits all the same width, so chips don't jiggle */
   cursor: pointer;
   overflow: hidden;
+}
+
+.chip:active {
+  translate: 0 2px;
+  box-shadow: 0 1px 0 rgba(120, 82, 36, 0.28);
+}
+
+/* The counter's icon, in a shiny bubble of its own color. */
+.chip-icon {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff 0, var(--chip-color, #f3e3c3) 75%);
+  box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.12);
+  font-size: 16px;
+  line-height: 1;
+}
+
+.chip-coins {
+  --chip-color: #ffd84d;
+}
+
+.chip-goods {
+  --chip-color: #f0b878;
+}
+
+.chip-people {
+  --chip-color: #94cdfc;
+}
+
+.chip-energy {
+  --chip-color: #ffe56b;
+}
+
+.chip-date {
+  --chip-color: #ffb3a3;
+}
+
+/* The level: its number on a big star, the XP to go in a bar beside it. */
+.chip-level {
+  padding-left: 40px;
+  min-width: 64px;
+}
+
+.chip-level .chip-icon {
+  position: absolute;
+  left: 1px;
+  top: 50%;
+  translate: 0 -50%;
+  width: 38px;
+  height: 38px;
+  background: none;
+  box-shadow: none;
+  font-size: 34px;
+  filter: drop-shadow(0 2px 0 rgba(150, 90, 0, 0.35));
+}
+
+.chip-level .chip-value {
+  position: absolute;
+  left: 1px;
+  width: 38px;
+  text-align: center;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  -webkit-text-stroke: 3px #b86b00;
+  paint-order: stroke fill;
+}
+
+.chip-level .chip-bar {
+  left: 40px;
+  right: 10px;
+  bottom: 6px;
+  height: 6px;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.chip-level .chip-extra {
+  margin-bottom: 6px;
 }
 
 .chip-extra {
@@ -132,7 +219,7 @@ button {
 }
 
 .chip-settings {
-  padding: 6px 9px;
+  padding: 4px 9px;
 }
 
 .chip.bump {
@@ -165,10 +252,32 @@ button {
   }
 
   .chip {
+    font-size: 14px;
+    padding: 3px 8px 3px 3px;
+    min-height: 34px;
+    gap: 2px;
+  }
+
+  .chip-icon {
+    width: 22px;
+    height: 22px;
     font-size: 13px;
-    padding: 4px 7px;
-    min-height: 32px;
-    gap: 3px;
+  }
+
+  .chip-level {
+    padding-left: 38px;
+    min-width: 60px;
+  }
+
+  .chip-level .chip-bar {
+    left: 38px;
+    right: 8px;
+    bottom: 50%;
+    translate: 0 50%;
+  }
+
+  .chip-level .chip-extra {
+    display: none;
   }
 
   .topbar,
@@ -211,18 +320,19 @@ button {
   border: none;
   border-radius: 999px;
   padding: 4px 12px;
-  background: var(--accent);
+  background: linear-gradient(#f7ad4c, var(--accent));
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.3);
   color: #fff;
   font-weight: 600;
   cursor: pointer;
 }
 
 .hint-done.hint-danger {
-  background: var(--bad);
+  background: linear-gradient(#e2614c, var(--bad));
 }
 
 .hint-done.hint-buy {
-  background: var(--good);
+  background: linear-gradient(#5cc07c, var(--good));
 }
 
 .hint-done:disabled {
@@ -275,42 +385,67 @@ button {
   bottom: 12px;
   translate: -50% 0;
   display: flex;
-  gap: 2px;
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 18px;
-  padding: 5px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  gap: 6px;
+  background: linear-gradient(#f6e6c4, #e6cc9a);
+  border: 2px solid #fff;
+  border-radius: 22px;
+  padding: 6px 6px 8px;
+  box-shadow: 0 4px 0 rgba(120, 82, 36, 0.3), 0 8px 22px rgba(0, 0, 0, 0.18);
 }
 
+/* Each tool is a little tile that sinks in when pressed; Build is green. */
 .tool {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 2px;
-  min-width: 64px;
-  padding: 6px 8px;
+  min-width: 62px;
+  padding: 6px 6px 5px;
   border: none;
-  border-radius: 13px;
-  background: transparent;
+  border-radius: 15px;
+  background: linear-gradient(#fff, #f8edd6);
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.8), 0 3px 0 #c9a873;
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
 }
 
 .tool-icon {
-  font-size: 22px;
+  font-size: 26px;
   line-height: 1;
+  filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.15));
 }
 
 .tool:hover {
-  background: #f3eadb;
+  background: linear-gradient(#fff, #fff4dc);
+}
+
+.tool:active {
+  translate: 0 2px;
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.8), 0 1px 0 #c9a873;
+}
+
+.tool-build,
+.tool-build:hover {
+  background: linear-gradient(#93e070, #4caf50);
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.35), 0 3px 0 #2f7d32;
+  color: #fff;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.3);
+}
+
+.tool-build:active {
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.35), 0 1px 0 #2f7d32;
 }
 
 @media (max-width: 400px) {
+  .toolbar {
+    gap: 4px;
+    padding: 5px 5px 7px;
+  }
+
   .tool {
     min-width: 0;
-    padding: 6px 7px;
+    padding: 6px 6px 5px;
   }
 }
 
@@ -328,7 +463,7 @@ button {
   padding: 6px 12px;
   border: none;
   border-radius: 999px;
-  background: transparent;
+  background: #f3e8d2;
   font-size: 13px;
   font-weight: 600;
   white-space: nowrap;
@@ -336,8 +471,10 @@ button {
 }
 
 .catalog-tab.active {
-  background: var(--ink);
+  background: linear-gradient(#f7ad4c, var(--accent));
+  box-shadow: 0 2px 0 #b5661a;
   color: #fff;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.25);
 }
 
 .catalog-grid {
@@ -354,8 +491,9 @@ button {
   gap: 2px;
   padding: 8px;
   border: 2px solid var(--border);
-  border-radius: 12px;
+  border-radius: 14px;
   background: #fff;
+  box-shadow: 0 3px 0 var(--border);
   text-align: left;
   cursor: pointer;
 }
@@ -841,11 +979,19 @@ button {
   margin: 0 18px 18px;
   padding: 10px;
   border: none;
-  border-radius: 10px;
-  background: var(--accent);
+  border-radius: 12px;
+  background: linear-gradient(#f7ad4c, var(--accent));
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.35), 0 3px 0 #b5661a;
   color: #fff;
-  font-weight: 700;
+  font-weight: 600;
+  font-size: 15px;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.25);
   cursor: pointer;
+}
+
+.panel-button:active:not(:disabled) {
+  translate: 0 2px;
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.35), 0 1px 0 #b5661a;
 }
 
 /* XP: blue, and offset to the right so it doesn't sit on top of the coins pop-up. */
@@ -898,6 +1044,8 @@ button {
 
 .panel-button:disabled {
   background: var(--border);
+  box-shadow: none;
+  text-shadow: none;
   color: var(--ink-soft);
   cursor: not-allowed;
 }
@@ -927,8 +1075,10 @@ button {
 }
 
 .panel-button.secondary {
-  background: var(--border);
+  background: linear-gradient(#fff, #f1e4c9);
+  box-shadow: inset 0 0 0 1px #e6d5b5, 0 3px 0 #cdb48a;
   color: var(--ink);
+  text-shadow: none;
 }
 
 /* ---- Sheets ----
@@ -985,21 +1135,41 @@ button {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--border);
+  padding: 10px 12px 10px 16px;
+  border-bottom: 3px solid #e0952f;
+  border-radius: 17px 17px 0 0;
+  background: linear-gradient(#ffd27a, #f6ae4b);
 }
 
 .sheet-header h2 {
   margin: 0;
-  font-size: 17px;
+  font-size: 19px;
+  font-weight: 600;
+  color: #fff;
+  -webkit-text-stroke: 3px #b8641a;
+  paint-order: stroke fill;
 }
 
+/* A round red ✕. */
 .sheet-close {
-  border: none;
-  background: none;
-  font-size: 18px;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: linear-gradient(#ff7d6b, #d6402f);
+  box-shadow: 0 2px 0 #8e2a1c;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
   cursor: pointer;
-  padding: 4px 8px;
+}
+
+.sheet-close:active {
+  translate: 0 2px;
+  box-shadow: none;
 }
 
 .sheet-body {
@@ -1023,7 +1193,8 @@ button {
 }
 
 .panel-button.danger {
-  background: var(--bad);
+  background: linear-gradient(#e2614c, var(--bad));
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.3), 0 3px 0 #8e2a1c;
 }
 
 /* ---- Context menu and placing ---- */
@@ -1652,8 +1823,30 @@ button {
 
   .chip {
     min-height: 30px;
-    padding: 3px 9px;
+    padding: 2px 9px 2px 2px;
     font-size: 13px;
+  }
+
+  .chip-icon {
+    width: 24px;
+    height: 24px;
+    font-size: 14px;
+  }
+
+  .chip-level {
+    padding-left: 38px;
+    min-width: 76px;
+  }
+
+  .chip-level .chip-bar {
+    left: 38px;
+    right: 8px;
+    bottom: 50%;
+    translate: 0 50%;
+  }
+
+  .chip-level .chip-extra {
+    display: none;
   }
 
   .topbar-stats,
@@ -1669,6 +1862,10 @@ button {
     flex-direction: column;
     padding: 4px;
     border-radius: 14px;
+  }
+
+  .toolbar {
+    gap: 4px;
   }
 
   .tool {
@@ -1696,7 +1893,8 @@ button {
   }
 
   .sheet-header {
-    padding: 8px 14px;
+    padding: 6px 10px 6px 14px;
+    border-radius: 15px 15px 0 0;
   }
 
   .sheet-body {

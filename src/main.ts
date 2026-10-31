@@ -1,3 +1,4 @@
+import '@fontsource-variable/fredoka'
 import './style.css'
 import { Game } from './game/Game'
 import { clearOfflineCopy, registerServiceWorker } from './serviceWorker'
