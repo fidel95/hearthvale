@@ -19,7 +19,7 @@ import {
 import { START_LOTS, START_LOT_VALUE, expansionPrice } from './land'
 import { edgeTiles } from './communityRules'
 import type { ProductId } from './products'
-import { isRock, isWater, nearMountain } from './terrain'
+import { isRiver, isRock, isWater, nearMountain } from './terrain'
 
 // The city's state: coins, which buildings exist and which tiles they cover.
 // No three.js in here. CityView watches for changes and draws them, which
@@ -284,6 +284,8 @@ export class City {
   canPlace(type: BuildingType, tile: Tile, ignoreId?: number, rotation: Rotation = 0): boolean {
     const fits = footprintTiles(tile, footprint(type, rotation)).every((t) => {
       if (!inBounds(t) || !this.ownsTile(t) || isWater(t) || isRock(t)) return false
+      // Only roads go over the river (as bridges).
+      if (isRiver(t) && type.category !== 'road') return false
       const id = this.occupied[t.z * GRID_SIZE + t.x]
       return id === null || id === ignoreId
     })
@@ -425,6 +427,9 @@ export class City {
     }
   }
 
+  // Buildings the last load moved into storage because the river runs where they stood.
+  movedForRiver: string[] = []
+
   // Rebuild a City from a save. Meant for a fresh, empty City. Buildings whose
   // type no longer exists, or that would overlap, are skipped with a warning
   // rather than breaking the whole save.
@@ -432,8 +437,17 @@ export class City {
     // Land first: buildings can only be placed on land the town owns.
     this.land = new Map(save.lots.map(({ x, z, price }) => [lotKey({ x, z }), { lot: { x, z }, price }]))
     this.emit({ kind: 'land' })
-    for (const saved of save.buildings) {
+    this.movedForRiver = []
+    for (let saved of save.buildings) {
       const type = BUILDINGS_BY_ID.get(RENAMED_BUILDING_IDS[saved.typeId] ?? saved.typeId)
+      // The river came after some towns had built in the Highlands: anything
+      // standing in it (but a road, which becomes a bridge) goes into
+      // storage, finished, to be placed again.
+      const inRiver = type && !saved.stored && type.category !== 'road' && footprintTiles(saved.tile, footprint(type, saved.rotation ?? 0)).some(isRiver)
+      if (type && inRiver) {
+        saved = { ...saved, stored: true, construction: null }
+        this.movedForRiver.push(type.name)
+      }
       if (!type || (!saved.stored && !this.canPlace(type, saved.tile, undefined, saved.rotation ?? 0))) {
         console.warn('Skipping saved building that no longer fits:', saved)
         continue

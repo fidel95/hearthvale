@@ -14,17 +14,17 @@ import {
   type Lot,
 } from './grid'
 import { Scenery } from './scenery'
-import { coastZ, isRock, isWater } from './terrain'
+import { RIVER, RIVER_HALF_WIDTH, coastZ, isRock, isWater, riverDistance } from './terrain'
 
 // Draws the ground: the whole world as muted land, the lots the town owns as
 // lush grass (a tile grid shows while building), a sandy beach along the coast, the sea with
-// gentle waves, and a "for sale" sign on every lot you could buy next. The
+// gentle waves, the Highlands' river between sandy banks, and a "for sale" sign on every lot you could buy next. The
 // land is rebuilt whenever it changes (rare), so it can be simple.
 
 // Owned grass is a natural lawn: greens that drift softly across the land,
 // with darker and sunnier patches. Land beyond the town is a paler green,
 // still clearly not yours.
-const COLORS = { owned: ['#69c055', '#93db6e', '#4ea544'], unowned: '#a8dc8c', grid: '#ffffff', sand: '#f6e3a4', sea: '#2fa3e0' }
+const COLORS = { owned: ['#69c055', '#93db6e', '#4ea544'], unowned: '#a8dc8c', grid: '#ffffff', sand: '#f6e3a4', sea: '#2fa3e0', river: '#3cb0e6', bank: '#d8c68e' }
 
 // Smooth noise (0 to 1) over the ground, so the grass varies gently instead
 // of tile by tile: a few overlapping waves at different angles.
@@ -72,7 +72,7 @@ export class LandView {
     scene.add(world)
     this.scenery = new Scenery(scene)
     this.sea = this.createSea()
-    scene.add(this.sea, this.createBeach())
+    scene.add(this.sea, this.createBeach(), this.createRiver(RIVER_HALF_WIDTH + 0.4, COLORS.bank, 0.009), this.createRiver(RIVER_HALF_WIDTH + 0.1, COLORS.river, 0.013))
 
     city.onChange((event) => {
       if (event.kind === 'land') this.rebuild()
@@ -134,7 +134,7 @@ export class LandView {
     this.grid.visible = this.gridVisible
     this.scene.add(this.owned, this.grid)
     // Scenery everywhere that isn't the town's, the sea or the beach.
-    this.scenery.rebuild((t) => !this.city.ownsTile(t) && t.z < coastZ(t.x) - 2 && !isRock(t))
+    this.scenery.rebuild((t) => !this.city.ownsTile(t) && t.z < coastZ(t.x) - 2 && !isRock(t) && riverDistance(t.x + 0.5, t.z + 0.5) > RIVER_HALF_WIDTH + 0.6)
 
     // A sign on every lot that could be bought next.
     for (const sign of this.signs.values()) sign.removeFromParent()
@@ -206,6 +206,38 @@ export class LandView {
       geometry,
       new THREE.MeshStandardMaterial({ color: COLORS.sea, roughness: 0.35, metalness: 0.1, flatShading: true }),
     )
+  }
+
+  // The river (or its banks, a little wider): a ribbon along its line, flat
+  // on the ground at height y. It runs on under the sea at the coast.
+  private createRiver(halfWidth: number, color: string, y: number) {
+    const points: THREE.Vector2[] = []
+    for (let i = 0; i + 1 < RIVER.length; i++) {
+      const [ax, az] = RIVER[i]
+      const [bx, bz] = RIVER[i + 1]
+      const steps = Math.ceil(Math.hypot(bx - ax, bz - az) / 0.25)
+      for (let k = 0; k < steps; k++) points.push(new THREE.Vector2(ax + ((bx - ax) * k) / steps, az + ((bz - az) * k) / steps))
+    }
+    points.push(new THREE.Vector2(...RIVER[RIVER.length - 1]))
+    const half = GRID_SIZE / 2
+    const positions: number[] = []
+    const indices: number[] = []
+    points.forEach((p, i) => {
+      // Square across the average direction here, so the bends stay smooth.
+      const along = points[Math.min(points.length - 1, i + 2)].clone().sub(points[Math.max(0, i - 2)]).normalize()
+      for (const side of [-1, 1]) positions.push(p.x - half - along.y * halfWidth * side, y, p.y - half + along.x * halfWidth * side)
+      if (i > 0) {
+        const a = (i - 1) * 2
+        indices.push(a, a + 1, a + 2, a + 1, a + 3, a + 2)
+      }
+    })
+    const geometry = new THREE.BufferGeometry()
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3))
+    geometry.setIndex(indices)
+    geometry.computeVertexNormals()
+    const mesh = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({ color, roughness: 0.4, side: THREE.DoubleSide }))
+    mesh.receiveShadow = true
+    return mesh
   }
 
   // Sand on every land tile that touches the sea.

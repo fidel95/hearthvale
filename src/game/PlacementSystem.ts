@@ -2,6 +2,7 @@ import { footprint, type BuildingType, type Rotation } from './buildings'
 import type { City } from './City'
 import { edgeTiles } from './communityRules'
 import { footprintTiles, type Tile } from './grid'
+import { isRiver } from './terrain'
 import type { Services } from './Services'
 import { demandFactor } from './demand'
 import type { UnlockSystem } from './UnlockSystem'
@@ -59,7 +60,13 @@ export class PlacementSystem {
     if (spot) {
       if (!this.city.canPlace(type, spot.tile, spot.ignoreId, spot.rotation)) {
         problems.push(
-          type.onShore ? 'It must stand on the shore, next to the sea' : type.nearMountain ? 'It must stand at the foot of a mountain, in the Highlands' : "It doesn't fit there",
+          type.category !== 'road' && footprintTiles(spot.tile, footprint(type, spot.rotation)).some(isRiver)
+            ? 'Only roads can cross the river (as bridges)'
+            : type.onShore
+              ? 'It must stand on the shore, next to the sea'
+              : type.nearMountain
+                ? 'It must stand at the foot of a mountain, in the Highlands'
+                : "It doesn't fit there",
         )
       } else if (type.requiresRoad && !edgeTiles({ type, tile: spot.tile, rotation: spot.rotation }).some(this.city.isRoad)) {
         warnings.push('Needs a road beside it to open')

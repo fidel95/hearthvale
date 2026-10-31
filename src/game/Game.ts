@@ -400,6 +400,12 @@ export class Game {
       notice.body.append(el('p', '', this.loadProblem))
       notice.show('💾 About your save', button('OK', () => notice.close()))
     }
+    if (this.city.movedForRiver.length > 0) {
+      const notice = new Modal(container)
+      const names = [...new Set(this.city.movedForRiver)].join(', ')
+      notice.body.append(el('p', '', `A river now runs down through the Highlands, from the mountains to the sea. It flows where your ${names} stood, so we've put ${this.city.movedForRiver.length === 1 ? 'it' : 'them'} in your Inventory, finished, ready to place again. Roads can cross the river as bridges.`))
+      notice.show('🏞️ A new river', button('OK', () => notice.close()))
+    }
     this.setUpSafetyNet(container)
     this.setUpWelcomeBack(container, builder, leftAt)
     this.setUpDaily(container, builder)

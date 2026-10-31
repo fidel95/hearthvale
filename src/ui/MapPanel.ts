@@ -1,6 +1,6 @@
 import { sizeOf, type City } from '../game/City'
 import { GRID_SIZE, lotOf, type Lot, type Tile } from '../game/grid'
-import { isRock, isWater } from '../game/terrain'
+import { isRiver, isRock, isWater } from '../game/terrain'
 import { el } from './dom'
 import { Sheet } from './Sheet'
 
@@ -147,7 +147,7 @@ export class MapPanel {
     for (let x = 0; x < GRID_SIZE; x++) {
       for (let z = 0; z < GRID_SIZE; z++) {
         const t = { x, z }
-        if (isWater(t)) tile(x, z, COLORS.sea)
+        if (isWater(t) || isRiver(t)) tile(x, z, COLORS.sea)
         else if (isRock(t)) tile(x, z, COLORS.rock)
         else if (this.city.ownsTile(t)) tile(x, z, COLORS.owned)
         else tile(x, z, this.city.canBuyLot(lotOf(t)) ? COLORS.sale : COLORS.unowned)

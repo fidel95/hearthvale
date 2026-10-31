@@ -69,3 +69,42 @@ export function mountainHeight(p: Peak, distance: number): number {
 export function nearestPeak(x: number, z: number): Peak {
   return PEAKS.reduce((best, p) => (Math.hypot(p.x - x, p.z - z) < Math.hypot(best.x - x, best.z - z) ? p : best))
 }
+
+// ---- The river
+
+// A river runs from the north edge of the Highlands down between the peaks
+// to the sea: a line through these points (in tiles), about two tiles wide.
+// Only roads can go on it (as bridges). Like the coast, it's fixed.
+export const RIVER: [number, number][] = [
+  [70, -1],
+  [70, 4],
+  [69, 9],
+  [70.5, 13],
+  [71, 17],
+  [70, 21],
+  [70, 24.5],
+  [69, 28],
+  [67.4, 31.5],
+  [67.5, 35],
+  [66.5, 40],
+  [65.5, 52],
+]
+export const RIVER_HALF_WIDTH = 1.05
+
+// How far a point (in tiles) is from the river's middle line.
+export function riverDistance(x: number, z: number): number {
+  let best = Infinity
+  for (let i = 0; i + 1 < RIVER.length; i++) {
+    const [ax, az] = RIVER[i]
+    const [bx, bz] = RIVER[i + 1]
+    const dx = bx - ax
+    const dz = bz - az
+    const t = Math.max(0, Math.min(1, ((x - ax) * dx + (z - az) * dz) / (dx * dx + dz * dz)))
+    best = Math.min(best, Math.hypot(x - ax - dx * t, z - az - dz * t))
+  }
+  return best
+}
+
+export function isRiver(tile: Tile): boolean {
+  return tile.x >= HIGHLANDS_X - 1 && !isWater(tile) && riverDistance(tile.x + 0.5, tile.z + 0.5) < RIVER_HALF_WIDTH
+}

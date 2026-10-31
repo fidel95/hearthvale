@@ -5,6 +5,7 @@ import type { City } from './City'
 import { roadMask } from './communityRules'
 import { tileToWorld } from './grid'
 import { loadMeshParts } from './models'
+import { isRiver } from './terrain'
 
 // Draws every road as one network. Each road tile's shape (straight, corner,
 // T, crossroads, dead end) comes from which neighbors are roads too: see
@@ -15,6 +16,8 @@ import { loadMeshParts } from './models'
 //   sidewalks with a curb, and a street lamp every few tiles.
 // - Dirt Road: packed earth with wheel ruts and no sidewalks or lamps.
 // - Cobblestone Street: brick paving and old-style lanterns.
+// - Over the river, any of them is a bridge: stone edges and railings along
+//   each side that looks out over the water.
 // - Avenue: in the colors of Kenney's Modular Road Kit, with a raised
 //   median down the middle carrying the kit's double street lamps.
 //
@@ -45,6 +48,7 @@ const RUTS = '#b08e64' // a dirt road's wheel tracks
 const JOINTS = '#76695b' // between a cobbled street's bricks
 const MEDIAN = '#c2c2cd'
 const POST = '#3b3f46'
+const BRIDGE = { stone: '#b9b2a4', rail: '#f2efe6' }
 const GLOW = { classic: '#fff1c4', lantern: '#ffd89a' }
 
 // The four directions in mask order, as unit steps.
@@ -180,6 +184,19 @@ export class RoadView {
         } else {
           // A dirt road's grassy verge.
           box(look.edge, d.dx !== 0 ? 0.08 : 1, top + 0.003, d.dz !== 0 ? 0.08 : 1, c.x + d.dx * 0.46, 0, c.z + d.dz * 0.46)
+        }
+      }
+
+      // A bridge: along each side over open water, a stone edge and a railing.
+      if (isRiver(b.tile)) {
+        for (const d of DIRECTIONS) {
+          if (mask & d.bit || !isRiver({ x: b.tile.x + d.dx, z: b.tile.z + d.dz })) continue
+          const alongX = d.dz !== 0
+          const x = c.x + d.dx * 0.48
+          const z = c.z + d.dz * 0.48
+          box(BRIDGE.stone, alongX ? 1 : 0.07, 0.07, alongX ? 0.07 : 1, c.x + d.dx * 0.5, 0, c.z + d.dz * 0.5)
+          box(BRIDGE.rail, alongX ? 1 : 0.025, 0.025, alongX ? 0.025 : 1, x, 0.17, z)
+          for (const along of [-0.4, 0, 0.4]) box(BRIDGE.rail, 0.025, 0.12, 0.025, x + (alongX ? along : 0), 0.05, z + (alongX ? 0 : along))
         }
       }
 

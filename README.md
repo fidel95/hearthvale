@@ -135,4 +135,5 @@ the right on a wide screen) so the town stays in view.
 - **The Spaceport:** a rocket lifts off every few minutes, in fire and smoke.
 - **In the sky:** hot air balloons drift over town, and now and then a UFO comes to hover over a building. Tap it before it leaves for a gift.
 - **A daily gift:** a 7-day calendar that grows to a big gift on day 7. Missing a day never loses your place.
+- **A river through the Highlands**, from the mountains to the sea. Roads cross it as bridges, and construction trucks bring loads to every building site.
 - **Turn the view** to look from any side; mountains in the way turn see-through.

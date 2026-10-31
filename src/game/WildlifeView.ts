@@ -3,7 +3,7 @@ import type { City } from './City'
 import { GRID_SIZE, inBounds, tileToWorld, worldToTile, type Tile } from './grid'
 import { turnToward } from './motion'
 import { seededRandom } from './neighborData'
-import { PEAKS, coastZ, isRock, nearMountain } from './terrain'
+import { PEAKS, coastZ, isRiver, isRock, nearMountain } from './terrain'
 
 // Wild animals out in the countryside, for looks: deer grazing in the
 // meadows, mountain goats on the Highlands' slopes, rabbits hopping about,
@@ -138,8 +138,8 @@ export class WildlifeView {
     this.group.visible = visible
   }
 
-  // Wild land: not the town's, not sea, beach or mountain rock.
-  private wild = (t: Tile) => inBounds(t) && !this.city.ownsTile(t) && !isRock(t) && t.z < coastZ(t.x) - 2
+  // Wild land: not the town's, not sea, beach, river or mountain rock.
+  private wild = (t: Tile) => inBounds(t) && !this.city.ownsTile(t) && !isRock(t) && !isRiver(t) && t.z < coastZ(t.x) - 2
 
   // Herds where they were before (the same random numbers each time), on
   // whatever's still wild.
