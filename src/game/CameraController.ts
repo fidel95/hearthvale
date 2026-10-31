@@ -9,6 +9,8 @@ const OFFSET = new THREE.Vector3(20, 20, 20)
 // so an ordinary pinch to zoom doesn't wobble it.
 const TWIST_THRESHOLD = 0.2
 const QUARTER = Math.PI / 2
+// The view's turn is remembered on this device (not in the save).
+const YAW_KEY = 'hearthvale.view-angle'
 
 const MIN_ZOOM = 0.4 // far enough out to see the whole 60×60 world
 const MAX_ZOOM = 3
@@ -107,7 +109,20 @@ export class CameraController {
       else if (e.key === '-' || e.key === '_') this.setZoom(this.camera.zoom / 1.15)
     })
 
+    try {
+      this.yaw = Number(localStorage.getItem(YAW_KEY)) || 0
+    } catch {
+      // Storage blocked: start from the usual view.
+    }
     this.apply()
+  }
+
+  private rememberYaw() {
+    try {
+      localStorage.setItem(YAW_KEY, String(this.yaw))
+    } catch {
+      // Storage blocked: the turn just isn't remembered.
+    }
   }
 
   // Which point on the ground is under this screen position?
@@ -217,6 +232,7 @@ export class CameraController {
 
     if (this.pointers.size === 1) {
       // Lifted one finger of a pinch: carry on dragging with the other one.
+      if (this.pinchStart?.twisting) this.rememberYaw()
       this.pinchStart = null
       const [rest] = [...this.pointers.values()]
       this.grabPoint = this.groundPointAt(rest.x, rest.y)
@@ -253,7 +269,10 @@ export class CameraController {
       // Glide round to the goal (or jump there with Reduce motion).
       const left = this.yawGoal - this.yaw
       this.yaw = !this.inertia || Math.abs(left) < 0.002 ? this.yawGoal : this.yaw + left * Math.min(1, dtSeconds * 9)
-      if (this.yaw === this.yawGoal) this.yawGoal = null
+      if (this.yaw === this.yawGoal) {
+        this.yawGoal = null
+        this.rememberYaw()
+      }
       this.apply()
       this.onMove?.()
     }

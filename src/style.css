@@ -2587,3 +2587,56 @@ button {
     animation: none;
   }
 }
+
+/* ---- Daily gift ---- */
+
+.daily-panel {
+  width: min(420px, 100%);
+}
+
+.daily-days {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin: 12px 0;
+}
+
+.daily-day {
+  background: var(--cream);
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  padding: 6px 2px;
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+.daily-day.big {
+  grid-column: span 2;
+}
+
+.daily-day.done {
+  opacity: 0.55;
+}
+
+.daily-day.today {
+  border-color: var(--accent);
+  background: linear-gradient(#fff6d6, #ffe08a);
+  box-shadow: 0 0 0 3px rgba(224, 138, 44, 0.25);
+}
+
+.daily-day-label {
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+.daily-day-icon {
+  font-size: 22px;
+}
+
+.daily-day-coins {
+  font-weight: 600;
+}
+
+.daily-day-extra {
+  color: var(--ink-soft);
+}

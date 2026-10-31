@@ -39,6 +39,7 @@ export class SaveSystem {
       buildings: { nextId: city.nextId, list: city.buildings },
       quests: s.quests.toSave(),
       goals: s.goals.toSave(),
+      daily: s.daily.toSave(),
       inventory: { items: s.inventory.toSave(), collections: s.collections.toSave() },
       shipments: s.docks.toSave(),
       taxes: s.taxes.toSave(),
@@ -77,6 +78,7 @@ export class SaveSystem {
     s.tips.load(save.tips)
     if (save.goals) s.goals.load(save.goals)
     else s.goals.startFromTown()
+    if (save.daily) s.daily.load(save.daily)
   }
 
   // Load the town saved in this browser, or start a new one. Returns when it
@@ -101,6 +103,7 @@ export class SaveSystem {
     s.inventory.onChange(changed)
     s.quests.onChange(changed)
     s.goals.onChange(changed)
+    s.daily.onChange(changed)
     s.collections.onChange(changed)
     s.neighbors.onChange(changed)
     s.tutorial.onChange(changed)

@@ -19,6 +19,7 @@ import { PlacementSystem } from './PlacementSystem'
 import { Player } from './Player'
 import { Quests } from './quests'
 import { Goals } from './goals'
+import { Daily } from './daily'
 import { Services } from './Services'
 import { SettingsStore } from './settings'
 import { Taxes } from './Taxes'
@@ -47,6 +48,7 @@ export class GameState {
   readonly taxes: Taxes
   readonly quests: Quests
   readonly goals: Goals
+  readonly daily: Daily
   readonly settings = new SettingsStore()
   readonly tutorial = new Tutorial(this.city)
   readonly army = new Army(this.city)
@@ -72,6 +74,7 @@ export class GameState {
       this.neighbors,
     )
     this.goals = new Goals(this.city, this.player, this.services, this.quests)
+    this.daily = new Daily(this.city, this.player)
     this.townEvents = new TownEvents(this.city, this.player, this.quests)
     this.finances = new Finances(this.city, this.taxes, this.clock)
   }

@@ -64,7 +64,9 @@ import { PARADE } from './Army'
 import { repairCost } from './Disasters'
 import { canUpgrade } from './construction'
 import { COLLECTIONS } from './collections'
-import { addMountains } from './MountainView'
+import { MountainView } from './MountainView'
+import { dayKey } from './daily'
+import { DailyPanel } from '../ui/DailyPanel'
 import { WeatherView } from './WeatherView'
 import { DisasterView } from './DisasterView'
 import { PortView } from './PortView'
@@ -148,7 +150,7 @@ export class Game {
   private flights = 0 // fly-to-counter icons started this second (kept few)
   private weather: WeatherView
   private disasterView: DisasterView
-  private mountains: { setSnow: (amount: number) => void }
+  private mountains: MountainView
   private flashEl = document.createElement('div')
   private lastSnow = -1
   private ambient = new THREE.HemisphereLight('#e8f4ff', '#8fbf6a', 1.3)
@@ -214,7 +216,7 @@ export class Game {
     this.effects = new EffectsView(this.scene)
     this.roadNetworks = new RoadNetworkView(this.scene, this.city)
     this.ambientView = new AmbientView(this.scene, this.city, this.cityView, this.effects, () => this.controls.target)
-    this.mountains = addMountains(this.scene)
+    this.mountains = new MountainView(this.scene)
     this.weather = new WeatherView(this.scene, () => this.controls.target, [this.sun, this.ambient])
     this.disasterView = new DisasterView(this.scene, this.city, this.state.disasters, {
       notice: (message, warn) => this.hud.toast(message, warn ? 'warn' : 'info'),
@@ -400,6 +402,7 @@ export class Game {
     }
     this.setUpSafetyNet(container)
     this.setUpWelcomeBack(container, builder, leftAt)
+    this.setUpDaily(container, builder)
     // Save shortly after anything changes.
     this.saves.watch(() => this.saver.requestSave())
 
@@ -479,6 +482,7 @@ export class Game {
     }
     this.sound.setRain(this.weather.intensity)
     this.controls.update(Math.min(dt, 100) / 1000)
+    this.mountains.update(this.camera, this.controls.target, Math.min(dt, 100) / 1000)
     // Development only: what's on the graphics card, for leak-hunting browser tests.
     if (import.meta.env.DEV && (this.devFrames = (this.devFrames + 1) % 60) === 0) {
       const { geometries, textures } = this.renderer.info.memory
@@ -527,6 +531,27 @@ export class Game {
       if (document.visibilityState === 'hidden') hiddenAt = Date.now()
       else if (hiddenAt !== null) welcome(hiddenAt)
     })
+  }
+
+  // The daily gift: offered once a day, after the tutorial, at a quiet
+  // moment (no window open, not in the middle of building). Closed without
+  // collecting, it's offered again next time the game opens (or tomorrow).
+  private setUpDaily(container: HTMLElement, builder: Builder) {
+    const daily = this.state.daily
+    const panel = new DailyPanel(container, daily, () => this.player.level)
+    panel.onClaimed = (gift) => {
+      this.sound.play('levelup')
+      this.hud.toast(`🎁 Daily gift: +${gift.coins.toLocaleString()} coins, +${gift.xp} XP${gift.energy ? `, +${gift.energy} energy` : ''}`)
+    }
+    let offered: string | null = null
+    const offer = () => {
+      const now = new Date()
+      const busy = panel.isOpen || builder.mode.kind !== 'select' || this.tutorial.current !== null || container.querySelector('.overlay:not([hidden]), .sheet:not([hidden])')
+      if (busy || !daily.due(now) || offered === dayKey(now)) return
+      offered = dayKey(now)
+      panel.show()
+    }
+    window.setInterval(offer, 2000)
   }
 
   // Selecting a building: its context menu on the map, the details sheet,

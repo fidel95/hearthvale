@@ -134,3 +134,5 @@ the right on a wide screen) so the town stays in view.
 - **The Highlands:** the world's east is mountain country. Buy land out there and build at the foot of the peaks: a Mountain Lodge, a Cable Car whose cabins ride up the mountainside, and the Tunnel Works, where a tunnel boring machine drills into the rock. Deer, mountain goats and rabbits roam the wild land, and eagles circle the peaks.
 - **The Spaceport:** a rocket lifts off every few minutes, in fire and smoke.
 - **In the sky:** hot air balloons drift over town, and now and then a UFO comes to hover over a building. Tap it before it leaves for a gift.
+- **A daily gift:** a 7-day calendar that grows to a big gift on day 7. Missing a day never loses your place.
+- **Turn the view** to look from any side; mountains in the way turn see-through.
