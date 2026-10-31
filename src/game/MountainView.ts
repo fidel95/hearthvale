@@ -40,7 +40,7 @@ export function addMountains(scene: THREE.Scene): { setSnow: (amount: number) =>
     const x = p.x - HALF
     const z = p.z - HALF
     const turn = rand() * Math.PI
-    // Broad flanks, then a steeper summit on top of them.
+    // Broad flanks, then a steeper summit on top of them (terrain.ts mountainHeight).
     const base = p.radius + 0.4
     const flank = p.height * 0.5
     const waist = base * 0.48

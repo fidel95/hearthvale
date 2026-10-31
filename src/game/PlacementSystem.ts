@@ -58,7 +58,9 @@ export class PlacementSystem {
     }
     if (spot) {
       if (!this.city.canPlace(type, spot.tile, spot.ignoreId, spot.rotation)) {
-        problems.push(type.onShore ? 'It must stand on the shore, next to the sea' : "It doesn't fit there")
+        problems.push(
+          type.onShore ? 'It must stand on the shore, next to the sea' : type.nearMountain ? 'It must stand at the foot of a mountain, in the Highlands' : "It doesn't fit there",
+        )
       } else if (type.requiresRoad && !edgeTiles({ type, tile: spot.tile, rotation: spot.rotation }).some(this.city.isRoad)) {
         warnings.push('Needs a road beside it to open')
       } else if (type.requiresRail && !edgeTiles({ type, tile: spot.tile, rotation: spot.rotation }).some(this.city.isRail)) {

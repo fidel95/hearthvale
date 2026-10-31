@@ -54,6 +54,8 @@ import { FlightView } from './FlightView'
 import { LeisureView } from './LeisureView'
 import { ArmyView } from './ArmyView'
 import { AnimalView } from './AnimalView'
+import { WildlifeView } from './WildlifeView'
+import { SkyView, ufoGift } from './SkyView'
 import { AmbientView } from './AmbientView'
 import { RoadNetworkView } from './RoadNetworkView'
 import { EffectsView } from './EffectsView'
@@ -134,6 +136,8 @@ export class Game {
   private leisureView: LeisureView
   private armyView: ArmyView
   private animalView: AnimalView
+  private wildlifeView: WildlifeView
+  private skyView: SkyView
   private effects: EffectsView
   private ambientView: AmbientView
   private roadNetworks: RoadNetworkView
@@ -205,6 +209,8 @@ export class Game {
     this.leisureView = new LeisureView(this.scene, this.city)
     this.armyView = new ArmyView(this.scene, this.city, this.state.army)
     this.animalView = new AnimalView(this.scene, this.city)
+    this.wildlifeView = new WildlifeView(this.scene, this.city)
+    this.skyView = new SkyView(this.scene, this.city, () => this.controls.target, import.meta.env.DEV && new URLSearchParams(location.search).has('ufo'))
     this.effects = new EffectsView(this.scene)
     this.roadNetworks = new RoadNetworkView(this.scene, this.city)
     this.ambientView = new AmbientView(this.scene, this.city, this.cityView, this.effects, () => this.controls.target)
@@ -321,7 +327,8 @@ export class Game {
       this.leisureView.setVisible(s.showPeople)
       this.armyView.setVisible(s.showTraffic)
       this.animalView.setVisible(s.showPeople)
-      this.effects.enabled = this.ambientView.enabled = this.controls.inertia = !s.reduceMotion
+      this.wildlifeView.setVisible(s.showPeople)
+      this.effects.enabled = this.ambientView.enabled = this.skyView.enabled = this.controls.inertia = !s.reduceMotion
       document.documentElement.style.setProperty('--ui-scale', String(s.uiScale))
       this.weather.enabled = s.weather
       this.weather.snow = s.snowMode
@@ -450,6 +457,7 @@ export class Game {
     this.leisureView.update(life)
     this.armyView.update(life)
     this.animalView.update(life)
+    this.wildlifeView.update(life)
     this.effects.update(Math.min(dt, 100) / 1000)
     // Road networks: while drawing or removing roads, or when switched on.
     const mode = this.builder.mode
@@ -457,6 +465,7 @@ export class Game {
     this.roadNetworks.setShown(roading || this.settings.values.roadOverlay)
     this.roadNetworks.update()
     this.ambientView.update(life)
+    this.skyView.update(life)
     if (this.effects.enabled) this.landView.sway(frameTime / 1000)
     this.weather.update(Math.min(dt, 100) / 1000)
     this.disasterView.raining = this.weather.isRaining && !this.weather.snow
@@ -649,6 +658,14 @@ export class Game {
       if (e.kind === 'goodsIn') this.sound.play('ship')
     })
     this.player.onChange((e) => e.kind === 'levelUp' && this.sound.play('levelup'))
+    // The UFO's visitors leave a gift for whoever taps their ship.
+    this.skyView.onUfoTapped = () => {
+      const gift = ufoGift(this.player.level)
+      this.city.economy.award(gift.coins, 'A gift from the UFO')
+      this.player.grantXp(gift.xp)
+      this.sound.play('levelup')
+      this.hud.toast(`🛸 The visitors left a gift: +${gift.coins} coins, +${gift.xp} XP!`)
+    }
     const notice = builder.onNotice
     builder.onNotice = (message) => {
       notice?.(message)

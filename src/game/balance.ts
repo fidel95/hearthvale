@@ -194,6 +194,7 @@ export type Mechanic =
   | 'railways'
   | 'flights'
   | 'factories'
+  | 'mountains'
 
 // The mechanics a building brings with it.
 export function mechanicsOf(type: BuildingType): Mechanic[] {
@@ -212,7 +213,8 @@ export function mechanicsOf(type: BuildingType): Mechanic[] {
     air: 'flights',
     industry: 'factories',
   }
-  return type.build ? [byCategory[type.category], 'construction'] : [byCategory[type.category]]
+  const own = type.nearMountain ? 'mountains' : byCategory[type.category]
+  return type.build ? [own, 'construction'] : [own]
 }
 
 // For each level, the mechanics that first appear there.

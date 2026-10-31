@@ -2555,3 +2555,35 @@ button {
   margin: 0;
   flex: 0 0 auto;
 }
+
+/* The UFO's button (SkyView): tap it for a gift. */
+.sky-gift-holder {
+  pointer-events: none;
+}
+
+.sky-gift {
+  width: 44px;
+  height: 44px;
+  border: 3px solid #fff;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #b8ffe0, #3fbf8f);
+  box-shadow: 0 0 0 4px rgba(184, 255, 224, 0.5), var(--raised, 0 3px 0 rgba(0, 0, 0, 0.2));
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  pointer-events: auto;
+  animation: sky-gift-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes sky-gift-pulse {
+  50% {
+    transform: scale(1.12);
+    box-shadow: 0 0 0 9px rgba(184, 255, 224, 0.25);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sky-gift {
+    animation: none;
+  }
+}

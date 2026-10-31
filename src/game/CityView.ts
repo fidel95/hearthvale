@@ -1,8 +1,10 @@
 import * as THREE from 'three'
 import { sizeOf, type City, type PlacedBuilding } from './City'
 import { cropState } from './crops'
-import { footprintCenter } from './grid'
+import { footprintCenter, GRID_SIZE } from './grid'
 import { isTrack, isPlot } from './buildings'
+import { AIM, type Aim } from './frontierModels'
+import { nearestPeak } from './terrain'
 import { createBuildingObject, createConstructionSite, createCropObject, cropLookFor, disposeBuildingObject, disposeCropObject } from './models'
 
 const POP_MS = 350
@@ -123,7 +125,12 @@ export class CityView {
     const cached = this.tops.get(id)
     if (cached !== undefined) return cached
     const obj = this.objects.get(id)
+    // Leave out anything that flies off (the Spaceport's rocket).
+    const flying: [THREE.Object3D, THREE.Object3D][] = []
+    obj?.traverse((o) => o.userData.flies && o.parent && flying.push([o, o.parent]))
+    for (const [o] of flying) o.removeFromParent()
     const box = obj ? new THREE.Box3().setFromObject(obj) : null
+    for (const [o, parent] of flying) parent.add(o)
     if (!box || box.isEmpty()) return 1.2
     this.tops.set(id, box.max.y)
     return box.max.y
@@ -220,6 +227,16 @@ export class CityView {
     // A quarter turn each; the model is centered, so turning it in place fits the turned footprint.
     obj.rotation.y = (-b.rotation * Math.PI) / 2
     obj.rotation.z = b.damaged ? 0.07 : 0
+    // Highland buildings turn their working part to face the nearest peak (frontierModels.ts).
+    const aim = obj.getObjectByName(AIM)
+    if (aim) {
+      const center = footprintCenter(b.tile, sizeOf(b)).add(new THREE.Vector3(GRID_SIZE / 2, 0, GRID_SIZE / 2))
+      const peak = nearestPeak(center.x, center.z)
+      const dx = peak.x - center.x
+      const dz = peak.z - center.z
+      aim.rotation.y = Math.atan2(-dz, dx) - obj.rotation.y
+      ;(aim.userData.aim as Aim | undefined)?.(Math.hypot(dx, dz), peak)
+    }
   }
 }
 

@@ -4,6 +4,7 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
 import type { BuildingType } from './buildings'
 import type { CropState, CropType } from './crops'
 import { buildCoalMine, buildLandfill } from './quarryModels'
+import { buildCableCar, buildLodge, buildSpaceport, buildTunnelWorks } from './frontierModels'
 
 // Tallest a model may be, in world units per tile of its footprint's longer side.
 const MAX_HEIGHT_PER_TILE = 1.2
@@ -370,6 +371,18 @@ function createPlaceholder(type: BuildingType): THREE.Group {
       break
     case 'landfill':
       buildLandfill(group, add, w, d, modelCopy)
+      break
+    case 'lodge':
+      buildLodge(add, w, d)
+      break
+    case 'cablecar':
+      buildCableCar(group, add)
+      break
+    case 'tunnel':
+      buildTunnelWorks(group, add, w, d)
+      break
+    case 'spaceport':
+      buildSpaceport(group, add)
       break
     case 'house': {
       add(new THREE.BoxGeometry(w * 0.8, height, d * 0.8), color, 0, 0, 0)

@@ -744,6 +744,88 @@
         "coins": 250,
         "xp": 25
       }
+    },
+    {
+      "id": "highlands",
+      "title": "Head for the Hills",
+      "giver": "🏔️",
+      "intro": "East of town, the Highlands rise. Buy land out there and build a Mountain Lodge at the foot of a peak: people pay well for the view.",
+      "level": 16,
+      "tasks": [
+        {
+          "label": "Build a Mountain Lodge",
+          "count": 1,
+          "have": {
+            "building": "mountain-lodge"
+          }
+        }
+      ],
+      "reward": {
+        "coins": 1500,
+        "xp": 120
+      }
+    },
+    {
+      "id": "cable-car",
+      "title": "Up and Away",
+      "giver": "🚡",
+      "intro": "Visitors want to reach the top. A Cable Car carries them up the mountainside.",
+      "after": "highlands",
+      "level": 16,
+      "tasks": [
+        {
+          "label": "Build a Cable Car",
+          "count": 1,
+          "have": {
+            "building": "cable-car"
+          }
+        }
+      ],
+      "reward": {
+        "coins": 2000,
+        "xp": 150
+      }
+    },
+    {
+      "id": "tunnel",
+      "title": "Deep Down",
+      "giver": "⛏️",
+      "intro": "There's ore inside those mountains. Set a tunnel boring machine to work at the Tunnel Works.",
+      "after": "highlands",
+      "level": 16,
+      "tasks": [
+        {
+          "label": "Build the Tunnel Works",
+          "count": 1,
+          "have": {
+            "building": "tunnel-works"
+          }
+        }
+      ],
+      "reward": {
+        "coins": 2500,
+        "xp": 160
+      }
+    },
+    {
+      "id": "spaceport",
+      "title": "To the Stars",
+      "giver": "🧑‍🚀",
+      "intro": "Hearthvale is ready for space. Build a Spaceport, and watch the rockets go up.",
+      "level": 18,
+      "tasks": [
+        {
+          "label": "Build the Spaceport",
+          "count": 1,
+          "have": {
+            "building": "spaceport"
+          }
+        }
+      ],
+      "reward": {
+        "coins": 5000,
+        "xp": 300
+      }
     }
   ],
   "achievements": [

@@ -73,6 +73,10 @@ export type PlaceholderShape =
   | 'lamp'
   | 'hedge'
   | 'gazebo'
+  | 'lodge'
+  | 'cablecar'
+  | 'tunnel'
+  | 'spaceport'
   | 'pond'
 
 export interface BuildingType {
@@ -136,6 +140,8 @@ export interface BuildingType {
   requiresRail?: boolean
   // Must be built on the shore, next to the sea (docks).
   onShore?: boolean
+  // Must be built at the foot of a Highlands mountain (terrain.ts).
+  nearMountain?: boolean
   // Depreciation period in years, when it differs from its category's (taxRules.ts).
   recoveryYears?: number
   // A festival prize (eventData.ts): never sold in the build menu; says where it was won.
@@ -1299,6 +1305,67 @@ export const BUILDING_TYPES: BuildingType[] = [
     attractsVisitors: { lingerSeconds: 10 },
     visitors: 30,
     placeholder: { shape: 'skiresort', color: '#f4f8fb', accent: '#c8463a', height: 2.4 },
+  },
+  // ---- The Highlands: built at the foot of a mountain (terrain.ts).
+  {
+    id: 'mountain-lodge',
+    name: 'Mountain Lodge',
+    category: 'home',
+    size: { x: 2, z: 2 },
+    cost: 1800,
+    unlockLevel: 16,
+    nearMountain: true,
+    build: { seconds: 150, materials: { lumber: 8, glass: 4 } },
+    needs: { water: 1, power: 1, trash: 1 },
+    income: { coins: 210, seconds: 200 },
+    residents: 8,
+    placeholder: { shape: 'lodge', color: '#8a5a36', accent: '#c8463a', height: 1.3 },
+  },
+  {
+    id: 'cable-car',
+    name: 'Cable Car',
+    category: 'business',
+    size: { x: 2, z: 2 },
+    cost: 3800,
+    unlockLevel: 16,
+    nearMountain: true,
+    requiresRoad: true,
+    build: { seconds: 180, materials: { steel: 6, glass: 3 } },
+    needs: { power: 3 },
+    income: { coins: 310, seconds: 240 }, // rides to the top
+    attractsVisitors: { lingerSeconds: 12 },
+    visitors: 25,
+    placeholder: { shape: 'cablecar', color: '#e8e2d4', accent: '#c8463a', height: 1.2 },
+  },
+  {
+    id: 'tunnel-works',
+    name: 'Tunnel Works',
+    category: 'industry',
+    size: { x: 3, z: 3 },
+    cost: 2800,
+    unlockLevel: 16,
+    nearMountain: true,
+    requiresRoad: true,
+    build: { seconds: 240, materials: { steel: 8, bricks: 4 } },
+    needs: { power: 5, water: 2 },
+    income: { coins: 260, seconds: 300 }, // ore and gems from the dig
+    placeholder: { shape: 'tunnel', color: '#e0a030', accent: '#3a3d42', height: 1 },
+  },
+  {
+    id: 'spaceport',
+    name: 'Spaceport',
+    category: 'business',
+    size: { x: 4, z: 4 },
+    cost: 6000,
+    unlockLevel: 18,
+    unique: true,
+    requiresRoad: true,
+    build: { seconds: 420, materials: { steel: 14, glass: 8, bricks: 6 } },
+    needs: { power: 8, water: 4, trash: 2 },
+    income: { coins: 520, seconds: 420 }, // launches and tours
+    attractsVisitors: { lingerSeconds: 15 },
+    visitors: 60,
+    placeholder: { shape: 'spaceport', color: '#d8dde2', accent: '#c8463a', height: 3 },
   },
   // ---- Farm animals: they earn farm income (eggs, pork, wool, milk) like a shop earns sales
   {

@@ -54,3 +54,18 @@ export function isRock(tile: Tile): boolean {
 export function nearMountain(tile: Tile, reach = 1): boolean {
   return PEAKS.some((p) => Math.hypot(tile.x + 0.5 - p.x, tile.z + 0.5 - p.z) < p.radius + reach)
 }
+
+// Height of a peak's surface at a distance from its middle (the shape
+// MountainView draws: broad flanks to half its height, then a steeper summit).
+export function mountainHeight(p: Peak, distance: number): number {
+  const base = p.radius + 0.4
+  const waist = base * 0.48
+  if (distance >= base) return 0
+  if (distance >= waist) return (p.height / 2) * ((base - distance) / (base - waist))
+  return p.height / 2 + (p.height / 2) * ((waist - distance) / waist)
+}
+
+// The nearest peak to a point (in tiles).
+export function nearestPeak(x: number, z: number): Peak {
+  return PEAKS.reduce((best, p) => (Math.hypot(p.x - x, p.z - z) < Math.hypot(best.x - x, best.z - z) ? p : best))
+}

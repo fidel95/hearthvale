@@ -19,7 +19,7 @@ import {
 import { START_LOTS, START_LOT_VALUE, expansionPrice } from './land'
 import { edgeTiles } from './communityRules'
 import type { ProductId } from './products'
-import { isRock, isWater } from './terrain'
+import { isRock, isWater, nearMountain } from './terrain'
 
 // The city's state: coins, which buildings exist and which tiles they cover.
 // No three.js in here. CityView watches for changes and draws them, which
@@ -290,6 +290,8 @@ export class City {
     if (!fits) return false
     // Docks stand on the shore: at least two of the tiles along their edges must be sea.
     if (type.onShore) return edgeTiles({ type, tile, rotation }).filter(isWater).length >= 2
+    // Highland buildings stand at the foot of a mountain: one of their tiles right beside its rock.
+    if (type.nearMountain) return footprintTiles(tile, footprint(type, rotation)).some((t) => nearMountain(t, 1.5))
     return true
   }
 
