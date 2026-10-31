@@ -13,7 +13,7 @@ export interface Settings {
   music: boolean // gentle background music
   weather: boolean // rain showers now and then
   snowMode: boolean // winter: snow on the ground, and showers fall as snow
-  disasters: boolean // tornados, lightning, floods and tsunamis now and then
+  disasters: boolean // tornados, lightning, floods, tsunamis and fires now and then
   roadOverlay: boolean // always show road networks (they show while building roads anyway)
   tips: boolean // one-time tips about newer features (tips.ts)
   uiScale: number // the size of the interface: 0.8 to 1.3
@@ -60,7 +60,7 @@ export const SETTING_LABELS: Record<SwitchSetting, string> = {
   music: 'Background music',
   weather: 'Rain showers',
   snowMode: '❄️ Snow mode (winter)',
-  disasters: 'Natural disasters (they damage, never destroy)',
+  disasters: 'Disasters and fires (they damage, never destroy)',
   roadOverlay: '🛣️ Always show road networks',
   tips: '💡 Tips about new features',
 }

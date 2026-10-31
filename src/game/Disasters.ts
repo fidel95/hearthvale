@@ -59,7 +59,8 @@ export class Disasters {
 
   // Hit whatever stands on these tiles: each building is damaged with the
   // given chance, and crops are lost. Returns what was damaged.
-  strike(kind: DisasterKind, tiles: Tile[], chance: number, now = Date.now()): PlacedBuilding[] {
+  // A fire (EmergencyView) is struck the same way, on the one building that burned.
+  strike(kind: DisasterKind | 'fire', tiles: Tile[], chance: number, now = Date.now()): PlacedBuilding[] {
     const hit: PlacedBuilding[] = []
     for (const b of this.buildingsOn(tiles)) {
       if (isPlot(b.type)) {
@@ -74,7 +75,7 @@ export class Disasters {
       if (!vulnerable(b) || this.random() >= chance) continue
       b.damaged = true
       hit.push(b)
-      this.city.announce({ kind: 'damaged', building: b, cause: DISASTER_INFO[kind].name })
+      this.city.announce({ kind: 'damaged', building: b, cause: kind === 'fire' ? 'Fire' : DISASTER_INFO[kind].name })
     }
     return hit
   }

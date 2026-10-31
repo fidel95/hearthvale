@@ -69,6 +69,7 @@ import { dayKey } from './daily'
 import { DailyPanel } from '../ui/DailyPanel'
 import { WeatherView } from './WeatherView'
 import { DisasterView } from './DisasterView'
+import { EmergencyView } from './EmergencyView'
 import { PortView } from './PortView'
 import { ShipView } from './ShipView'
 import { AutoSaver } from './save'
@@ -150,6 +151,7 @@ export class Game {
   private flights = 0 // fly-to-counter icons started this second (kept few)
   private weather: WeatherView
   private disasterView: DisasterView
+  private emergencyView: EmergencyView
   private mountains: MountainView
   private flashEl = document.createElement('div')
   private lastSnow = -1
@@ -229,6 +231,14 @@ export class Game {
       siren: () => this.sound.siren(),
       setStorm: (on) => this.weather.setStorm(on),
     })
+    // ?fire starts the first fire after a few seconds (development only, for browser checks).
+    this.emergencyView = new EmergencyView(this.scene, this.city, this.cityView, this.state.disasters, import.meta.env.DEV && new URLSearchParams(location.search).has('fire'))
+    this.emergencyView.onNotice = (message, warn) => this.hud.toast(message, warn ? 'warn' : 'info')
+    this.emergencyView.onSiren = () => this.sound.siren()
+    this.emergencyView.onPutOut = () => {
+      this.player.grantXp(5)
+      this.hud.toast('🧯 You put out the fire! +5 XP')
+    }
     this.flashEl.className = 'flash'
     container.append(this.flashEl)
     const builder = new Builder(this.scene, this.city, this.player, this.docks, this.cityView, this.controls, this.renderer.domElement)
@@ -326,6 +336,7 @@ export class Game {
       landView.calmSea = s.reduceMotion
       this.peopleView.setVisible(s.showPeople)
       this.trafficView.setVisible(s.showTraffic)
+      this.emergencyView.setVisible(s.showTraffic)
       this.flightView.setVisible(s.showTraffic)
       this.leisureView.setVisible(s.showPeople)
       this.armyView.setVisible(s.showTraffic)
@@ -336,6 +347,7 @@ export class Game {
       this.weather.enabled = s.weather
       this.weather.snow = s.snowMode
       this.disasterView.enabled = s.disasters
+      this.emergencyView.enabled = s.disasters
       this.leisureView.raining = this.weather.isRaining || s.snowMode
       this.peopleView.setRaining(this.weather.isRaining && !s.snowMode)
       this.weather.showDrops = !s.reduceMotion
@@ -480,6 +492,7 @@ export class Game {
     this.weather.update(Math.min(dt, 100) / 1000)
     this.disasterView.raining = this.weather.isRaining && !this.weather.snow
     this.disasterView.update(Math.min(dt, 100) / 1000)
+    this.emergencyView.update(life)
     // Snow settling or melting: update the land, trees and hills as it changes.
     if (Math.abs(this.weather.snowCover - this.lastSnow) > 0.02 || (this.weather.snowCover !== this.lastSnow && (this.weather.snowCover === 0 || this.weather.snowCover === 1))) {
       this.lastSnow = this.weather.snowCover

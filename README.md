@@ -136,4 +136,6 @@ the right on a wide screen) so the town stays in view.
 - **In the sky:** hot air balloons drift over town, and now and then a UFO comes to hover over a building. Tap it before it leaves for a gift.
 - **A daily gift:** a 7-day calendar that grows to a big gift on day 7. Missing a day never loses your place.
 - **A river through the Highlands**, from the mountains to the sea. Roads cross it as bridges, and construction trucks bring loads to every building site.
+- **Emergencies:** now and then a fire breaks out. Your fire station sends an engine to hose it down, with the police and an ambulance, lights flashing; with no engine coming, tap the 🔥 yourself. Between fires, ambulances and police cars go out on calls.
+- **Traffic lights** at every paved junction; cars stop on red and queue behind each other. A yellow submarine dives and surfaces out at sea.
 - **Turn the view** to look from any side; mountains in the way turn see-through.

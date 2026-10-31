@@ -26,6 +26,16 @@ describe('Disasters', () => {
     expect(state.city.production.collect(home.id, 60_000)).toBeGreaterThan(0)
   })
 
+  it('count a fire left to burn as damage by fire', () => {
+    const state = new GameState()
+    const disasters = new Disasters(state.city, () => 0)
+    const home = state.city.place(b('cottage'), at(0, 0), { now: 0, free: true })!
+    const causes: string[] = []
+    state.city.onChange((e) => e.kind === 'damaged' && causes.push(e.cause))
+    expect(disasters.strike('fire', [home.tile], 1)).toEqual([home])
+    expect(causes).toEqual(['Fire'])
+  })
+
   it('ruin crops but leave the plot', () => {
     const state = new GameState()
     const plot = state.city.place(b('farm-plot'), at(0, 0), { free: true })!

@@ -7,6 +7,7 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
 import { construction, DUMP_TRUCK_TURN, modelCopy, modelFitted } from './models'
 import { easeShare, turnToward } from './motion'
 import { nextTile, pathToFarthest, Polyline } from './routes'
+import { lightFor, signalJunctions, type Light } from './signals'
 
 // Everything that moves along roads and track: cars, buses, trains, and the
 // army's marching squad and patrol jeep. Purely for looks, like PeopleView:
@@ -14,7 +15,8 @@ import { nextTile, pathToFarthest, Polyline } from './routes'
 // out again from the town whenever roads, track or stops change.
 //
 // - Cars: about one for every five residents. They wander the roads, keeping
-//   to the right, and only turn back at a dead end.
+//   to the right, and only turn back at a dead end. They stop at red lights
+//   (signals.ts) and keep their distance from the car in front.
 // - Buses: one per bus stop (up to two), looping from stop to stop and
 //   pausing at each; with a single stop, out to the far end and back.
 // - Trains: from the station to the far end of the line and back, pausing at
@@ -26,6 +28,9 @@ import { nextTile, pathToFarthest, Polyline } from './routes'
 
 const MAX_CARS = 16
 const MAX_SITE_TRUCKS = 3
+const STOP_LINE = 0.3 // how far toward a junction (0 to 1 between tile middles) cars wait at a red light
+const GAP = 0.5 // how close a car comes up behind the one in front
+const LIGHT_COLORS: Record<Light, string> = { green: '#3fdc63', amber: '#ffb238', red: '#ff4b3a' }
 const LANE = 0.17 // how far right of the middle of the road vehicles drive
 const SPEED = { car: 1.8, bus: 1.3, train: 2.2, truck: 1.4 } // tiles per second (at Game's PACE)
 const CORNERING = 7 // how quickly cars settle into a new lane and heading
@@ -188,6 +193,7 @@ interface Wanderer {
   to: Tile
   t: number
   speed: number
+  waited: number // seconds held up behind another car (after a while it squeezes by)
 }
 
 // Something going round a fixed route (bus, train, squad): distance along
@@ -218,6 +224,15 @@ export class TrafficView {
   private wantCars = 0
   private wantJeep = false
   private carModels = CAR_MODELS
+  // Traffic lights: the junctions that have them, the clock they run on, and
+  // their lamps (one material per way, recolored as the lights change).
+  private signals = new Set<string>()
+  private signalTime = 0
+  private signalMeshes: THREE.Mesh[] = []
+  private lamps = {
+    x: new THREE.MeshStandardMaterial({ color: LIGHT_COLORS.green, emissive: LIGHT_COLORS.green, emissiveIntensity: 0.8 }),
+    z: new THREE.MeshStandardMaterial({ color: LIGHT_COLORS.red, emissive: LIGHT_COLORS.red, emissiveIntensity: 0.8 }),
+  }
 
   constructor(scene: THREE.Scene, city: City) {
     this.scene = scene
@@ -237,6 +252,12 @@ export class TrafficView {
   update(dt: number) {
     if (!this.visible) return
     if (this.dirty) this.replan()
+    this.signalTime += dt
+    for (const axis of ['x', 'z'] as const) {
+      const color = LIGHT_COLORS[lightFor(axis, this.signalTime)]
+      this.lamps[axis].color.set(color)
+      this.lamps[axis].emissive.set(color)
+    }
     this.spawnTimer -= dt
     if (this.spawnTimer <= 0 && (this.cars.length < this.wantCars + (this.wantJeep ? 1 : 0))) {
       this.spawnTimer = 0.7
@@ -268,6 +289,66 @@ export class TrafficView {
     this.planBuses(all)
     this.planTrain(all)
     this.planSiteTrucks(all)
+    this.planSignals()
+  }
+
+  // A post on two opposite corners of each junction, each with a lamp facing
+  // each way.
+  private planSignals() {
+    for (const m of this.signalMeshes) {
+      m.removeFromParent()
+      m.geometry.dispose()
+    }
+    this.signalMeshes = []
+    const junctions = signalJunctions(this.city)
+    this.signals = new Set(junctions.map((t) => `${t.x},${t.z}`))
+    if (junctions.length === 0) return
+    const posts: THREE.BufferGeometry[] = []
+    const lamps = { x: [] as THREE.BufferGeometry[], z: [] as THREE.BufferGeometry[] }
+    for (const tile of junctions) {
+      const c = center(tile)
+      for (const corner of [-1, 1]) {
+        const x = c.x + corner * 0.44
+        const z = c.z + corner * 0.44
+        posts.push(new THREE.CylinderGeometry(0.016, 0.02, 0.5, 6).translate(x, 0.25, z))
+        posts.push(new THREE.BoxGeometry(0.09, 0.13, 0.09).translate(x, 0.52, z))
+        // Each lamp looks back down the road at the traffic coming in.
+        lamps.x.push(new THREE.SphereGeometry(0.032, 8, 6).translate(x - corner * 0.047, 0.52, z))
+        lamps.z.push(new THREE.SphereGeometry(0.032, 8, 6).translate(x, 0.52, z - corner * 0.047))
+      }
+    }
+    const mesh = (parts: THREE.BufferGeometry[], m: THREE.Material) => {
+      const merged = new THREE.Mesh(mergeGeometries(parts), m)
+      for (const g of parts) g.dispose()
+      merged.castShadow = true
+      this.scene.add(merged)
+      this.signalMeshes.push(merged)
+    }
+    mesh(posts, material('#3b3f46'))
+    mesh(lamps.x, this.lamps.x)
+    mesh(lamps.z, this.lamps.z)
+  }
+
+  // Should this car wait where it is? At a red (or amber) light ahead, or
+  // close behind another car going the same way.
+  private held(car: Wanderer): boolean {
+    if (car.placed && this.signals.has(`${car.to.x},${car.to.z}`) && car.t <= STOP_LINE) {
+      const light = lightFor(car.to.x !== car.at.x ? 'x' : 'z', this.signalTime)
+      if (light === 'red' || (light === 'amber' && car.t < STOP_LINE - 0.08)) return true
+    }
+    if (car.waited > 4) return false // stuck too long: squeeze on
+    const heading = car.object.rotation.y
+    const fx = Math.cos(heading)
+    const fz = -Math.sin(heading)
+    const p = car.object.position
+    for (const other of this.cars) {
+      if (other === car || !other.placed) continue
+      const dx = other.object.position.x - p.x
+      const dz = other.object.position.z - p.z
+      const ahead = dx * fx + dz * fz
+      if (ahead > 0.05 && ahead < GAP && Math.abs(dx * fz - dz * fx) < 0.13) return true
+    }
+    return false
   }
 
   private clearAll() {
@@ -287,7 +368,7 @@ export class TrafficView {
     const object = jeep ? makeJeep() : makeKitCar(pick(this.carModels))
     object.userData.jeep = jeep
     this.scene.add(object)
-    this.cars.push({ object, from: null, at, to, t: 0, speed: SPEED.car * (0.85 + Math.random() * 0.3) })
+    this.cars.push({ object, from: null, at, to, t: 0, speed: SPEED.car * (0.85 + Math.random() * 0.3), waited: 0 })
   }
 
   private removeCar(car: Wanderer) {
@@ -296,7 +377,11 @@ export class TrafficView {
   }
 
   private driveCar(car: Wanderer, dt: number) {
-    car.t += car.speed * dt
+    if (this.held(car)) car.waited += dt
+    else {
+      car.waited = 0
+      car.t += car.speed * dt
+    }
     while (car.t >= 1) {
       car.t -= 1
       const next = nextTile(car.at, car.to, this.city.isRoad)
