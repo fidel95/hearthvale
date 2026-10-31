@@ -1,0 +1,14 @@
+Construction models
+
+crane.glb, mixer.glb, office.glb, toilet.glb, planks.glb, boxes.glb, barrel.glb
+  From "LowPoly House Construction Site" by Majadroid (Maik Hoffmann), https://majadroid.itch.io/
+  License: CC0 (https://creativecommons.org/publicdomain/zero/1.0/). Converted from FBX to glTF.
+  Color palette by Imphenzia (www.imphenzia.com).
+
+bulldozer.glb
+  "Bulldozer" by Poly by Google, https://poly.pizza/m/ddxtaegI3HQ
+  License: CC BY 3.0 (https://creativecommons.org/licenses/by/3.0/)
+
+dump-truck.glb
+  "Dump truck" by jeremy, https://poly.pizza/m/1BpGYg14QGD
+  License: CC BY 3.0 (https://creativecommons.org/licenses/by/3.0/)

@@ -207,6 +207,57 @@ export function modelCopy(url: string, scale: number, fallback: () => THREE.Obje
   return group
 }
 
+// A copy of a model sized so its longest side is `size`, turned by `turn` (to
+// face +z), and standing on the origin: centered on it, or (onBase) with the
+// middle of what touches the ground there, so a crane turns about its mast.
+// Returns a group right away and fills it in once the model has loaded
+// (`fallback` instead if it can't load). Shapes and materials are shared.
+export function modelFitted(url: string, size: number, options: { turn?: number; onBase?: boolean } = {}, fallback: () => THREE.Object3D = () => new THREE.Group()): THREE.Group {
+  const group = new THREE.Group()
+  loadModel(url)
+    .then((model) => {
+      const copy = model.clone()
+      copy.rotation.y = options.turn ?? 0
+      const holder = new THREE.Group()
+      holder.add(copy)
+      holder.updateMatrixWorld(true)
+      const box = new THREE.Box3().setFromObject(holder)
+      const dims = box.getSize(new THREE.Vector3())
+      const middle = box.getCenter(new THREE.Vector3())
+      if (options.onBase) {
+        const base = new THREE.Box3()
+        const v = new THREE.Vector3()
+        holder.traverse((o) => {
+          if (!(o instanceof THREE.Mesh)) return
+          const position = o.geometry.attributes.position
+          for (let i = 0; i < position.count; i++) {
+            v.fromBufferAttribute(position, i).applyMatrix4(o.matrixWorld)
+            if (v.y < box.min.y + dims.y * 0.05) base.expandByPoint(v)
+          }
+        })
+        if (!base.isEmpty()) base.getCenter(middle)
+      }
+      copy.position.set(-middle.x, -box.min.y, -middle.z)
+      holder.scale.setScalar(size / Math.max(dims.x, dims.y, dims.z))
+      holder.traverse((o) => {
+        if (o instanceof THREE.Mesh) o.castShadow = o.receiveShadow = true
+      })
+      group.add(holder)
+    })
+    .catch((err) => {
+      console.warn(`Couldn't load ${url}, using a simple shape`, err)
+      group.add(fallback())
+    })
+  return group
+}
+
+// Majadroid's Construction Site pack (CC0) and two Poly Pizza models (CC BY):
+// the tower crane, machines, site office and building materials.
+export const construction = (name: string) => `${import.meta.env.BASE_URL}models/construction/${name}.glb`
+// Which way each one faces as modelled, to turn it toward +z.
+export const BULLDOZER_TURN = Math.PI / 2
+export const DUMP_TRUCK_TURN = Math.PI
+
 // Builds the 3D object for a building. Its origin is the center of the
 // footprint at ground level. Models load in the background, so this returns
 // an empty group right away and fills it in once the model is ready.
@@ -315,7 +366,7 @@ function createPlaceholder(type: BuildingType): THREE.Group {
 
   switch (shape) {
     case 'mine':
-      buildCoalMine(group, add, w, d, modelCopy)
+      buildCoalMine(group, add, w, d)
       break
     case 'landfill':
       buildLandfill(group, add, w, d, modelCopy)
@@ -942,9 +993,7 @@ export function createConstructionSite(type: BuildingType): THREE.Group {
   }
   add(new THREE.BoxGeometry(w * 0.8, 0.05, 0.06), '#d9a85e', 0, h, -d * 0.38)
   add(new THREE.BoxGeometry(w * 0.8, 0.05, 0.06), '#d9a85e', 0, h, d * 0.38)
-  // Traffic cones at the front corners and a stack of crates (Kenney's Car
-  // Kit), and a bulldozer working to and fro across the front (named, so
-  // CityView can drive it).
+  // Traffic cones at the front corners (Kenney's Car Kit).
   const carKit = (name: string) => `${import.meta.env.BASE_URL}models/cars/${name}.glb`
   const coneShape = () => {
     const cone = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.18, 8).translate(0, 0.09, 0), new THREE.MeshStandardMaterial({ color: '#f07a2a', flatShading: true }))
@@ -956,37 +1005,34 @@ export function createConstructionSite(type: BuildingType): THREE.Group {
     cone.position.set(side * w * 0.42, 0.04, d * 0.45)
     group.add(cone)
   }
-  for (const [x, y, z] of [[0, 0, 0], [0.19, 0, 0.02], [0.09, 0.18, 0.01]]) {
-    const crate = modelCopy(carKit('box'), 0.25, () => new THREE.Group())
-    crate.position.set(w * 0.22 + x, 0.04 + y, -d * 0.36 + z)
-    group.add(crate)
+  // The site office and a portable toilet down the right side; planks,
+  // boxes and a barrel down the left; a cement mixer parked at the back.
+  const size = Math.min(w, d)
+  const put = (name: string, length: number, x: number, z: number, turn = 0) => {
+    const thing = modelFitted(construction(name), length, { turn })
+    thing.position.set(x, 0.04, z)
+    group.add(thing)
   }
+  put('office', size * 0.22, w * 0.4, d * 0.02)
+  put('toilet', size * 0.08, w * 0.41, d * 0.24)
+  put('planks', size * 0.18, -w * 0.4, d * 0.05)
+  put('boxes', size * 0.08, -w * 0.4, -d * 0.16)
+  put('barrel', size * 0.045, -w * 0.38, d * 0.24)
+  put('mixer', size * 0.26, w * 0.16, -d * 0.4, Math.PI / 2)
+  // A bulldozer working to and fro across the front (named, so CityView can
+  // drive it; it turns the dozer to face along x).
   const dozer = new THREE.Group()
   dozer.name = 'site-dozer'
   dozer.userData.range = w * 0.28
   dozer.position.set(0, 0.04, d * 0.39)
-  const machine = modelCopy(carKit('tractor-shovel'), 0.17, () => new THREE.Group())
-  machine.position.y = 0.68 * 0.17 // the kit's wheels hang below its origin
-  dozer.add(machine)
+  dozer.add(modelFitted(construction('bulldozer'), size * 0.22, { turn: BULLDOZER_TURN }))
   group.add(dozer)
-  // A tower crane at the back corner. Its jib (named, so CityView can turn
-  // it) swings slowly round with a load hanging from it.
-  const mast = Math.max(w, d) * 0.55 + 0.6
-  add(new THREE.BoxGeometry(0.08, mast, 0.08), '#f2c230', -w * 0.4, 0.04, -d * 0.4)
+  // A tower crane at the back corner, turning slowly about its mast (named,
+  // so CityView can turn it), a load hanging from its jib.
   const jib = new THREE.Group()
   jib.name = 'crane-jib'
-  jib.position.set(-w * 0.4, 0.04 + mast, -d * 0.4)
-  for (const [geometry, color, x, y] of [
-    [new THREE.BoxGeometry(Math.max(w, d) * 0.9, 0.06, 0.06), '#f2c230', Math.max(w, d) * 0.3, 0.03],
-    [new THREE.BoxGeometry(0.2, 0.12, 0.12), '#5d6168', -0.15, 0.06],
-    [new THREE.BoxGeometry(0.012, 0.4, 0.012), '#2b2d33', Math.max(w, d) * 0.6, -0.2],
-    [new THREE.BoxGeometry(0.12, 0.08, 0.12), '#b5432f', Math.max(w, d) * 0.6, -0.44],
-  ] as const) {
-    const m = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({ color, flatShading: true }))
-    m.position.set(x, y, 0)
-    m.castShadow = true
-    jib.add(m)
-  }
+  jib.position.set(-w * 0.4, 0.04, -d * 0.4)
+  jib.add(modelFitted(construction('crane'), Math.max(w, d) * 0.6 + 0.9, { onBase: true }))
   group.add(jib)
   return group
 }

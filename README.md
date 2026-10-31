@@ -311,6 +311,8 @@ docs/                     the docs linked above
 - 3D models: [City Kit (Suburban)](https://kenney.nl/assets/city-kit-suburban) by Kenney, CC0 (see `public/models/suburban/License.txt`).
 - Pines, boulders and stones: [Mini Forest](https://kenney.nl/assets/mini-forest) by Kenney, CC0 (see `public/models/forest/License.txt`).
 - Leafy, autumn and palm trees, bushes, flowers, grass, mushrooms, rocks, logs and stone monuments: [Nature Kit](https://kenney.nl/assets/nature-kit) by Kenney, CC0 (see `public/models/nature/License.txt`).
+- Tower crane, cement mixer, site office, portable toilet and building materials on construction sites: [LowPoly House Construction Site](https://opengameart.org/content/3d-house-construction-site-lowpoly-cc0) by Majadroid, CC0 (palette by Imphenzia).
+- [Bulldozer](https://poly.pizza/m/ddxtaegI3HQ) by Poly by Google, CC BY 3.0, and [Dump truck](https://poly.pizza/m/1BpGYg14QGD) by jeremy, CC BY 3.0 (construction sites, the Coal Mine and the Landfill; see `public/models/construction/License.txt`).
 - Cargo ship, containers and boats: [Watercraft Kit](https://kenney.nl/assets/watercraft-kit) by Kenney, CC0 (see `public/models/watercraft/License.txt`).
 - Shops and apartments: [City Kit (Commercial)](https://kenney.nl/assets/city-kit-commercial) by Kenney, CC0 (see `public/models/commercial/License.txt`).
 - Factories, the power plant, water tower, recycling center and warehouse: [City Kit (Industrial)](https://kenney.nl/assets/city-kit-industrial) by Kenney, CC0 (see `public/models/industrial/License.txt`).
