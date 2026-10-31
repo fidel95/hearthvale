@@ -1,6 +1,6 @@
 import { soldBy } from './products'
 import { BUILDING_TYPES, type BuildingType, isPlot } from './buildings'
-import { MAX_LOCATION_BONUS, ROAD_BONUS } from './communityRules'
+import { MAX_LOCATION_BONUS, roadBonus } from './communityRules'
 import { upgradeCost } from './construction'
 import { CROP_TYPES, type CropType } from './crops'
 import { SHIPMENT_OPTIONS } from './Docks'
@@ -87,7 +87,7 @@ export function buildingRow(type: BuildingType): BuildingRow {
     type.amenity ? `+${type.amenity.bonus * 100}% within ${type.amenity.radius} tiles` : '',
     type.storage ? `stores 📦 ${type.storage}` : '',
     isPlot(type) ? 'grows crops' : '',
-    type.category === 'road' ? `+${ROAD_BONUS * 100}% for homes and shops beside it` : '',
+    type.category === 'road' ? `+${Math.round(roadBonus(type) * 100)}% for homes and shops beside it` : '',
     type.category === 'decoration' ? 'looks nice' : '',
   ]
     .filter(Boolean)
@@ -121,7 +121,7 @@ export function buildingRow(type: BuildingType): BuildingRow {
     paybackMinutes: paybackCycles !== null && income ? buildSeconds / 60 + (paybackCycles * income.seconds) / 60 : null,
     coinsPerMinute: net !== null && income ? net / (income.seconds / 60) : null,
     coinsPerEnergy: net,
-    roads: type.category === 'home' || type.category === 'business' ? `not required; +${ROAD_BONUS * 100}% beside one` : '—',
+    roads: type.category === 'home' || type.category === 'business' ? 'not required; +2–8% beside one, by kind of road' : '—',
     upgrades: canUpgrade ? `★★ at level ${upgradeCost(type, 2).playerLevel}, ★★★ at ${upgradeCost(type, 3).playerLevel}` : '—',
   }
 }

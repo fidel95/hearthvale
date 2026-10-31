@@ -1,6 +1,6 @@
 import { BUILDING_TYPES, type BuildingType, type Category, isPlot } from '../game/buildings'
 import type { City } from '../game/City'
-import { ROAD_BONUS } from '../game/communityRules'
+import { roadBonus } from '../game/communityRules'
 import type { PlacementSystem } from '../game/PlacementSystem'
 import type { Player } from '../game/Player'
 import type { UnlockSystem } from '../game/UnlockSystem'
@@ -34,7 +34,7 @@ function headline(type: BuildingType): string {
   if (type.amenity) return `+${type.amenity.bonus * 100}% nearby`
   if (type.storage) return `Stores 📦 ${type.storage}`
   if (isPlot(type)) return 'Grows crops'
-  if (type.category === 'road') return `+${ROAD_BONUS * 100}% beside it`
+  if (type.category === 'road') return `+${Math.round(roadBonus(type) * 100)}% beside it`
   if (type.id === 'rail') return 'Trains run on it'
   if (type.townBonus) return `+${Math.round(type.townBonus * 100)}% town-wide`
   return 'Decoration'
@@ -62,7 +62,7 @@ function details(type: BuildingType): string[] {
     lines.push(`+${Math.round(type.amenity.bonus * 100)}% income for homes and shops ${reach}${cap}`)
   }
   if (type.populationCapacity) lines.push(`Room for 👥 ${type.populationCapacity} more residents in town`)
-  if (type.category === 'road') lines.push(`Drag to draw. Homes and shops beside a road earn +${ROAD_BONUS * 100}%`)
+  if (type.category === 'road') lines.push(`Drag to draw. Homes and shops beside it earn +${Math.round(roadBonus(type) * 100)}% (the best road beside them counts). Every kind of road joins up with the others`)
   if (type.onShore) lines.push('Must be built on the shore. Order shipments of goods here')
   if (type.requiresRoad) lines.push('🛣️ Needs a road touching one of its sides to open')
   if (type.id === 'rail') lines.push('Drag to lay track. A Train Station beside it runs a train to the end of the line and back')

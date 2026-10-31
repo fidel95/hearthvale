@@ -2,27 +2,27 @@ id,name,category,role,unlockLevel,quests,footprint,tiles,cost,materials,material
 cannery,Cannery,industry,late,12,Made in Hearthvale,3×2,6,600,🧱 4 🔩 1,85,685,90,,,0,,,42,0,💧4 🔌4 🗑️3,0,,,,,,—,—
 textile-mill,Textile Mill,industry,late,13,,3×3,9,900,🧱 6 🪟 2 🔩 2,180,1080,150,,,0,,,63,0,💧5 🔌6 🗑️3,0,,,,,,—,—
 furniture-workshop,Furniture Workshop,industry,late,16,,3×2,6,1100,🪵 8 🔩 2,146,1246,180,,,0,,,77,0,💧2 🔌6 🗑️4,0,,,,,,—,—
-deli,Deli,business,late,12,Made in Hearthvale,2×2,4,520,🧱 2 🪟 2,70,590,60,60,80,6,50,5,36,0,💧2 🔌3 🗑️2,0,,11.8,12.8,50,50,not required; +5% beside one,"★★ at level 14, ★★★ at 16"
-clothing-store,Clothing Store,business,late,13,,2×2,4,800,🧱 2 🪟 4,110,910,120,90,135,9,90,9,56,0,💧1 🔌4 🗑️2,0,,10.11111111111111,17.166666666666664,60,90,not required; +5% beside one,"★★ at level 15, ★★★ at 17"
-furniture-store,Furniture Store,business,late,16,,3×2,6,1000,🪵 4 🪟 4,128,1128,150,120,165,8,125,11,70,0,💧1 🔌3 🗑️3,0,,9.024,20.548,62.5,125,not required; +5% beside one,"★★ at level 18, ★★★ at 20"
-cottage,Cottage,home,early,1,,2×2,4,100,,0,100,0,30,15,0,15,1,5,2,💧2 🔌2 🗑️2,0,,6.666666666666667,3.3333333333333335,30,15,not required; +5% beside one,"★★ at level 10, ★★★ at 12"
-townhouse,Townhouse,home,early,3,Master Builder,2×2,4,250,🪵 3,36,286,60,60,35,0,35,2,17,3,💧3 🔌3 🗑️3,0,,8.17142857142857,9.17142857142857,35,35,not required; +5% beside one,"★★ at level 10, ★★★ at 12"
-family-house,Family House,home,middle,6,,2×2,4,400,🧱 4 🪵 4,108,508,120,90,50,0,50,3,28,4,💧4 🔌4 🗑️4,0,,10.16,17.240000000000002,33.333333333333336,50,not required; +5% beside one,"★★ at level 10, ★★★ at 12"
-modern-house,Modern House,home,late,11,,2×2,4,600,🧱 4 🪟 4 🔩 2,190,790,180,120,80,0,80,5,42,4,💧4 🔌5 🗑️3,0,,9.875,22.75,40,80,not required; +5% beside one,"★★ at level 13, ★★★ at 15"
-bungalow,Bungalow,home,early,2,,2×2,4,180,,0,180,0,45,24,0,24,2,9,2,💧2 🔌2 🗑️2,0,,7.5,5.625,32,24,not required; +5% beside one,"★★ at level 10, ★★★ at 12"
-duplex,Duplex,home,middle,5,,2×2,4,330,🧱 3 🪵 3,81,411,90,75,42,0,42,3,22,4,💧4 🔌3 🗑️4,0,,9.785714285714286,13.732142857142858,33.6,42,not required; +5% beside one,"★★ at level 10, ★★★ at 12"
-eco-house,Eco House,home,late,8,,2×2,4,480,🪟 4 🔩 2,130,610,120,100,60,0,60,4,33,4,💧3 🔌1 🗑️3,0,,10.166666666666666,18.944444444444443,36,60,not required; +5% beside one,"★★ at level 10, ★★★ at 12"
-villa,Villa,home,late,9,,2×2,4,560,🧱 4 🪵 4 🪟 3,168,728,150,110,70,0,70,5,39,5,💧5 🔌4 🗑️4,0,,10.4,21.566666666666666,38.18181818181818,70,not required; +5% beside one,"★★ at level 11, ★★★ at 13"
-manor,Manor,home,late,12,,2×2,4,900,🧱 8 🪟 6 🔩 2,290,1190,240,180,120,0,120,8,63,6,💧6 🔌6 🗑️5,0,,9.916666666666666,33.75,40,120,not required; +5% beside one,"★★ at level 14, ★★★ at 16"
-apartment-block,Apartment Block,home,late,14,Moving Up,2×2,4,1300,🧱 10 🪟 8 🔩 4,410,1710,300,210,175,0,175,12,91,16,💧10 🔌10 🗑️8,0,,9.771428571428572,39.2,50,175,not required; +5% beside one,"★★ at level 16, ★★★ at 18"
-high-rise,High-Rise,home,late,17,A City Skyline,2×2,4,2000,🧱 6 🪟 14 🔩 10,620,2620,480,240,250,0,250,17,140,28,💧14 🔌16 🗑️12,0,,10.48,49.92,62.5,250,not required; +5% beside one,"★★ at level 19, ★★★ at 21"
-bakery,Bakery,business,early,2,Open for Business,2×2,4,300,,0,300,0,45,40,4,20,3,15,0,💧2 🔌3 🗑️2,0,,15,11.25,26.666666666666668,20,not required; +5% beside one,"★★ at level 10, ★★★ at 12"
-general-store,General Store,business,late,8,,3×2,6,500,🪵 4 🪟 2,88,588,120,90,75,7,40,5,35,0,💧2 🔌4 🗑️3,0,,14.7,24.05,26.666666666666668,40,not required; +5% beside one,"★★ at level 10, ★★★ at 12"
-cafe,Café,business,middle,4,,2×2,4,380,🧱 2 🪵 2,54,434,60,60,52,5,27,3,26,0,💧3 🔌2 🗑️2,0,,16.074074074074073,17.074074074074073,27,27,not required; +5% beside one,"★★ at level 10, ★★★ at 12"
-flower-shop,Flower Shop,business,middle,6,,2×2,4,450,🪵 3 🪟 2,76,526,90,75,62,6,32,4,31,0,💧4 🔌2 🗑️1,0,,16.4375,22.046875,25.6,32,not required; +5% beside one,"★★ at level 10, ★★★ at 12"
-restaurant,Restaurant,business,late,10,,3×2,6,700,🧱 6 🪟 3 🔩 1,175,875,180,120,110,10,60,7,49,0,💧5 🔌4 🗑️4,0,,14.583333333333334,32.16666666666667,30,60,not required; +5% beside one,"★★ at level 12, ★★★ at 14"
-supermarket,Supermarket,business,late,12,,3×3,9,1100,🧱 6 🪟 6 🔩 6,360,1460,300,150,160,14,90,11,77,0,💧4 🔌8 🗑️6,0,,16.22222222222222,45.55555555555555,36,90,not required; +5% beside one,"★★ at level 14, ★★★ at 16"
-shopping-center,Shopping Center,business,late,15,Shop Till You Drop,4×3,12,3400,🧱 8 🪟 10 🔩 8,520,3920,420,180,290,18,200,19,238,0,💧5 🔌10 🗑️8,0,,19.6,65.80000000000001,66.66666666666667,200,not required; +5% beside one,"★★ at level 17, ★★★ at 19"
+deli,Deli,business,late,12,Made in Hearthvale,2×2,4,520,🧱 2 🪟 2,70,590,60,60,80,6,50,5,36,0,💧2 🔌3 🗑️2,0,,11.8,12.8,50,50,"not required; +2–8% beside one, by kind of road","★★ at level 14, ★★★ at 16"
+clothing-store,Clothing Store,business,late,13,,2×2,4,800,🧱 2 🪟 4,110,910,120,90,135,9,90,9,56,0,💧1 🔌4 🗑️2,0,,10.11111111111111,17.166666666666664,60,90,"not required; +2–8% beside one, by kind of road","★★ at level 15, ★★★ at 17"
+furniture-store,Furniture Store,business,late,16,,3×2,6,1000,🪵 4 🪟 4,128,1128,150,120,165,8,125,11,70,0,💧1 🔌3 🗑️3,0,,9.024,20.548,62.5,125,"not required; +2–8% beside one, by kind of road","★★ at level 18, ★★★ at 20"
+cottage,Cottage,home,early,1,,2×2,4,100,,0,100,0,30,15,0,15,1,5,2,💧2 🔌2 🗑️2,0,,6.666666666666667,3.3333333333333335,30,15,"not required; +2–8% beside one, by kind of road","★★ at level 10, ★★★ at 12"
+townhouse,Townhouse,home,early,3,Master Builder,2×2,4,250,🪵 3,36,286,60,60,35,0,35,2,17,3,💧3 🔌3 🗑️3,0,,8.17142857142857,9.17142857142857,35,35,"not required; +2–8% beside one, by kind of road","★★ at level 10, ★★★ at 12"
+family-house,Family House,home,middle,6,,2×2,4,400,🧱 4 🪵 4,108,508,120,90,50,0,50,3,28,4,💧4 🔌4 🗑️4,0,,10.16,17.240000000000002,33.333333333333336,50,"not required; +2–8% beside one, by kind of road","★★ at level 10, ★★★ at 12"
+modern-house,Modern House,home,late,11,,2×2,4,600,🧱 4 🪟 4 🔩 2,190,790,180,120,80,0,80,5,42,4,💧4 🔌5 🗑️3,0,,9.875,22.75,40,80,"not required; +2–8% beside one, by kind of road","★★ at level 13, ★★★ at 15"
+bungalow,Bungalow,home,early,2,,2×2,4,180,,0,180,0,45,24,0,24,2,9,2,💧2 🔌2 🗑️2,0,,7.5,5.625,32,24,"not required; +2–8% beside one, by kind of road","★★ at level 10, ★★★ at 12"
+duplex,Duplex,home,middle,5,,2×2,4,330,🧱 3 🪵 3,81,411,90,75,42,0,42,3,22,4,💧4 🔌3 🗑️4,0,,9.785714285714286,13.732142857142858,33.6,42,"not required; +2–8% beside one, by kind of road","★★ at level 10, ★★★ at 12"
+eco-house,Eco House,home,late,8,,2×2,4,480,🪟 4 🔩 2,130,610,120,100,60,0,60,4,33,4,💧3 🔌1 🗑️3,0,,10.166666666666666,18.944444444444443,36,60,"not required; +2–8% beside one, by kind of road","★★ at level 10, ★★★ at 12"
+villa,Villa,home,late,9,,2×2,4,560,🧱 4 🪵 4 🪟 3,168,728,150,110,70,0,70,5,39,5,💧5 🔌4 🗑️4,0,,10.4,21.566666666666666,38.18181818181818,70,"not required; +2–8% beside one, by kind of road","★★ at level 11, ★★★ at 13"
+manor,Manor,home,late,12,,2×2,4,900,🧱 8 🪟 6 🔩 2,290,1190,240,180,120,0,120,8,63,6,💧6 🔌6 🗑️5,0,,9.916666666666666,33.75,40,120,"not required; +2–8% beside one, by kind of road","★★ at level 14, ★★★ at 16"
+apartment-block,Apartment Block,home,late,14,Moving Up,2×2,4,1300,🧱 10 🪟 8 🔩 4,410,1710,300,210,175,0,175,12,91,16,💧10 🔌10 🗑️8,0,,9.771428571428572,39.2,50,175,"not required; +2–8% beside one, by kind of road","★★ at level 16, ★★★ at 18"
+high-rise,High-Rise,home,late,17,A City Skyline,2×2,4,2000,🧱 6 🪟 14 🔩 10,620,2620,480,240,250,0,250,17,140,28,💧14 🔌16 🗑️12,0,,10.48,49.92,62.5,250,"not required; +2–8% beside one, by kind of road","★★ at level 19, ★★★ at 21"
+bakery,Bakery,business,early,2,Open for Business,2×2,4,300,,0,300,0,45,40,4,20,3,15,0,💧2 🔌3 🗑️2,0,,15,11.25,26.666666666666668,20,"not required; +2–8% beside one, by kind of road","★★ at level 10, ★★★ at 12"
+general-store,General Store,business,late,8,,3×2,6,500,🪵 4 🪟 2,88,588,120,90,75,7,40,5,35,0,💧2 🔌4 🗑️3,0,,14.7,24.05,26.666666666666668,40,"not required; +2–8% beside one, by kind of road","★★ at level 10, ★★★ at 12"
+cafe,Café,business,middle,4,,2×2,4,380,🧱 2 🪵 2,54,434,60,60,52,5,27,3,26,0,💧3 🔌2 🗑️2,0,,16.074074074074073,17.074074074074073,27,27,"not required; +2–8% beside one, by kind of road","★★ at level 10, ★★★ at 12"
+flower-shop,Flower Shop,business,middle,6,,2×2,4,450,🪵 3 🪟 2,76,526,90,75,62,6,32,4,31,0,💧4 🔌2 🗑️1,0,,16.4375,22.046875,25.6,32,"not required; +2–8% beside one, by kind of road","★★ at level 10, ★★★ at 12"
+restaurant,Restaurant,business,late,10,,3×2,6,700,🧱 6 🪟 3 🔩 1,175,875,180,120,110,10,60,7,49,0,💧5 🔌4 🗑️4,0,,14.583333333333334,32.16666666666667,30,60,"not required; +2–8% beside one, by kind of road","★★ at level 12, ★★★ at 14"
+supermarket,Supermarket,business,late,12,,3×3,9,1100,🧱 6 🪟 6 🔩 6,360,1460,300,150,160,14,90,11,77,0,💧4 🔌8 🗑️6,0,,16.22222222222222,45.55555555555555,36,90,"not required; +2–8% beside one, by kind of road","★★ at level 14, ★★★ at 16"
+shopping-center,Shopping Center,business,late,15,Shop Till You Drop,4×3,12,3400,🧱 8 🪟 10 🔩 8,520,3920,420,180,290,18,200,19,238,0,💧5 🔌10 🗑️8,0,,19.6,65.80000000000001,66.66666666666667,200,"not required; +2–8% beside one, by kind of road","★★ at level 17, ★★★ at 19"
 farm-plot,Farm Plot,farm,early,1,,2×2,4,50,,0,50,0,,,0,,,2,0,💧2,0,grows crops,,,,,—,—
 oak-tree,Oak Tree,decoration,early,1,,1×1,1,20,,0,20,0,,,0,,,1,0,,0,+2% within 1 tiles; looks nice,,,,,—,—
 pine-tree,Pine Tree,decoration,early,1,,1×1,1,15,,0,15,0,,,0,,,0,0,,0,+1% within 1 tiles; looks nice,,,,,—,—
@@ -48,6 +48,9 @@ barn,Barn,storage,middle,5,Room for the Harvest,2×2,4,150,🪵 6,72,222,60,,,0,
 warehouse,Warehouse,storage,late,10,,3×2,6,500,🪵 4 🔩 6,198,698,180,,,0,,,35,0,🔌1,0,stores 📦 400,,,,,—,—
 dock,Dock,port,late,9,Harbor Town,3×2,6,800,🪵 10 🔩 4,220,1020,180,,,0,,,56,0,🔌1 🗑️1,10,stores 📦 100,,,,,—,—
 road,Road,road,early,1,,1×1,1,10,,0,10,0,,,0,,,0,0,,0,+5% for homes and shops beside it,,,,,—,—
+dirt-road,Dirt Road,road,early,1,,1×1,1,3,,0,3,0,,,0,,,0,0,,0,+2% for homes and shops beside it,,,,,—,—
+cobble-street,Cobblestone Street,road,middle,5,,1×1,1,20,,0,20,0,,,0,,,1,0,,0,+6% for homes and shops beside it,,,,,—,—
+avenue,Avenue,road,late,8,,1×1,1,40,,0,40,0,,,0,,,2,0,,0,+8% for homes and shops beside it,,,,,—,—
 park,Park,community,middle,6,Community Spirit,2×2,4,200,🪵 3,36,236,60,,,0,,,14,0,💧1,5,+10% within 4 tiles,,,,,—,—
 fire-station,Fire Station,community,late,9,,2×2,4,600,🧱 8 🔩 2,170,770,180,,,0,,,42,0,💧2 🔌2 🗑️1,20,+10% within 6 tiles,,,,,—,—
 police-station,Police Station,community,late,12,Safe Streets,2×2,4,700,🧱 6 🪟 2 🔩 2,180,880,180,,,0,,,49,0,💧1 🔌3 🗑️1,25,+6% within 6 tiles,,,,,—,—
@@ -67,7 +70,7 @@ playground,Playground,community,middle,6,Fun in the Sun,2×2,4,250,,0,250,0,,,0,
 sports-field,Sports Field,community,late,8,,3×2,6,650,🪵 4,48,698,90,,,0,,,45,0,💧2,10,+8% within 5 tiles,,,,,—,—
 public-beach,Public Beach,community,late,9,Fun in the Sun,3×2,6,400,,0,400,0,,,0,,,20,0,,8,+8% within 5 tiles,,,,,—,—
 central-park,Central Park,community,late,11,,4×4,16,1800,🧱 4 🪵 8,156,1956,180,,,0,,,126,0,💧3,25,+12% within 7 tiles,,,,,—,—
-ski-resort,Ski Resort,business,late,13,Hit the Slopes,4×4,16,3500,🪵 10 🔩 8,320,3820,300,300,260,0,260,17,245,0,💧2 🔌4 🗑️2,0,,14.692307692307692,78.46153846153847,52,260,not required; +5% beside one,"★★ at level 15, ★★★ at 17"
+ski-resort,Ski Resort,business,late,13,Hit the Slopes,4×4,16,3500,🪵 10 🔩 8,320,3820,300,300,260,0,260,17,245,0,💧2 🔌4 🗑️2,0,,14.692307692307692,78.46153846153847,52,260,"not required; +2–8% beside one, by kind of road","★★ at level 15, ★★★ at 17"
 chicken-coop,Chicken Coop,farm,early,3,Down on the Farm,2×2,4,220,,0,220,0,45,22,0,22,1,11,0,,0,,10,7.5,29.333333333333332,22,—,—
 pig-pen,Pig Pen,farm,middle,5,Down on the Farm,2×2,4,420,,0,420,0,70,38,0,38,3,21,0,💧1,0,,11.052631578947368,12.894736842105262,32.57142857142857,38,—,—
 sheep-meadow,Sheep Meadow,farm,middle,7,,3×2,6,650,,0,650,0,90,58,0,58,4,32,0,💧1,0,,11.206896551724139,16.810344827586206,38.666666666666664,58,—,—

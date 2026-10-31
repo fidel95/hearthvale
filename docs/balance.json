@@ -131,7 +131,7 @@
       "paybackMinutes": 12.8,
       "coinsPerMinute": 50,
       "coinsPerEnergy": 50,
-      "roads": "not required; +5% beside one",
+      "roads": "not required; +2–8% beside one, by kind of road",
       "upgrades": "★★ at level 14, ★★★ at 16"
     },
     {
@@ -162,7 +162,7 @@
       "paybackMinutes": 17.166666666666664,
       "coinsPerMinute": 60,
       "coinsPerEnergy": 90,
-      "roads": "not required; +5% beside one",
+      "roads": "not required; +2–8% beside one, by kind of road",
       "upgrades": "★★ at level 15, ★★★ at 17"
     },
     {
@@ -193,7 +193,7 @@
       "paybackMinutes": 20.548,
       "coinsPerMinute": 62.5,
       "coinsPerEnergy": 125,
-      "roads": "not required; +5% beside one",
+      "roads": "not required; +2–8% beside one, by kind of road",
       "upgrades": "★★ at level 18, ★★★ at 20"
     },
     {
@@ -224,7 +224,7 @@
       "paybackMinutes": 3.3333333333333335,
       "coinsPerMinute": 30,
       "coinsPerEnergy": 15,
-      "roads": "not required; +5% beside one",
+      "roads": "not required; +2–8% beside one, by kind of road",
       "upgrades": "★★ at level 10, ★★★ at 12"
     },
     {
@@ -257,7 +257,7 @@
       "paybackMinutes": 9.17142857142857,
       "coinsPerMinute": 35,
       "coinsPerEnergy": 35,
-      "roads": "not required; +5% beside one",
+      "roads": "not required; +2–8% beside one, by kind of road",
       "upgrades": "★★ at level 10, ★★★ at 12"
     },
     {
@@ -288,7 +288,7 @@
       "paybackMinutes": 17.240000000000002,
       "coinsPerMinute": 33.333333333333336,
       "coinsPerEnergy": 50,
-      "roads": "not required; +5% beside one",
+      "roads": "not required; +2–8% beside one, by kind of road",
       "upgrades": "★★ at level 10, ★★★ at 12"
     },
     {
@@ -319,7 +319,7 @@
       "paybackMinutes": 22.75,
       "coinsPerMinute": 40,
       "coinsPerEnergy": 80,
-      "roads": "not required; +5% beside one",
+      "roads": "not required; +2–8% beside one, by kind of road",
       "upgrades": "★★ at level 13, ★★★ at 15"
     },
     {
@@ -350,7 +350,7 @@
       "paybackMinutes": 5.625,
       "coinsPerMinute": 32,
       "coinsPerEnergy": 24,
-      "roads": "not required; +5% beside one",
+      "roads": "not required; +2–8% beside one, by kind of road",
       "upgrades": "★★ at level 10, ★★★ at 12"
     },
     {
@@ -381,7 +381,7 @@
       "paybackMinutes": 13.732142857142858,
       "coinsPerMinute": 33.6,
       "coinsPerEnergy": 42,
-      "roads": "not required; +5% beside one",
+      "roads": "not required; +2–8% beside one, by kind of road",
       "upgrades": "★★ at level 10, ★★★ at 12"
     },
     {
@@ -412,7 +412,7 @@
       "paybackMinutes": 18.944444444444443,
       "coinsPerMinute": 36,
       "coinsPerEnergy": 60,
-      "roads": "not required; +5% beside one",
+      "roads": "not required; +2–8% beside one, by kind of road",
       "upgrades": "★★ at level 10, ★★★ at 12"
     },
     {
@@ -443,7 +443,7 @@
       "paybackMinutes": 21.566666666666666,
       "coinsPerMinute": 38.18181818181818,
       "coinsPerEnergy": 70,
-      "roads": "not required; +5% beside one",
+      "roads": "not required; +2–8% beside one, by kind of road",
       "upgrades": "★★ at level 11, ★★★ at 13"
     },
     {
@@ -474,7 +474,7 @@
       "paybackMinutes": 33.75,
       "coinsPerMinute": 40,
       "coinsPerEnergy": 120,
-      "roads": "not required; +5% beside one",
+      "roads": "not required; +2–8% beside one, by kind of road",
       "upgrades": "★★ at level 14, ★★★ at 16"
     },
     {
@@ -507,7 +507,7 @@
       "paybackMinutes": 39.2,
       "coinsPerMinute": 50,
       "coinsPerEnergy": 175,
-      "roads": "not required; +5% beside one",
+      "roads": "not required; +2–8% beside one, by kind of road",
       "upgrades": "★★ at level 16, ★★★ at 18"
     },
     {
@@ -540,7 +540,7 @@
       "paybackMinutes": 49.92,
       "coinsPerMinute": 62.5,
       "coinsPerEnergy": 250,
-      "roads": "not required; +5% beside one",
+      "roads": "not required; +2–8% beside one, by kind of road",
       "upgrades": "★★ at level 19, ★★★ at 21"
     },
     {
@@ -573,7 +573,7 @@
       "paybackMinutes": 11.25,
       "coinsPerMinute": 26.666666666666668,
       "coinsPerEnergy": 20,
-      "roads": "not required; +5% beside one",
+      "roads": "not required; +2–8% beside one, by kind of road",
       "upgrades": "★★ at level 10, ★★★ at 12"
     },
     {
@@ -604,7 +604,7 @@
       "paybackMinutes": 24.05,
       "coinsPerMinute": 26.666666666666668,
       "coinsPerEnergy": 40,
-      "roads": "not required; +5% beside one",
+      "roads": "not required; +2–8% beside one, by kind of road",
       "upgrades": "★★ at level 10, ★★★ at 12"
     },
     {
@@ -635,7 +635,7 @@
       "paybackMinutes": 17.074074074074073,
       "coinsPerMinute": 27,
       "coinsPerEnergy": 27,
-      "roads": "not required; +5% beside one",
+      "roads": "not required; +2–8% beside one, by kind of road",
       "upgrades": "★★ at level 10, ★★★ at 12"
     },
     {
@@ -666,7 +666,7 @@
       "paybackMinutes": 22.046875,
       "coinsPerMinute": 25.6,
       "coinsPerEnergy": 32,
-      "roads": "not required; +5% beside one",
+      "roads": "not required; +2–8% beside one, by kind of road",
       "upgrades": "★★ at level 10, ★★★ at 12"
     },
     {
@@ -697,7 +697,7 @@
       "paybackMinutes": 32.16666666666667,
       "coinsPerMinute": 30,
       "coinsPerEnergy": 60,
-      "roads": "not required; +5% beside one",
+      "roads": "not required; +2–8% beside one, by kind of road",
       "upgrades": "★★ at level 12, ★★★ at 14"
     },
     {
@@ -728,7 +728,7 @@
       "paybackMinutes": 45.55555555555555,
       "coinsPerMinute": 36,
       "coinsPerEnergy": 90,
-      "roads": "not required; +5% beside one",
+      "roads": "not required; +2–8% beside one, by kind of road",
       "upgrades": "★★ at level 14, ★★★ at 16"
     },
     {
@@ -761,7 +761,7 @@
       "paybackMinutes": 65.80000000000001,
       "coinsPerMinute": 66.66666666666667,
       "coinsPerEnergy": 200,
-      "roads": "not required; +5% beside one",
+      "roads": "not required; +2–8% beside one, by kind of road",
       "upgrades": "★★ at level 17, ★★★ at 19"
     },
     {
@@ -1546,6 +1546,99 @@
       "upgrades": "—"
     },
     {
+      "id": "dirt-road",
+      "name": "Dirt Road",
+      "category": "road",
+      "role": "early",
+      "unlockLevel": 1,
+      "quests": [],
+      "footprint": "1×1",
+      "tiles": 1,
+      "cost": 3,
+      "materials": "",
+      "materialsValue": 0,
+      "totalCost": 3,
+      "buildSeconds": 0,
+      "cycleSeconds": null,
+      "coinsPerCycle": null,
+      "goodsPerCycle": 0,
+      "netPerCycle": null,
+      "xpPerCycle": null,
+      "buildXp": 0,
+      "residents": 0,
+      "needs": "",
+      "upkeepPerMonth": 0,
+      "effect": "+2% for homes and shops beside it",
+      "paybackCycles": null,
+      "paybackMinutes": null,
+      "coinsPerMinute": null,
+      "coinsPerEnergy": null,
+      "roads": "—",
+      "upgrades": "—"
+    },
+    {
+      "id": "cobble-street",
+      "name": "Cobblestone Street",
+      "category": "road",
+      "role": "middle",
+      "unlockLevel": 5,
+      "quests": [],
+      "footprint": "1×1",
+      "tiles": 1,
+      "cost": 20,
+      "materials": "",
+      "materialsValue": 0,
+      "totalCost": 20,
+      "buildSeconds": 0,
+      "cycleSeconds": null,
+      "coinsPerCycle": null,
+      "goodsPerCycle": 0,
+      "netPerCycle": null,
+      "xpPerCycle": null,
+      "buildXp": 1,
+      "residents": 0,
+      "needs": "",
+      "upkeepPerMonth": 0,
+      "effect": "+6% for homes and shops beside it",
+      "paybackCycles": null,
+      "paybackMinutes": null,
+      "coinsPerMinute": null,
+      "coinsPerEnergy": null,
+      "roads": "—",
+      "upgrades": "—"
+    },
+    {
+      "id": "avenue",
+      "name": "Avenue",
+      "category": "road",
+      "role": "late",
+      "unlockLevel": 8,
+      "quests": [],
+      "footprint": "1×1",
+      "tiles": 1,
+      "cost": 40,
+      "materials": "",
+      "materialsValue": 0,
+      "totalCost": 40,
+      "buildSeconds": 0,
+      "cycleSeconds": null,
+      "coinsPerCycle": null,
+      "goodsPerCycle": 0,
+      "netPerCycle": null,
+      "xpPerCycle": null,
+      "buildXp": 2,
+      "residents": 0,
+      "needs": "",
+      "upkeepPerMonth": 0,
+      "effect": "+8% for homes and shops beside it",
+      "paybackCycles": null,
+      "paybackMinutes": null,
+      "coinsPerMinute": null,
+      "coinsPerEnergy": null,
+      "roads": "—",
+      "upgrades": "—"
+    },
+    {
       "id": "park",
       "name": "Park",
       "category": "community",
@@ -2178,7 +2271,7 @@
       "paybackMinutes": 78.46153846153847,
       "coinsPerMinute": 52,
       "coinsPerEnergy": 260,
-      "roads": "not required; +5% beside one",
+      "roads": "not required; +2–8% beside one, by kind of road",
       "upgrades": "★★ at level 15, ★★★ at 17"
     },
     {
@@ -2499,6 +2592,7 @@
         "Oak Tree",
         "Pine Tree",
         "Road",
+        "Dirt Road",
         "🍓 Strawberries"
       ],
       "quests": [
@@ -2575,6 +2669,7 @@
         "Duplex",
         "Bench",
         "Barn",
+        "Cobblestone Street",
         "Pig Pen",
         "🎃 Pumpkins"
       ],
@@ -2629,6 +2724,7 @@
         "Eco House",
         "General Store",
         "Duck Pond",
+        "Avenue",
         "Sports Field"
       ],
       "quests": [

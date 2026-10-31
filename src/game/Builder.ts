@@ -396,11 +396,15 @@ export class Builder {
     while (x !== tile.x) steps.push({ x: (x += Math.sign(tile.x - x)), z })
     while (z !== tile.z) steps.push({ x, z: (z += Math.sign(tile.z - z)) })
     for (const t of steps) {
-      if (!this.city.canPlace(type, t)) continue
+      // Drawing one kind of road over another swaps it (a dirt road paved into an avenue, say).
+      const other = this.city.buildingAt(t)
+      const swap = other && type.category === 'road' && other.type.category === 'road' && other.type !== type
+      if (!swap && !this.city.canPlace(type, t)) continue
       if (!this.placement.freeBuild && !this.city.canAfford(type)) {
         if (first) this.onNotice?.(`Not enough coins for a ${type.name}`)
         break
       }
+      if (swap) this.city.remove(other.id)
       this.city.place(type, t, { free: this.placement.freeBuild, basis: this.placement.freeBuild ? 0 : type.cost })
     }
     this.lastPainted = tile

@@ -116,7 +116,7 @@ the right on a wide screen) so the town stays in view.
 - **Docks and shipping:** build a Dock on the shore, order a coastal freighter or a container ship, and unload it (🚢) when it arrives. You can watch it all: the dock's gantry crane loads the waiting export containers, the ship casts off and sails out to sea, and it comes back full just as the shipment arrives. Unloading, the crane lifts the containers onto the quay, and trucks drive them to a shop or warehouse in town and come back with more to export.
 - **Utilities:** homes, shops and farms use 💧 water, 🔌 electricity and 🗑️ trash pickup. Beyond what the county supplies, build plants; they cost coins every month. Shortages cut income.
 - **Decorations:** trees, flower beds, stone paths, fences, benches, fountains and statues raise the income of homes and shops right around them (+1% to +8% each), up to +10% from decorations in all. Landscaping also raises a building's assessed value.
-- **Roads and community:** shops need a road touching one side (🚧 means one is missing); homes and shops beside a road earn +5%; near a Park, Fire Station or School, +10–15% (up to +40%), which also raises their assessed value.
+- **Roads and community:** shops need a road touching one side (🚧 means one is missing); homes and shops beside a road earn more, by kind of road (the best one beside them counts); near a Park, Fire Station or School, +10–15% (up to +40%), which also raises their assessed value.
 - **People:** residents walk between homes, shops and parks on the sidewalks only, along the roads (never across grass or down the road); a building with no road beside it gets no foot traffic.
 - **Taxes:** see below and [docs/TAXES.md](docs/TAXES.md).
 - **City rating (😊):** 0–100, from utilities, neighborhoods, roads, room to grow, finances and greenery. The Town window shows each part and what raises it. Landmarks need a minimum rating.
@@ -140,6 +140,7 @@ the right on a wide screen) so the town stays in view.
 - **Weather:** rain showers roll in every few minutes: the sky dims, umbrellas come out and the beach empties (Settings → Rain showers; Admin can start or stop it).
 - **Traffic and transport:** cars drive your roads as the town grows. Bus Stops (level 7) lift nearby homes and shops, and buses run between them. An Army Base (level 12) adds safety and room for residents: its squad runs a daily drill (marching, saluting as the flag goes up, jumping jacks, push-ups, a run), a sentry keeps watch, a helicopter circles the town and a jeep patrols. Tap it and 🎖️ Parade (🪙 300): the squad marches through town behind a flag and a drum, and all rent and sales are 10% higher for 3 minutes. Railway track and a Train Station (level 14): a train shuttles along your line and visitors lift all rent and sales. An Airport (level 15): planes take off, circle the town and land.
 - **Building several at once:** after Place, tap a spot for each one (tap a spot again to take it back), then ✓ or "Buy N · 🪙 total" buys them all; coins, fit and room for residents are checked for the whole set.
+- **Kinds of road:** a Dirt Road (🪙 3, +2%), the Road (🪙 10, +5%), a Cobblestone Street (level 5, 🪙 20, +6%, brick paving and lanterns) and an Avenue (level 8, 🪙 40, +8%, a median with double street lamps). They all join up; draw one kind over another to swap it (pave a dirt road into an avenue).
 - **Removing roads:** tap a road and 🗑️ Remove, then tap or drag along more roads to pick several and remove them together; it warns if a shop would lose its road.
 - **Phones in landscape:** the toolbar moves to a slim column on the left and windows open down the right side, so the map stays visible; the map fills the screen around the notch.
 - **Moving buildings:** press and hold a building, or drag the selected one, and let go where it should go. The outline shows where it fits; dragging to the screen's edge scrolls the map.
@@ -217,7 +218,7 @@ src/
     CityView.ts           keeps 3D objects in sync with City
     LandView.ts           the ground, owned land and "for sale" signs
     PeopleView.ts         residents walking around town
-    RoadView.ts           draws the road network as one merged mesh
+    RoadView.ts           draws the road network (each kind of road in its own look) as a few merged meshes
     RoadNetworkView.ts    overlay: each connected road network in its own color, cut-off buildings red
     demand.ts             shops' customers: residents within reach, and the share of sales they give
     needs.ts              what homes want nearby, their happiness, and its rent bonus
@@ -318,4 +319,5 @@ docs/                     the docs linked above
 - Pigs, sheep, cows, the horse and the farm dog: [Farm Animals Pack](https://quaternius.com/packs/farmanimal.html) by Quaternius, CC0 (see `public/models/animals/License.txt`).
 - The planes: [Jet](https://poly.pizza/m/bgUY8zN2Bq9) by Poly by Google, [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) (texture reduced to 512 px).
 - The chickens: [Chicken](https://poly.pizza/m/1YE8U35HXsI) by jeremy, [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/).
+- The avenues' street lamps and colors: [Modular Road Kit](https://poly.pizza/m/YClppstaHV) by Kenney, CC0 (only the lamps are kept, in `public/models/roads/lamps.glb`).
 - Built with [three.js](https://threejs.org), [Vite](https://vite.dev) and [Vitest](https://vitest.dev).

@@ -178,6 +178,25 @@ export async function loadInstanceable(url: string, height: number): Promise<{ g
   return { geometry, material: (mesh.material as THREE.MeshStandardMaterial).clone() }
 }
 
+// The meshes of one part of a model (found by name), each with its shape
+// baked into the part's own coordinates: for drawing many copies at once
+// (instancing), one batch per material. The shapes are shared, never freed.
+export async function loadMeshParts(url: string, name: string): Promise<{ geometry: THREE.BufferGeometry; material: THREE.Material }[]> {
+  const model = await loadModel(url)
+  model.updateMatrixWorld(true)
+  const node = model.getObjectByName(name)
+  if (!node) throw new Error(`${name} isn't in ${url}`)
+  const toNode = node.matrixWorld.clone().invert()
+  const parts: { geometry: THREE.BufferGeometry; material: THREE.Material }[] = []
+  node.traverse((o) => {
+    if (!(o instanceof THREE.Mesh)) return
+    const geometry = o.geometry.clone().applyMatrix4(toNode.clone().multiply(o.matrixWorld))
+    sharedGeometries.add(geometry)
+    parts.push({ geometry, material: o.material as THREE.Material })
+  })
+  return parts
+}
+
 // A character with its animations (Kenney's Mini Characters): one load per
 // file; copies are made with SkeletonUtils.clone, which shares the shapes.
 const characterCache = new Map<string, Promise<{ scene: THREE.Object3D; animations: THREE.AnimationClip[] }>>()

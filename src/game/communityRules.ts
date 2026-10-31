@@ -6,7 +6,8 @@ import type { Tile } from './grid'
 // the same way: amenities nearby raise rents, and with them the property's
 // value (and property tax). Services.ts applies these rules to the town.
 
-// Homes and shops touching a road earn this much more.
+// Homes and shops touching a Road earn this much more (other kinds of
+// road have their own: roadBonus).
 export const ROAD_BONUS = 0.05
 // However many amenities are nearby, the bonus stops here.
 export const MAX_LOCATION_BONUS = 0.4
@@ -47,22 +48,34 @@ export function edgeTiles(p: Placed): Tile[] {
   return ring
 }
 
+// How much a road adds to homes and shops beside it (each kind has its own).
+export function roadBonus(type: BuildingType): number {
+  return type.road?.bonus ?? ROAD_BONUS
+}
+
 export function locationBonus(building: Placed, all: Iterable<Placed>, isRoad: (tile: Tile) => boolean): LocationBonus {
   const { category } = building.type
   if (category !== 'home' && category !== 'business') return NONE
   let community = 0
   let decor = 0
   const sources: string[] = []
+  const roads = new Map<string, BuildingType>()
   for (const other of all) {
+    if (other.type.category === 'road') roads.set(`${other.tile.x},${other.tile.z}`, other.type)
     const amenity = other.type.amenity
     if (!amenity || footprintGap(building, other) > amenity.radius) continue
     if (other.type.category === 'decoration') decor += amenity.bonus
     else community += amenity.bonus
     sources.push(other.type.name)
   }
-  if (edgeTiles(building).some(isRoad)) {
-    community += ROAD_BONUS
-    sources.push('Road')
+  // The best road beside it counts (one road bonus, not one per road).
+  const beside = edgeTiles(building).filter(isRoad)
+  if (beside.length > 0) {
+    const best = beside
+      .map((t) => roads.get(`${t.x},${t.z}`))
+      .reduce<BuildingType | undefined>((a, b) => (b && (!a || roadBonus(b) > roadBonus(a)) ? b : a), undefined)
+    community += best ? roadBonus(best) : ROAD_BONUS
+    sources.push(best?.name ?? 'Road')
   }
   const total = community + Math.min(MAX_DECOR_BONUS, decor)
   return { total: Math.min(MAX_LOCATION_BONUS, Math.round(total * 1000) / 1000), sources }

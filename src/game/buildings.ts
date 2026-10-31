@@ -6,6 +6,8 @@ import type { ProductId } from './products'
 import type { Materials } from './items'
 import type { Utility } from './utilityRules'
 
+export type RoadStyle = 'dirt' | 'asphalt' | 'cobble' | 'avenue'
+
 export type Category =
   | 'home'
   | 'business'
@@ -138,6 +140,9 @@ export interface BuildingType {
   prize?: string
   // How to draw it when there's no model (or the model fails to load).
   placeholder: { shape: PlaceholderShape; color: string; accent: string; height: number }
+  // Roads: how much they add to homes and shops beside them, and how they're
+  // drawn (RoadView). Every kind of road joins up with every other.
+  road?: { bonus: number; style: RoadStyle }
   // URL of a .glb model, e.g. suburban('building-type-a'). Optional: without it we draw the placeholder.
   model?: string
 }
@@ -821,7 +826,41 @@ export const BUILDING_TYPES: BuildingType[] = [
     size: { x: 1, z: 1 },
     cost: 10,
     unlockLevel: 1,
+    road: { bonus: 0.05, style: 'asphalt' },
     placeholder: { shape: 'road', color: '#5d6168', accent: '#f2f2f2', height: 0.03 },
+  },
+  {
+    // A cheap packed-earth track: no sidewalks or lamps, and less of a draw.
+    id: 'dirt-road',
+    name: 'Dirt Road',
+    category: 'road',
+    size: { x: 1, z: 1 },
+    cost: 3,
+    unlockLevel: 1,
+    road: { bonus: 0.02, style: 'dirt' },
+    placeholder: { shape: 'road', color: '#9a7650', accent: '#b08e64', height: 0.02 },
+  },
+  {
+    // Brick paving and old-style lanterns.
+    id: 'cobble-street',
+    name: 'Cobblestone Street',
+    category: 'road',
+    size: { x: 1, z: 1 },
+    cost: 20,
+    unlockLevel: 5,
+    road: { bonus: 0.06, style: 'cobble' },
+    placeholder: { shape: 'road', color: '#8d7f70', accent: '#cbbfa8', height: 0.03 },
+  },
+  {
+    // A boulevard: a raised median with double street lamps (Kenney's Modular Road Kit).
+    id: 'avenue',
+    name: 'Avenue',
+    category: 'road',
+    size: { x: 1, z: 1 },
+    cost: 40,
+    unlockLevel: 8,
+    road: { bonus: 0.08, style: 'avenue' },
+    placeholder: { shape: 'road', color: '#6f7689', accent: '#c2c2cd', height: 0.03 },
   },
   {
     id: 'park',
