@@ -10,7 +10,8 @@ import type { Docks } from './Docks'
 import { footprintCenter, footprintTiles, lotOf, worldToTile, type Lot, type Tile } from './grid'
 import { createBuildingObject } from './models'
 import type { PlacementSystem, Spot } from './PlacementSystem'
-import { PRODUCTS, soldBy } from './products'
+import { PRODUCTS, inputsText, soldBy } from './products'
+import { MARKET_ID } from './market'
 import { collectReach } from './progression'
 import type { Player } from './Player'
 
@@ -51,6 +52,7 @@ export class Builder {
   onPlantRequest?: (plot: PlacedBuilding) => void
   // An idle dock was tapped: show the shipments to order.
   onDockRequest?: (dock: PlacedBuilding) => void
+  onMarketRequest?: () => void
   // Tapping an empty tile of your land offers "Build here" (Game opens the
   // build menu); tapping land you could buy offers it.
   onBuildHere?: (tile: Tile) => void
@@ -301,6 +303,7 @@ export class Builder {
     if (b.type.goodsPerSale && this.city.production.isReady(b, now) && !this.city.production.hasStock(b)) return this.city.production.supplyFor(b) > 0
     if (isPlot(b.type)) return cropState(b.crop, now).stage !== 'growing'
     if (b.type.category === 'port') return this.docks.state(b, now).stage !== 'sailing'
+    if (b.type.id === MARKET_ID) return true
     return this.city.production.isReady(b, now) && this.city.production.hasStock(b)
   }
 
@@ -329,6 +332,10 @@ export class Builder {
       this.onNotice?.(`${building.type.name} has no road access. Build a road touching one of its sides.`)
       return
     }
+    if (building.type.id === MARKET_ID) {
+      this.onMarketRequest?.()
+      return
+    }
     if (building.type.category === 'port') {
       const state = this.docks.state(building, now)
       if (state.stage === 'idle') this.onDockRequest?.(building)
@@ -341,7 +348,12 @@ export class Builder {
       const state = this.city.production.factoryState(building, now)
       const product = PRODUCTS[f.product]
       if (state === 'working') this.onNotice?.(`🏭 ${product.icon} ${building.stock} ${product.name.toLowerCase()} ready in ${duration(building.readyAt - now)}`)
-      else if (state === 'idle') this.onNotice?.(`🏭 ${building.type.name} needs 📦 ${f.input} goods to start a batch (storage has ${this.city.goods}). Harvest crops, or order a shipment.`)
+      else if (state === 'idle')
+        this.onNotice?.(
+          f.recipe
+            ? `${building.type.name} needs ${inputsText(f)} to start a batch. Collect them from your farm.`
+            : `🏭 ${building.type.name} needs 📦 ${f.input} goods to start a batch (storage has ${this.city.goods}). Harvest crops, or order a shipment.`,
+        )
       else if (!outOfEnergy() && this.city.production.collectBatch(building.id, now) === 0) this.onNotice?.('Storage is full. Sell products at your shops, or build a Barn or Warehouse.')
       return
     }

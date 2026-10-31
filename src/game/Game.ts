@@ -17,6 +17,7 @@ import { QuestsPanel } from '../ui/QuestsPanel'
 import { el } from '../ui/dom'
 import { Modal, Sheet, button } from '../ui/Sheet'
 import { DockPanel } from '../ui/DockPanel'
+import { MarketPanel } from '../ui/MarketPanel'
 import { Hud } from '../ui/Hud'
 import { LandPanel } from '../ui/LandPanel'
 import { LevelUpPanel } from '../ui/LevelUpPanel'
@@ -70,6 +71,7 @@ import { DailyPanel } from '../ui/DailyPanel'
 import { WeatherView } from './WeatherView'
 import { DisasterView } from './DisasterView'
 import { EmergencyView } from './EmergencyView'
+import { TractorView } from './TractorView'
 import { PortView } from './PortView'
 import { ShipView } from './ShipView'
 import { AutoSaver } from './save'
@@ -152,6 +154,7 @@ export class Game {
   private weather: WeatherView
   private disasterView: DisasterView
   private emergencyView: EmergencyView
+  private tractorView: TractorView
   private mountains: MountainView
   private flashEl = document.createElement('div')
   private lastSnow = -1
@@ -238,6 +241,10 @@ export class Game {
     this.emergencyView.onPutOut = () => {
       this.player.grantXp(5)
       this.hud.toast('🧯 You put out the fire! +5 XP')
+    }
+    this.tractorView = new TractorView(this.scene, this.city)
+    this.tractorView.onTend = (plot) => {
+      if (this.city.production.tend(plot.id, Date.now())) this.effects.dust(footprintCenter(plot.tile, sizeOf(plot)).setY(0.05), sizeOf(plot))
     }
     this.flashEl.className = 'flash'
     container.append(this.flashEl)
@@ -361,8 +368,11 @@ export class Game {
       this.clock.speed = devSpeed() !== 1 ? devSpeed() : (admin?.calendarSpeed ?? 1)
     })
     window.setInterval(() => this.applyPowers(), 500)
-    // Idle factories start a batch as soon as there are goods for one.
-    window.setInterval(() => this.city.production.runFactories(Date.now()), 1000)
+    // Idle factories start a batch as soon as there are goods for one, and the market posts new orders.
+    window.setInterval(() => {
+      this.city.production.runFactories(Date.now())
+      this.state.market.refresh(Date.now())
+    }, 1000)
     this.setUpJuice()
 
     // Rain: umbrellas up, the beach empties, and a word about it.
@@ -376,6 +386,7 @@ export class Game {
     this.showTaxEvents(taxPanel)
     const cropPicker = new CropPicker(container, this.city, this.player, (message) => this.hud.toast(message))
     cropPicker.month = () => this.clock.month
+    cropPicker.mastery = (crop) => this.state.goals.cropMastery(crop.id)
     builder.onPlantRequest = (plot) => cropPicker.open(plot)
     this.showPlayerEvents(new LevelUpPanel(container))
     this.showCollectionEvents()
@@ -391,6 +402,9 @@ export class Game {
     this.showQuestEvents()
     const dockPanel = new DockPanel(container, this.city, this.docks, (message) => this.hud.toast(message))
     builder.onDockRequest = (dock) => dockPanel.open(dock)
+    const marketPanel = new MarketPanel(container, this.city, this.state.market, (message) => this.hud.toast(message))
+    builder.onMarketRequest = () => marketPanel.open()
+    this.incomeView.marketReady = () => this.state.market.anyDeliverable()
 
     this.saver = new AutoSaver(() => this.saves.toSave())
     this.settingsPanel = new SettingsPanel(container, this.settings, this.saver, (message, kind) => this.hud.toast(message, kind))
@@ -493,6 +507,7 @@ export class Game {
     this.disasterView.raining = this.weather.isRaining && !this.weather.snow
     this.disasterView.update(Math.min(dt, 100) / 1000)
     this.emergencyView.update(life)
+    this.tractorView.update(life)
     // Snow settling or melting: update the land, trees and hills as it changes.
     if (Math.abs(this.weather.snowCover - this.lastSnow) > 0.02 || (this.weather.snowCover !== this.lastSnow && (this.weather.snowCover === 0 || this.weather.snowCover === 1))) {
       this.lastSnow = this.weather.snowCover
@@ -834,10 +849,12 @@ export class Game {
         case 'collected':
           this.cityView.bounce(e.building.id)
           if (e.amount > 0) fly(e.building, '🪙', 'coins', Math.min(4, 1 + Math.floor(e.amount / 25)))
+          if (e.produce) fly(e.building, PRODUCTS[e.produce.product].icon, 'goods', Math.min(3, e.produce.units))
           break
         case 'harvested':
           if (e.amount > 0) fly(e.building, '🪙', 'coins', 3)
           if (e.goods > 0) fly(e.building, '📦', 'goods', 2)
+          if (e.produce) fly(e.building, PRODUCTS[e.produce.product].icon, 'goods', 2)
           break
         case 'made':
           this.cityView.bounce(e.building.id)

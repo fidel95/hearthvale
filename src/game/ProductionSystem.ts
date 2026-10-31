@@ -1,10 +1,10 @@
-import type { City, CityEvent, PlacedBuilding } from './City'
+import type { City, CityEvent, PlacedBuilding, Produce } from './City'
 import { levelFactor } from './construction'
-import { cropState, type CropType } from './crops'
+import { cropState, masteryBonus, type CropType } from './crops'
 import { isPlot } from './buildings'
 import { seasonBonus } from './seasons'
 import type { Economy } from './Economy'
-import { soldBy } from './products'
+import { soldBy, type FactoryRecipe, type Recipe, type ProductId } from './products'
 
 // Everything buildings produce over time: collecting income, planting and
 // harvesting crops, restocking shops, running factories, finishing
@@ -16,6 +16,8 @@ import { soldBy } from './products'
 export class ProductionSystem {
   // The calendar month (0 = January), for crops in season. GameState wires it to the clock.
   month: () => number = () => 0
+  // A crop's mastery stars (goals.ts), for the harvest bonus. GameState wires it to the goals.
+  cropStars: (crop: CropType) => number = () => 0
   private city: City
   private economy: Economy
   private emit: (event: CityEvent) => void
@@ -43,7 +45,21 @@ export class ProductionSystem {
 
   // What a crop on this plot sells for at the market right now (less without enough water).
   harvestValue(plot: PlacedBuilding, crop: CropType): number {
-    return Math.round(crop.sellPrice * this.city.incomeMultiplier(plot) * (1 + seasonBonus(crop, this.month())))
+    return Math.round(crop.sellPrice * this.harvestFactor(plot, crop))
+  }
+
+  // Less without enough water; more in season, and for each mastery star.
+  private harvestFactor(plot: PlacedBuilding, crop: CropType): number {
+    return this.city.incomeMultiplier(plot) * (1 + seasonBonus(crop, this.month()) + masteryBonus(this.cropStars(crop)))
+  }
+
+  // Put farm products in storage, as far as there's room. Returns what went in.
+  private store(produce: Produce | undefined): Produce | undefined {
+    if (!produce) return undefined
+    const units = Math.min(produce.units, this.economy.room())
+    if (units <= 0) return undefined
+    this.economy.changeProduct(produce.product, units)
+    return { product: produce.product, units }
   }
 
   // Shops sell from their own shelves; everything else always has "stock".
@@ -71,7 +87,9 @@ export class ProductionSystem {
     building.readyAt = now + building.type.income.seconds * 1000
     building.lastCollectedAt = now
     building.stock -= goodsUsed
-    this.emit({ kind: 'collected', building, amount, goodsUsed })
+    // Pens and orchards: eggs, milk, fruit… into storage too.
+    const produce = this.store(building.type.produce)
+    this.emit({ kind: 'collected', building, amount, goodsUsed, produce })
     this.economy.adjust(amount)
     return amount
   }
@@ -94,9 +112,16 @@ export class ProductionSystem {
     return units
   }
 
-  // ---- Factories. A batch takes its goods when it starts (they're in the
-  // works, kept in building.stock as the units being made) and its products
-  // go into storage when it's collected; then the next batch starts.
+  // ---- Factories. A batch takes its goods (or a farm workshop's recipe of
+  // products) when it starts (they're in the works, kept in building.stock as
+  // the units being made) and its products go into storage when it's
+  // collected; then the next batch starts.
+
+  // Does storage have what a batch takes?
+  hasInputs(f: FactoryRecipe): boolean {
+    if (!f.recipe) return this.economy.goods >= f.input
+    return Object.entries(f.recipe).every(([id, n]) => this.economy.product(id as ProductId) >= (n ?? 0))
+  }
 
   factoryState(b: PlacedBuilding, now: number): 'idle' | 'working' | 'done' {
     if (!b.type.factory || b.stock <= 0) return 'idle'
@@ -109,11 +134,12 @@ export class ProductionSystem {
     const b = this.city.get(id)
     const f = b?.type.factory
     if (!b || !f || b.stock > 0 || !this.city.isOperating(b)) return false
-    if (this.economy.goods < f.input) return false
+    if (!this.hasInputs(f)) return false
     b.stock = f.output
     b.readyAt = now + f.seconds * 1000
     this.emit({ kind: 'batchStarted', building: b })
-    this.economy.changeGoods(-f.input)
+    if (f.recipe) for (const [id, n] of Object.entries(f.recipe)) this.economy.changeProduct(id as ProductId, -(n ?? 0))
+    else this.economy.changeGoods(-f.input)
     return true
   }
 
@@ -138,50 +164,77 @@ export class ProductionSystem {
   }
 
   // Plant a crop on an empty farm plot, paying for the seeds.
-  // free: true skips the cost, for the starting town.
-  plant(id: number, crop: CropType, { now = Date.now(), free = false } = {}): boolean {
+  // free: true skips the cost, for the starting town; auto: the tractor sowed it.
+  plant(id: number, crop: CropType, { now = Date.now(), free = false, auto = false } = {}): boolean {
     const plot = this.city.get(id)
     if (!plot || !isPlot(plot.type) || cropState(plot.crop, now).stage !== 'empty') return false
     if (!free && !this.economy.canAfford(crop.seedCost)) return false
 
     plot.crop = { cropId: crop.id, plantedAt: now }
     const cost = free ? 0 : crop.seedCost
-    this.emit({ kind: 'planted', building: plot, crop, cost })
+    this.emit({ kind: 'planted', building: plot, crop, cost, auto })
     this.economy.adjust(-cost)
     return true
   }
 
   // Harvest a ripe crop. If the town has shops, the harvest goes into storage
   // as goods for them to sell, and whatever doesn't fit is sold at the market.
-  // With no shops it's all sold. Returns the coins earned (0 if not ripe, or
-  // if it all went into storage).
-  harvest(id: number, now: number): number {
+  // With no shops it's all sold. Some crops also give farm products (wheat,
+  // grapes). Returns the coins earned (0 if not ripe, or if it all went into
+  // storage). auto: the tractor harvested it.
+  harvest(id: number, now: number, { auto = false } = {}): number {
     const plot = this.city.get(id)
     if (!plot) return 0
     const state = cropState(plot.crop, now)
     if (state.stage !== 'ripe') return 0
 
     plot.crop = null
-    // Less without enough water; more in season.
-    const goods = Math.round(state.crop.goods * this.city.incomeMultiplier(plot) * (1 + seasonBonus(state.crop, this.month())))
+    const goods = Math.round(state.crop.goods * this.harvestFactor(plot, state.crop))
     // Goods are kept if anything uses them: a shop selling goods, or a factory.
     const hasShops = [...this.city.all()].some((b) => ((b.type.goodsPerSale && !b.type.sells) || b.type.factory) && this.city.isBuilt(b))
     const stored = Math.min(goods, hasShops ? this.economy.room() : 0)
     const amount = goods > 0 ? Math.round((this.harvestValue(plot, state.crop) * (goods - stored)) / goods) : 0
-    this.emit({ kind: 'harvested', building: plot, crop: state.crop, goods: stored, amount })
+    const xp = state.crop.xp + this.cropStars(state.crop)
     this.economy.changeGoods(stored)
+    const produce = this.store(state.crop.produce)
+    this.emit({ kind: 'harvested', building: plot, crop: state.crop, goods: stored, amount, xp, produce, auto })
     this.economy.adjust(amount)
     return amount
   }
 
   // Clear a withered crop so the plot can be planted again. The seeds are lost.
-  clearPlot(id: number, now: number): boolean {
+  clearPlot(id: number, now: number, { auto = false } = {}): boolean {
     const plot = this.city.get(id)
     if (!plot) return false
     const state = cropState(plot.crop, now)
     if (state.stage !== 'withered') return false
     plot.crop = null
-    this.emit({ kind: 'cleared', building: plot, crop: state.crop })
+    this.emit({ kind: 'cleared', building: plot, crop: state.crop, auto })
+    return true
+  }
+
+  // The tractor's work on a field (TractorView): harvest a ripe crop or clear
+  // a withered one, then sow the same crop again if the seeds are affordable.
+  // No energy. Returns whether it did anything.
+  tend(id: number, now: number): boolean {
+    const plot = this.city.get(id)
+    if (!plot) return false
+    const state = cropState(plot.crop, now)
+    if (state.stage === 'ripe') this.harvest(id, now, { auto: true })
+    else if (state.stage === 'withered') this.clearPlot(id, now, { auto: true })
+    else return false
+    this.plant(id, state.crop, { now, auto: true })
+    return true
+  }
+
+  // Sell farm products from storage at the Farmers' Market (market.ts sets
+  // the price). Returns whether storage had them all.
+  sell(items: Recipe, amount: number, { order = false } = {}): boolean {
+    const list = Object.entries(items) as [ProductId, number][]
+    if (list.some(([id, n]) => this.economy.product(id) < n)) return false
+    for (const [id, n] of list) this.economy.changeProduct(id, -n)
+    this.emit({ kind: 'sold', items, amount, order })
+    this.economy.adjust(amount)
     return true
   }
 

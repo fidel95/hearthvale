@@ -73,6 +73,9 @@ export class Finances {
         case 'harvested':
           this.earn('farm', e.amount, `${e.crop.emoji} ${e.crop.name}`)
           break
+        case 'sold':
+          this.earn('farm', e.amount, "Farmers' Market")
+          break
         case 'award':
           this.earn(e.reason.startsWith('Tourism') ? 'tourism' : 'prizes', e.amount)
           break

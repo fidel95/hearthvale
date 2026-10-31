@@ -5,6 +5,7 @@ import type { BuildingType } from './buildings'
 import type { CropState, CropType } from './crops'
 import { buildCoalMine, buildLandfill } from './quarryModels'
 import { buildCableCar, buildLodge, buildSpaceport, buildTunnelWorks } from './frontierModels'
+import { buildBakery, buildDairy, buildMarket, buildOrchard, buildTractorShed, buildWinery } from './farmModels'
 
 // Tallest a model may be, in world units per tile of its footprint's longer side.
 const MAX_HEIGHT_PER_TILE = 1.2
@@ -383,6 +384,24 @@ function createPlaceholder(type: BuildingType): THREE.Group {
       break
     case 'spaceport':
       buildSpaceport(group, add)
+      break
+    case 'orchard':
+      buildOrchard(add, w, d, color, accent)
+      break
+    case 'bakery':
+      buildBakery(add, w, d, color, accent)
+      break
+    case 'dairy':
+      buildDairy(add, w, d, color, accent)
+      break
+    case 'winery':
+      buildWinery(add, w, d, color, accent)
+      break
+    case 'market':
+      buildMarket(add, w, d, color, accent)
+      break
+    case 'tractorshed':
+      buildTractorShed(add, w, d, color, accent)
       break
     case 'house': {
       add(new THREE.BoxGeometry(w * 0.8, height, d * 0.8), color, 0, 0, 0)

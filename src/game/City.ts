@@ -18,7 +18,7 @@ import {
 } from './grid'
 import { START_LOTS, START_LOT_VALUE, expansionPrice } from './land'
 import { edgeTiles } from './communityRules'
-import type { ProductId } from './products'
+import type { ProductId, Recipe } from './products'
 import { isRiver, isRock, isWater, nearMountain } from './terrain'
 
 // The city's state: coins, which buildings exist and which tiles they cover.
@@ -88,6 +88,8 @@ export interface CitySave {
   lots: { x: number; z: number; price: number }[]
 }
 
+export type Produce = { product: ProductId; units: number }
+
 export type CityEvent =
   // paid is what the player spent: 0 for free buildings and ones loaded from a save.
   // basis is its cost for depreciation (taxes): normally its price, but 0 for
@@ -95,11 +97,16 @@ export type CityEvent =
   | { kind: 'added'; building: PlacedBuilding; paid: number; basis: number }
   | { kind: 'removed'; building: PlacedBuilding }
   | { kind: 'moved'; building: PlacedBuilding }
-  // goodsUsed: what a shop sold out of storage to earn it.
-  | { kind: 'collected'; building: PlacedBuilding; amount: number; goodsUsed: number }
-  | { kind: 'planted'; building: PlacedBuilding; crop: CropType; cost: number }
-  // goods went into storage; amount is coins from selling the rest at the market.
-  | { kind: 'harvested'; building: PlacedBuilding; crop: CropType; goods: number; amount: number }
+  // goodsUsed: what a shop sold out of storage to earn it; produce: farm
+  // products it put in storage (a pen or an orchard).
+  | { kind: 'collected'; building: PlacedBuilding; amount: number; goodsUsed: number; produce?: Produce }
+  // auto: done by the tractor (no energy used).
+  | { kind: 'planted'; building: PlacedBuilding; crop: CropType; cost: number; auto?: boolean }
+  // goods went into storage; amount is coins from selling the rest at the
+  // market; xp is the crop's, plus its mastery stars.
+  | { kind: 'harvested'; building: PlacedBuilding; crop: CropType; goods: number; amount: number; xp: number; produce?: Produce; auto?: boolean }
+  // Farm products sold at the Farmers' Market (market.ts), loose or for an order.
+  | { kind: 'sold'; items: Recipe; amount: number; order: boolean }
   // Goods bought and delivered (a shipment), and what they cost.
   | { kind: 'goodsIn'; units: number; cost: number }
   | { kind: 'goods'; goods: number }
@@ -107,7 +114,7 @@ export type CityEvent =
   // A factory started a batch (its goods went in), or one was collected (products out).
   | { kind: 'batchStarted'; building: PlacedBuilding }
   | { kind: 'made'; building: PlacedBuilding; product: ProductId; units: number }
-  | { kind: 'cleared'; building: PlacedBuilding; crop: CropType } // a withered crop was cleared away
+  | { kind: 'cleared'; building: PlacedBuilding; crop: CropType; auto?: boolean } // a withered crop was cleared away
   | { kind: 'award'; amount: number; reason: string } // prize coins, e.g. a level-up reward
   | { kind: 'expense'; amount: number; reason: string } // a running cost, e.g. utility upkeep
   | { kind: 'coins'; coins: number }

@@ -195,6 +195,11 @@ export class Taxes {
           this.inventory.units += event.goods
           this.emit({ kind: 'changed' })
           break
+        // Farm products sold at the Farmers' Market: farm income too.
+        case 'sold':
+          this.ledger.farmIncome += event.amount
+          this.emit({ kind: 'changed' })
+          break
         case 'goodsIn':
           this.inventory.units += event.units
           this.inventory.cost += event.cost

@@ -1,5 +1,6 @@
 import type { City, PlacedBuilding } from '../game/City'
-import { CROP_TYPES, cropState, profitPerMinute, type CropType } from '../game/crops'
+import { CROP_TYPES, cropState, masteryBonus, profitPerMinute, type CropType } from '../game/crops'
+import { PRODUCTS } from '../game/products'
 import type { Player } from '../game/Player'
 import { coins, el, outOfEnergyMessage, timeSpan } from './dom'
 import { isPlot } from '../game/buildings'
@@ -25,6 +26,8 @@ export class CropPicker {
 
   // The calendar month, for crops in season.
   month: () => number = () => 0
+  // A crop's mastery stars (goals.ts), and harvests toward the next star.
+  mastery: (crop: CropType) => { stars: number; count: number; next: number | null } = () => ({ stars: 0, count: 0, next: null })
 
   constructor(container: HTMLElement, city: City, player: Player, onNotice: (message: string) => void) {
     this.city = city
@@ -78,6 +81,8 @@ export class CropPicker {
           return item
         }
         const profit = crop.sellPrice - crop.seedCost
+        const m = this.mastery(crop)
+        const stars = '★'.repeat(m.stars) + '☆'.repeat(3 - m.stars)
         item.append(
           el('span', 'catalog-name', `${crop.emoji} ${crop.name}`),
           el('span', 'catalog-meta', `Seeds ${coins(crop.seedCost)} → sells ${coins(crop.sellPrice)}`),
@@ -89,8 +94,14 @@ export class CropPicker {
               ? `${SEASON_INFO[crop.season].icon} In season now: +${IN_SEASON_BONUS * 100}% harvest`
               : `${SEASON_INFO[crop.season].icon} Best in ${SEASON_INFO[crop.season].name.toLowerCase()}`,
           ),
-          el('span', 'crop-profit', `Profit ${coins(profit)} · ${coins(profitPerMinute(crop))}/min · ⭐ ${crop.xp}`),
+          el('span', 'crop-profit', `Profit ${coins(profit)} · ${coins(profitPerMinute(crop))}/min · ⭐ ${crop.xp + m.stars}`),
+          el(
+            'span',
+            'catalog-meta crop-mastery',
+            `${stars}${m.stars ? ` +${Math.round(masteryBonus(m.stars) * 100)}% harvest` : ''}${m.next !== null ? ` · ${m.count}/${m.next} to the next star` : ' · mastered'}`,
+          ),
         )
+        if (crop.produce) item.append(el('span', 'catalog-meta', `Also gives ${PRODUCTS[crop.produce.product].icon} ${crop.produce.units} ${PRODUCTS[crop.produce.product].name.toLowerCase()}`))
         item.disabled = !this.city.economy.canAfford(crop.seedCost)
         item.addEventListener('click', () => this.plant(crop))
         return item

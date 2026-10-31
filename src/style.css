@@ -2640,3 +2640,43 @@ button {
 .daily-day-extra {
   color: var(--ink-soft);
 }
+
+/* The Farmers' Market: orders, and the stall. */
+.market-order.empty {
+  color: var(--muted, #6b6f78);
+  font-size: 13px;
+}
+
+.market-wants {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.market-want {
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #f4efe6;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.market-want.done {
+  background: #e3f3dc;
+  color: var(--good);
+}
+
+.market-buttons {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.market-buttons .panel-button {
+  margin: 0;
+  width: auto;
+}
+
+.market-buttons .panel-button:first-child {
+  flex: 1;
+}

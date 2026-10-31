@@ -3,6 +3,7 @@ import { GameState } from '../game/GameState'
 import { SAVE_VERSION, type SaveData } from '../game/save'
 import { SaveSystem } from '../game/SaveSystem'
 import { TIPS } from '../game/tips'
+import { PRODUCT_IDS } from '../game/products'
 import { at, b, richGame } from './helpers'
 
 // Stage 5: older saves keep working, and tips show one at a time.
@@ -19,10 +20,11 @@ function olderSave(state: GameState, drop: (keyof SaveData)[]): SaveData {
 
 describe('Older saves', () => {
   const added: [string, (keyof SaveData)[]][] = [
-    ['before tips', ['tips']],
-    ['before the financial report', ['tips', 'finances']],
-    ['before events and factories', ['tips', 'finances', 'events']],
-    ['before neighbors and parades', ['tips', 'finances', 'events', 'neighbors', 'army']],
+    ['before the Farmers\' Market', ['market']],
+    ['before tips', ['market', 'tips']],
+    ['before the financial report', ['market', 'tips', 'finances']],
+    ['before events and factories', ['market', 'tips', 'finances', 'events']],
+    ['before neighbors and parades', ['market', 'tips', 'finances', 'events', 'neighbors', 'army']],
   ]
   for (const [when, drop] of added) {
     it(`load and keep playing: a save from ${when}`, () => {
@@ -34,7 +36,7 @@ describe('Older saves', () => {
       // The town is all there…
       expect([...loaded.city.all()].length).toBe([...state.city.all()].length)
       expect(loaded.city.coins).toBe(state.city.coins)
-      expect(loaded.city.products).toEqual({ preserves: 0, clothes: 0, furniture: 0 })
+      expect(loaded.city.products).toEqual(Object.fromEntries(PRODUCT_IDS.map((id) => [id, 0])))
       // …and new features work from here on.
       const prizes = () => loaded.finances.totals(loaded.clock.year).income.prizes
       const before = prizes()

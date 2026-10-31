@@ -5,10 +5,10 @@ import type { PlacementSystem } from '../game/PlacementSystem'
 import type { Player } from '../game/Player'
 import type { UnlockSystem } from '../game/UnlockSystem'
 import { UTILITIES, UTILITY_INFO } from '../game/utilityRules'
-import { el } from './dom'
+import { el, timeSpan } from './dom'
 import { Sheet, button } from './Sheet'
 import { PARADE } from '../game/Army'
-import { PRODUCTS, soldBy } from '../game/products'
+import { PRODUCTS, inputsText, soldBy } from '../game/products'
 import { thumbnail } from './thumbnails'
 
 // The build menu, laid out like a shop: tabs by kind of building, a card for
@@ -31,7 +31,11 @@ const TABS: { label: string; categories: Category[] }[] = [
 
 // One line on what a building does, for its card.
 function headline(type: BuildingType): string {
+  if (type.produce) return `${PRODUCTS[type.produce.product].icon} ${type.produce.units} + 🪙 ${type.income!.coins} every ${timeSpan(type.income!.seconds)}`
   if (type.income) return `🪙 ${type.income.coins} every ${type.income.seconds}s`
+  if (type.factory) return `${inputsText(type.factory)} → ${PRODUCTS[type.factory.product].icon} ${type.factory.output}`
+  if (type.id === 'farmers-market') return 'Buys farm products'
+  if (type.id === 'tractor-shed') return 'Tends your crops'
   if (type.supplies) return `Supplies ${UTILITY_INFO[type.supplies.utility].icon} ${type.supplies.amount}`
   if (type.amenity) return `+${type.amenity.bonus * 100}% nearby`
   if (type.storage) return `Stores 📦 ${type.storage}`
@@ -53,8 +57,15 @@ function details(type: BuildingType): string[] {
   }
   if (type.factory) {
     const p = PRODUCTS[type.factory.product]
-    lines.push(`Makes ${p.icon} ${type.factory.output} ${p.name.toLowerCase()} from 📦 ${type.factory.input} goods every ${type.factory.seconds}s`)
+    lines.push(`Makes ${p.icon} ${type.factory.output} ${p.name.toLowerCase()} from ${inputsText(type.factory)} every ${timeSpan(type.factory.seconds)}`)
+    if (p.farm) lines.push(`🧺 Sell ${p.name.toLowerCase()} at the Farmers' Market for 🪙 ${p.price} each, or fill its orders`)
   }
+  if (type.produce) {
+    const p = PRODUCTS[type.produce.product]
+    lines.push(`Each collection also puts ${p.icon} ${type.produce.units} ${p.name.toLowerCase()} in storage (worth 🪙 ${p.price} each at the Farmers' Market)`)
+  }
+  if (type.id === 'farmers-market') lines.push("🧺 Sell eggs, milk, fruit, bread and more here, and fill orders that pay extra coins and XP")
+  if (type.id === 'tractor-shed') lines.push('🚜 Its tractor drives out to harvest ripe crops, clear withered ones and sow the same crop again, using no energy')
   if (isPlot(type)) lines.push('Plant crops on it: harvests stock your shops or sell at market')
   if (type.storage) lines.push(`Stores 📦 ${type.storage} goods`)
   if (type.supplies) lines.push(`Supplies ${UTILITY_INFO[type.supplies.utility].icon} ${type.supplies.amount} ${UTILITY_INFO[type.supplies.utility].name.toLowerCase()}`)

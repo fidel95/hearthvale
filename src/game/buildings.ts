@@ -1,4 +1,4 @@
-import type { ProductId } from './products'
+import type { FactoryRecipe, ProductId } from './products'
 // The building catalog. Everything the game knows about a kind of building
 // lives here as plain data, so adding a building means adding an entry,
 // not writing new code.
@@ -78,6 +78,12 @@ export type PlaceholderShape =
   | 'tunnel'
   | 'spaceport'
   | 'pond'
+  | 'orchard'
+  | 'bakery'
+  | 'dairy'
+  | 'winery'
+  | 'market'
+  | 'tractorshed'
 
 export interface BuildingType {
   id: string
@@ -108,8 +114,9 @@ export interface BuildingType {
   // many goods their shelves hold (filled from town storage by restocking).
   goodsPerSale?: number // units of what it sells (goods, or its product)
   sells?: ProductId // a specialty shop: sells this product instead of goods
-  // A factory: each batch takes `input` goods and makes `output` of a product.
-  factory?: { product: ProductId; input: number; output: number; seconds: number }
+  // A factory: each batch takes `input` goods (or a farm workshop's `recipe`
+  // of products) and makes `output` of a product.
+  factory?: FactoryRecipe
   stockCapacity?: number
   // Bigger buildings take time to build and need materials to finish
   // (construction.ts). Without this, a building is ready the moment it's placed.
@@ -136,6 +143,8 @@ export interface BuildingType {
   heightLimit?: number
   // Animal pens: which animals live here and how many (AnimalView draws them).
   animals?: { kind: 'chicken' | 'pig' | 'sheep' | 'cow'; count: number }
+  // Pens and orchards: farm products each collection puts in town storage (products.ts).
+  produce?: { product: ProductId; units: number }
   // Needs railway track touching one side to work (the train station).
   requiresRail?: boolean
   // Must be built on the shore, next to the sea (docks).
@@ -1375,7 +1384,8 @@ export const BUILDING_TYPES: BuildingType[] = [
     size: { x: 2, z: 2 },
     cost: 220,
     unlockLevel: 3,
-    income: { coins: 22, seconds: 45 }, // eggs
+    income: { coins: 22, seconds: 45 },
+    produce: { product: 'eggs', units: 2 },
     animals: { kind: 'chicken', count: 5 },
     recoveryYears: 10, // a single-purpose livestock structure, IRC §168(e)(3)(D)
     placeholder: { shape: 'pen', color: '#c8463a', accent: '#f2ead8', height: 0.5 },
@@ -1388,6 +1398,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     cost: 420,
     unlockLevel: 5,
     income: { coins: 38, seconds: 70 },
+    produce: { product: 'truffles', units: 1 }, // they sniff them out
     needs: { water: 1 },
     animals: { kind: 'pig', count: 3 },
     recoveryYears: 10,
@@ -1400,7 +1411,8 @@ export const BUILDING_TYPES: BuildingType[] = [
     size: { x: 3, z: 2 },
     cost: 650,
     unlockLevel: 7,
-    income: { coins: 58, seconds: 90 }, // wool
+    income: { coins: 58, seconds: 90 },
+    produce: { product: 'wool', units: 2 },
     needs: { water: 1 },
     animals: { kind: 'sheep', count: 4 },
     recoveryYears: 10,
@@ -1413,13 +1425,97 @@ export const BUILDING_TYPES: BuildingType[] = [
     size: { x: 3, z: 3 },
     cost: 950,
     unlockLevel: 9,
-    income: { coins: 92, seconds: 120 }, // milk
+    income: { coins: 92, seconds: 120 },
+    produce: { product: 'milk', units: 3 },
     needs: { water: 2 },
     animals: { kind: 'cow', count: 3 },
     recoveryYears: 10,
     placeholder: { shape: 'pen', color: '#b5432f', accent: '#f2ead8', height: 0.6 },
   },
+  // ---- Orchards: planted once, picked again and again.
+  orchard('apple-orchard', 'Apple Orchard', 300, 4, 300, 20, 'apples', 4, '#e0383e'),
+  orchard('cherry-orchard', 'Cherry Orchard', 550, 8, 480, 30, 'cherries', 4, '#b3122e'),
+  orchard('orange-grove', 'Orange Grove', 850, 12, 720, 45, 'oranges', 5, '#f39a1e'),
+  // ---- Farm workshops: farm products in, something worth more out (sold at the Farmers' Market).
+  {
+    id: 'bakehouse',
+    name: 'Bakehouse',
+    category: 'farm',
+    size: { x: 2, z: 2 },
+    cost: 700,
+    unlockLevel: 6,
+    build: { seconds: 60, materials: { bricks: 2, lumber: 2 } },
+    factory: { product: 'bread', input: 0, output: 2, seconds: 120, recipe: { wheat: 6, eggs: 2 } },
+    needs: { water: 1, power: 2 },
+    placeholder: { shape: 'bakery', color: '#f1dcb4', accent: '#b5432f', height: 0.9 },
+  },
+  {
+    id: 'dairy',
+    name: 'Dairy',
+    category: 'farm',
+    size: { x: 2, z: 2 },
+    cost: 1100,
+    unlockLevel: 9,
+    build: { seconds: 90, materials: { bricks: 3, steel: 1 } },
+    factory: { product: 'cheese', input: 0, output: 2, seconds: 180, recipe: { milk: 6 } },
+    needs: { water: 2, power: 2 },
+    placeholder: { shape: 'dairy', color: '#f4f6f8', accent: '#3a6fb0', height: 0.9 },
+  },
+  {
+    id: 'winery',
+    name: 'Winery',
+    category: 'farm',
+    size: { x: 3, z: 2 },
+    cost: 1500,
+    unlockLevel: 11,
+    build: { seconds: 120, materials: { lumber: 4, bricks: 3 } },
+    factory: { product: 'wine', input: 0, output: 2, seconds: 300, recipe: { grapes: 8 } },
+    needs: { water: 2, power: 2 },
+    placeholder: { shape: 'winery', color: '#e8d9c0', accent: '#7b3fa0', height: 1 },
+  },
+  {
+    // Buys farm products, and posts orders that pay extra (market.ts).
+    id: 'farmers-market',
+    name: "Farmers' Market",
+    category: 'farm',
+    size: { x: 3, z: 2 },
+    cost: 600,
+    unlockLevel: 4,
+    unique: true,
+    attractsVisitors: { lingerSeconds: 10 },
+    visitors: 10,
+    placeholder: { shape: 'market', color: '#f4efe6', accent: '#3f8f3a', height: 0.9 },
+  },
+  {
+    // Its tractor drives out to harvest ripe crops, clear withered ones and sow again (TractorView).
+    id: 'tractor-shed',
+    name: 'Tractor Shed',
+    category: 'farm',
+    size: { x: 2, z: 2 },
+    cost: 1600,
+    unlockLevel: 8,
+    unique: true,
+    build: { seconds: 90, materials: { lumber: 4, steel: 2 } },
+    placeholder: { shape: 'tractorshed', color: '#b5432f', accent: '#f2ead8', height: 0.9 },
+  },
 ]
+
+// An orchard: trees planted once that bear fruit again and again (2×2).
+function orchard(id: string, name: string, cost: number, unlockLevel: number, seconds: number, coins: number, product: ProductId, units: number, fruit: string): BuildingType {
+  return {
+    id,
+    name,
+    category: 'farm',
+    size: { x: 2, z: 2 },
+    cost,
+    unlockLevel,
+    income: { coins, seconds },
+    produce: { product, units },
+    needs: { water: 1 },
+    recoveryYears: 10, // orchard trees: 10 years (IRC §168(e)(3)(D))
+    placeholder: { shape: 'orchard', color: '#4f9a3c', accent: fruit, height: 0.9 },
+  }
+}
 
 // Festival prizes (eventData.ts): decorations you can only win, one per
 // season. Not in BUILDING_TYPES, so the build menu never sells them; their
@@ -1447,10 +1543,10 @@ export const PRIZE_TYPES: BuildingType[] = [
 
 export const BUILDINGS_BY_ID = new Map([...BUILDING_TYPES, ...PRIZE_TYPES].map((b) => [b.id, b]))
 
-// A crop plot: a farm building with no animals (animal pens are farm
-// buildings too, but earn like homes and shops instead of growing crops).
+// A crop plot: plowed soil to plant on. (Pens, orchards, workshops, the
+// market and the tractor shed are farm buildings too.)
 export function isPlot(type: BuildingType): boolean {
-  return type.category === 'farm' && !type.animals
+  return type.category === 'farm' && type.placeholder.shape === 'field'
 }
 
 // Roads and railway track: 1×1 tiles you draw by dragging, drawn on screen

@@ -1,3 +1,4 @@
+import type { ProductId } from './products'
 import type { Season } from './seasons'
 // The crop catalog and the rules for how a planted crop changes over time.
 // Like buildings.ts, crops are plain data: adding a crop means adding an entry.
@@ -21,6 +22,9 @@ export interface CropType {
   freshSeconds: number
   // When it's in season (seasons.ts): harvested then, it yields 25% more.
   season: Season
+  // Farm products the harvest also puts in town storage, for a farm workshop
+  // (wheat for the Bakehouse, grapes for the Winery) or the Farmers' Market.
+  produce?: { product: ProductId; units: number }
   // How to draw it (see createCropObject in models.ts).
   look: { shape: PlantShape; leaf: string; fruit: string; height: number; perTile: 1 | 2 }
 }
@@ -58,8 +62,10 @@ export const CROP_TYPES: CropType[] = [
     unlockLevel: 2,
     freshSeconds: 15 * MINUTE,
     season: 'summer',
+    produce: { product: 'wheat', units: 3 },
     look: { shape: 'stalk', leaf: '#7fb34a', fruit: '#e8c75a', height: 0.4, perTile: 2 },
-  },  {
+  },
+  {
     id: 'carrots',
     name: 'Carrots',
     emoji: '🥕',
@@ -73,7 +79,6 @@ export const CROP_TYPES: CropType[] = [
     season: 'winter',
     look: { shape: 'stalk', leaf: '#5fae45', fruit: '#f08a24', height: 0.25, perTile: 2 },
   },
-
   {
     id: 'pumpkins',
     name: 'Pumpkins',
@@ -87,7 +92,8 @@ export const CROP_TYPES: CropType[] = [
     freshSeconds: 1 * HOUR,
     season: 'fall',
     look: { shape: 'vine', leaf: '#4f9a3c', fruit: '#e9822f', height: 0.25, perTile: 1 },
-  },  {
+  },
+  {
     id: 'tomatoes',
     name: 'Tomatoes',
     emoji: '🍅',
@@ -101,7 +107,6 @@ export const CROP_TYPES: CropType[] = [
     season: 'summer',
     look: { shape: 'bush', leaf: '#4f9a3c', fruit: '#e0383e', height: 0.35, perTile: 2 },
   },
-
   {
     id: 'corn',
     name: 'Corn',
@@ -115,7 +120,8 @@ export const CROP_TYPES: CropType[] = [
     freshSeconds: 3 * HOUR,
     season: 'summer',
     look: { shape: 'cob', leaf: '#4f9a3c', fruit: '#f2d23c', height: 0.6, perTile: 2 },
-  },  {
+  },
+  {
     id: 'grapes',
     name: 'Grapes',
     emoji: '🍇',
@@ -127,9 +133,9 @@ export const CROP_TYPES: CropType[] = [
     unlockLevel: 11,
     freshSeconds: 6 * HOUR,
     season: 'fall',
+    produce: { product: 'grapes', units: 4 },
     look: { shape: 'vine', leaf: '#4a8a3a', fruit: '#7b3fa0', height: 0.4, perTile: 2 },
   },
-
   {
     id: 'sunflowers',
     name: 'Sunflowers',
@@ -190,6 +196,12 @@ export function cropState(planted: PlantedCrop | null, now: number): CropState {
   }
   if (now < witherAt) return { stage: 'ripe', crop, witherAt }
   return { stage: 'withered', crop }
+}
+
+// Mastery (goals.ts): each star a crop has earned makes its harvests 10%
+// bigger (and worth a point more XP).
+export function masteryBonus(stars: number): number {
+  return 0.1 * stars
 }
 
 // Profit per minute of growing: the number the crop picker shows to compare crops.

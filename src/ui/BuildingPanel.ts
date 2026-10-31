@@ -9,11 +9,11 @@ import { upgradeQuote } from '../game/projects'
 import type { Services } from '../game/Services'
 import type { Taxes } from '../game/Taxes'
 import { UTILITIES, UTILITY_INFO } from '../game/utilityRules'
-import { coins, duration, el, percent } from './dom'
+import { coins, duration, el, percent, timeSpan } from './dom'
 import { isTrack, isPlot } from '../game/buildings'
 import { CUSTOMER_REACH } from '../game/demand'
 import { happinessFactor } from '../game/needs'
-import { PRODUCTS, soldBy } from '../game/products'
+import { PRODUCTS, inputsText, soldBy } from '../game/products'
 import { Sheet, button } from './Sheet'
 
 // Everything about one building: status, a progress bar for whatever it's
@@ -148,14 +148,19 @@ export class BuildingPanel {
           ? `✅ ${product.icon} ${b.stock} ${product.name.toLowerCase()} ready to collect`
           : state === 'working'
             ? `⚙️ Making ${product.icon} ${b.stock} ${product.name.toLowerCase()}, ready in ${duration(b.readyAt - Date.now())}`
-            : `⏸️ Waiting for goods: a batch needs 📦 ${f.input} (storage has ${this.city.goods})`
+            : f.recipe
+              ? `⏸️ Waiting for ${inputsText(f)} (from your farm)`
+              : `⏸️ Waiting for goods: a batch needs 📦 ${f.input} (storage has ${this.city.goods})`
       const shops = [...this.city.all()].filter((s) => s.type.sells === f.product).length
+      const market = [...this.city.all()].some((s) => s.type.id === 'farmers-market')
       parts.push(
         section(
           '🏭 Production',
           el('p', '', status),
-          el('p', 'muted', `Each batch: 📦 ${f.input} goods → ${product.icon} ${f.output} ${product.name.toLowerCase()} in ${f.seconds}s. The next batch starts by itself when you collect.`),
-          el('p', shops ? 'muted' : 'warning', shops ? `${shops} shop${shops === 1 ? '' : 's'} in town sell${shops === 1 ? 's' : ''} ${product.name.toLowerCase()}.` : `No shop sells ${product.name.toLowerCase()} yet: build one (Businesses).`),
+          el('p', 'muted', `Each batch: ${inputsText(f)} → ${product.icon} ${f.output} ${product.name.toLowerCase()} in ${timeSpan(f.seconds)}. The next batch starts by itself when you collect.`),
+          product.farm
+            ? el('p', market ? 'muted' : 'warning', market ? `The Farmers' Market buys ${product.name.toLowerCase()} for 🪙 ${product.price} each, and its orders pay more.` : `Build a Farmers' Market (Farms) to sell ${product.name.toLowerCase()}.`)
+            : el('p', shops ? 'muted' : 'warning', shops ? `${shops} shop${shops === 1 ? '' : 's'} in town sell${shops === 1 ? 's' : ''} ${product.name.toLowerCase()}.` : `No shop sells ${product.name.toLowerCase()} yet: build one (Businesses).`),
         ),
       )
     }

@@ -62,16 +62,17 @@ export class Player {
           this.spendEnergy(now)
           this.addXp(collectXp(event.amount), now, event.building)
           break
+        // The tractor's work (auto) takes no energy.
         case 'harvested':
-          this.spendEnergy(now)
-          this.addXp(event.crop.xp, now, event.building)
+          if (!event.auto) this.spendEnergy(now)
+          this.addXp(event.xp, now, event.building)
           break
         case 'planted':
           // Free starter crops don't use energy.
-          if (event.cost > 0) this.spendEnergy(now)
+          if (event.cost > 0 && !event.auto) this.spendEnergy(now)
           break
         case 'cleared':
-          this.spendEnergy(now)
+          if (!event.auto) this.spendEnergy(now)
           break
         case 'finished': // finishing construction: a bigger building, more XP
           this.addXp(Math.max(2, Math.floor(event.building.type.cost / 50)), now, event.building)

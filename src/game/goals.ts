@@ -161,6 +161,19 @@ export class Goals {
     return this.stars.get(m.key) ?? 0
   }
 
+  // A crop's stars, for its harvest bonus (crops.ts masteryBonus).
+  cropStars(cropId: string): number {
+    return this.stars.get(`c:${cropId}`) ?? 0
+  }
+
+  // A crop's stars, harvests so far, and the harvests the next star needs (null when mastered).
+  cropMastery(cropId: string): { stars: number; count: number; next: number | null } {
+    const m = MASTERY_BY_KEY.get(`c:${cropId}`)
+    if (!m) return { stars: 0, count: 0, next: null }
+    const stars = this.starsOf(m)
+    return { stars, count: this.countOf(m), next: stars < 3 ? m.goals[stars] : null }
+  }
+
   stepOf(kind: MilestoneKind): number {
     return this.steps.get(kind.id) ?? 0
   }

@@ -20,6 +20,7 @@ import { Player } from './Player'
 import { Quests } from './quests'
 import { Goals } from './goals'
 import { Daily } from './daily'
+import { FarmMarket } from './market'
 import { Services } from './Services'
 import { SettingsStore } from './settings'
 import { Taxes } from './Taxes'
@@ -49,6 +50,7 @@ export class GameState {
   readonly quests: Quests
   readonly goals: Goals
   readonly daily: Daily
+  readonly market: FarmMarket
   readonly settings = new SettingsStore()
   readonly tutorial = new Tutorial(this.city)
   readonly army = new Army(this.city)
@@ -75,6 +77,8 @@ export class GameState {
     )
     this.goals = new Goals(this.city, this.player, this.services, this.quests)
     this.daily = new Daily(this.city, this.player)
+    this.market = new FarmMarket(this.city, this.player)
+    this.city.production.cropStars = (crop) => this.goals.cropStars(crop.id)
     this.townEvents = new TownEvents(this.city, this.player, this.quests)
     this.finances = new Finances(this.city, this.taxes, this.clock)
   }

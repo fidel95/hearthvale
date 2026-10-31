@@ -10,7 +10,8 @@ import { footprintCenter } from './grid'
 import type { Services } from './Services'
 import { isPlot } from './buildings'
 import { repairCost } from './Disasters'
-import { PRODUCTS, soldBy } from './products'
+import { PRODUCTS, inputsText, soldBy } from './products'
+import { MARKET_ID } from './market'
 import { UTILITY_INFO, shortIcons } from './utilityRules'
 
 // Labels floating over buildings: bubbles that say "tap me" (coins to
@@ -38,6 +39,8 @@ export class IncomeView {
   private services: Services
   private docks: Docks
   private onTap: (building: PlacedBuilding) => void
+  // Can an order at the Farmers' Market be delivered now? (Game wires it to the market.)
+  marketReady: () => boolean = () => false
   private bubbles = new Map<number, Bubble>()
   private info: CSS2DObject
   private hovered: PlacedBuilding | null = null
@@ -139,6 +142,7 @@ export class IncomeView {
     if (b.damaged) return { kind: 'noroad', icon: '🔧' }
     if (b.type.requiresRoad && !this.city.hasRoadAccess(b)) return { kind: 'noroad', icon: '🚧' }
     if (b.type.requiresRail && !this.city.hasRailAccess(b)) return { kind: 'noroad', icon: '🛤️' }
+    if (b.type.id === MARKET_ID) return this.marketReady() ? { kind: 'cargo', icon: '🧺' } : null
     if (b.type.factory) return this.city.production.factoryState(b, now) === 'done' ? { kind: 'cargo', icon: PRODUCTS[b.type.factory.product].icon } : null
     if (this.city.production.isReady(b, now)) return this.city.production.hasStock(b) ? { kind: 'coins', icon: '🪙' } : { kind: 'stock', icon: soldBy(b.type).icon }
     if (b.type.category === 'port') return this.docks.state(b, now).stage === 'arrived' ? { kind: 'cargo', icon: '🚢' } : null
@@ -218,8 +222,9 @@ export class IncomeView {
       const state = this.city.production.factoryState(b, now)
       if (state === 'done') return [b.type.name, `Ready! Tap to collect ${product.icon} ${b.stock}`]
       if (state === 'working') return [b.type.name, `${product.icon} ${b.stock} in ${duration(b.readyAt - now)}`]
-      return [b.type.name, `Waiting for 📦 ${f.input} goods (storage has ${this.city.goods})`]
+      return [b.type.name, f.recipe ? `Waiting for ${inputsText(f)}` : `Waiting for 📦 ${f.input} goods (storage has ${this.city.goods})`]
     }
+    if (b.type.id === MARKET_ID) return [b.type.name, this.marketReady() ? '🧺 An order is ready to deliver: tap' : 'Tap to sell farm products and fill orders']
     if (!b.type.income) return [b.type.name, '']
     const uses = b.type.goodsPerSale
     if (uses && this.city.production.isReady(b, now) && !this.city.production.hasStock(b)) {

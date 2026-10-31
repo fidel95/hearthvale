@@ -36,12 +36,17 @@ individual building.
 | `populationCapacity` | Room for more residents in town | — |
 | `attractsVisitors` | Walkers visit and linger | — |
 | `storage` | Goods it adds to town storage | — |
+| `factory` | A batch: goods (`input`) or a farm workshop's `recipe` of products in, `output` of a `product` out, every `seconds` | — |
+| `produce` | Pens and orchards: farm products each collection puts in storage, `{ product, units }` | — |
 | `onShore` | Must be built by the sea | — |
 | `recoveryYears` | Depreciation period, if not its category's | — |
 | `model`, `placeholder` | How to draw it | — |
 
 Crops (`CropType`, crops.ts) follow the same idea: `seedCost`, `growSeconds`,
-`sellPrice`, `goods`, `freshSeconds`, `xp`, `unlockLevel`, and a `look`.
+`sellPrice`, `goods`, `freshSeconds`, `xp`, `unlockLevel`, and a `look`;
+wheat and grapes also have `produce` (farm products the harvest gives).
+Products (products.ts) are factory products and farm products, with a
+Farmers' Market `price` for farm ones.
 
 ## Placed buildings (`PlacedBuilding`, City.ts)
 
@@ -73,7 +78,7 @@ One JSON document in `localStorage` under `hearthvale.save`
   "version": 3,
   "savedAt": 1793284644137,                 // the most recent save
   "player": { "xp": 52, "level": 3, "energy": 9, "energyAt": 1793284600000 },
-  "resources": { "coins": 1505, "goods": 40 },
+  "resources": { "coins": 1505, "goods": 40, "products": { "eggs": 6, "bread": 2, … } },
   "population": { "current": 12, "capacity": 40 },  // worked out on load; here for readability
   "land": { "parcels": [{ "x": 2, "z": 2, "price": 250 }, …] },
   "buildings": {
@@ -102,7 +107,11 @@ One JSON document in `localStorage` under `hearthvale.save`
   "settings": { "showGrid": true, "showPeople": true, "confirmPurchases": true, "reduceMotion": false },
   "tutorial": { "step": 6, "skipped": false },
   "safetyNet": { "lastGrantAt": null },
-  "neighbors": [["rosa", { "friendship": 6, "day": "2026-10-29", "helped": ["25,25"], "giftClaimed": true, "requestDone": false }]]
+  "neighbors": [["rosa", { "friendship": 6, "day": "2026-10-29", "helped": ["25,25"], "giftClaimed": true, "requestDone": false }]],
+  "market": {                                // the Farmers' Market (optional: added with the market)
+    "orders": [{ "items": { "eggs": 8, "milk": 3 }, "coins": 144, "xp": 12 }, null, …],
+    "nextAt": [0, 1793284700000, 0]          // when each empty slot gets a new order
+  }
 }
 ```
 

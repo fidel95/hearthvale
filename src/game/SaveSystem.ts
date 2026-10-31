@@ -40,6 +40,7 @@ export class SaveSystem {
       quests: s.quests.toSave(),
       goals: s.goals.toSave(),
       daily: s.daily.toSave(),
+      market: s.market.toSave(),
       inventory: { items: s.inventory.toSave(), collections: s.collections.toSave() },
       shipments: s.docks.toSave(),
       taxes: s.taxes.toSave(),
@@ -79,6 +80,7 @@ export class SaveSystem {
     if (save.goals) s.goals.load(save.goals)
     else s.goals.startFromTown()
     if (save.daily) s.daily.load(save.daily)
+    s.market.load(save.market)
   }
 
   // Load the town saved in this browser, or start a new one. Returns when it
@@ -104,6 +106,7 @@ export class SaveSystem {
     s.quests.onChange(changed)
     s.goals.onChange(changed)
     s.daily.onChange(changed)
+    s.market.onChange(changed)
     s.collections.onChange(changed)
     s.neighbors.onChange(changed)
     s.tutorial.onChange(changed)

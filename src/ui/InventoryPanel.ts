@@ -43,7 +43,7 @@ export class InventoryPanel {
     this.sheet.body.append(this.tabs, this.content)
     const refresh = () => this.sheet.isOpen && this.render()
     inventory.onChange(refresh)
-    city.onChange((e) => (e.kind === 'stored' || e.kind === 'restored' || e.kind === 'goods' || e.kind === 'coins') && refresh())
+    city.onChange((e) => (e.kind === 'stored' || e.kind === 'restored' || e.kind === 'goods' || e.kind === 'products' || e.kind === 'coins') && refresh())
   }
 
   open(tab: Tab = this.tab) {
