@@ -1504,6 +1504,16 @@ button {
   font-size: 24px;
 }
 
+.goal-thumb {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+}
+
+.goals-heading {
+  margin: 18px 0 0;
+}
+
 .achievement-stars {
   color: #e3a91a;
   letter-spacing: 2px;

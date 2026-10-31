@@ -3121,7 +3121,7 @@
     },
     {
       "level": 11,
-      "totalXp": 550,
+      "totalXp": 590,
       "newMechanics": [
         "landmarks"
       ],
@@ -3138,7 +3138,7 @@
     },
     {
       "level": 12,
-      "totalXp": 660,
+      "totalXp": 788,
       "newMechanics": [
         "factories"
       ],

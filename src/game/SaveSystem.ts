@@ -38,6 +38,7 @@ export class SaveSystem {
       land: { parcels: city.lots },
       buildings: { nextId: city.nextId, list: city.buildings },
       quests: s.quests.toSave(),
+      goals: s.goals.toSave(),
       inventory: { items: s.inventory.toSave(), collections: s.collections.toSave() },
       shipments: s.docks.toSave(),
       taxes: s.taxes.toSave(),
@@ -57,6 +58,7 @@ export class SaveSystem {
   // tax books, which replace the records City's 'added' events created.
   load(save: SaveContents) {
     const s = this.state
+    s.goals.pause()
     s.clock.playedMs = save.calendar.playedMs
     s.city.load(citySave(save as SaveData))
     s.taxes.load(save.taxes)
@@ -73,6 +75,8 @@ export class SaveSystem {
     s.townEvents.load(save.events)
     s.finances.load(save.finances)
     s.tips.load(save.tips)
+    if (save.goals) s.goals.load(save.goals)
+    else s.goals.startFromTown()
   }
 
   // Load the town saved in this browser, or start a new one. Returns when it
@@ -96,6 +100,7 @@ export class SaveSystem {
     s.player.onChange(changed)
     s.inventory.onChange(changed)
     s.quests.onChange(changed)
+    s.goals.onChange(changed)
     s.collections.onChange(changed)
     s.neighbors.onChange(changed)
     s.tutorial.onChange(changed)

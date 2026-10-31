@@ -11,6 +11,7 @@ import { footprintCenter, footprintTiles, lotOf, worldToTile, type Lot, type Til
 import { createBuildingObject } from './models'
 import type { PlacementSystem, Spot } from './PlacementSystem'
 import { PRODUCTS, soldBy } from './products'
+import { collectReach } from './progression'
 import type { Player } from './Player'
 
 // What a click on the map currently does.
@@ -358,7 +359,7 @@ export class Builder {
         }
         return
       }
-      if (!outOfEnergy()) this.city.production.collect(building.id, now)
+      if (!outOfEnergy() && this.city.production.collect(building.id, now) > 0) this.collectAround(building, now)
       return
     }
     const state = cropState(building.crop, now)
@@ -372,6 +373,7 @@ export class Builder {
         break
       case 'ripe':
         this.city.production.harvest(building.id, now)
+        this.collectAround(building, now)
         break
       case 'withered':
         this.city.production.clearPlot(building.id, now)
@@ -412,6 +414,15 @@ export class Builder {
     this.refresh()
   }
 
+  // Is there income to collect here, or a ripe crop to harvest?
+  private collectable(b: PlacedBuilding, now: number): boolean {
+    return (this.city.production.isReady(b, now) && this.city.production.hasStock(b)) || cropState(b.crop, now).stage === 'ripe'
+  }
+
+  private collectOne(b: PlacedBuilding, now: number): number {
+    return isPlot(b.type) ? this.city.production.harvest(b.id, now) : this.city.production.collect(b.id, now)
+  }
+
   // Collect every ready building and harvest every ripe crop, one energy
   // each, until everything's done or energy runs out.
   collectAll(): { actions: number; coins: number; outOfEnergy: boolean } {
@@ -419,13 +430,32 @@ export class Builder {
     let actions = 0
     let coins = 0
     for (const b of this.city.all()) {
-      const ready = (this.city.production.isReady(b, now) && this.city.production.hasStock(b)) || cropState(b.crop, now).stage === 'ripe'
-      if (!ready) continue
+      if (!this.collectable(b, now)) continue
       if (!this.player.hasEnergy(now)) return { actions, coins, outOfEnergy: true }
-      coins += isPlot(b.type) ? this.city.production.harvest(b.id, now) : this.city.production.collect(b.id, now)
+      coins += this.collectOne(b, now)
       actions++
     }
     return { actions, coins, outOfEnergy: false }
+  }
+
+  // From level 10: after collecting from a building, collect whatever else is
+  // ready within reach of it too (progression.ts collectReach), one energy each.
+  private collectAround(center: PlacedBuilding, now: number) {
+    const reach = collectReach(this.player.level)
+    if (reach === 0) return
+    const size = sizeOf(center)
+    let count = 0
+    for (const b of this.city.all()) {
+      if (b === center || !this.collectable(b, now)) continue
+      const s = sizeOf(b)
+      const gapX = Math.max(0, b.tile.x - (center.tile.x + size.x - 1), center.tile.x - (b.tile.x + s.x - 1))
+      const gapZ = Math.max(0, b.tile.z - (center.tile.z + size.z - 1), center.tile.z - (b.tile.z + s.z - 1))
+      if (Math.max(gapX, gapZ) > reach) continue
+      if (!this.player.hasEnergy(now)) break
+      this.collectOne(b, now)
+      if (!this.collectable(b, now)) count++
+    }
+    if (count > 0) this.onNotice?.(`🧺 Collected ${count} more nearby`)
   }
 
   // The building type following the pointer, if any.

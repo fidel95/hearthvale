@@ -9,6 +9,7 @@ import type { NeighborsSave } from './Neighbors'
 import type { PlayerSave } from './Player'
 import { levelForXp, maxEnergy } from './progression'
 import type { QuestsSave } from './quests'
+import type { GoalsSave } from './goals'
 import type { Settings } from './settings'
 import type { TaxesSave } from './Taxes'
 import type { ArmySave } from './Army'
@@ -50,6 +51,7 @@ export interface SaveData {
   events?: TownEventsSave // this season's festival and this week's challenges (added with events)
   finances?: FinancesSave // the financial report's months and top earners (added with the report)
   tips?: string[] // the tips already read (added with tips)
+  goals?: GoalsSave // mastery and milestones (added with goals)
 }
 
 // The City's part of the save, pieced back together from the file's sections.

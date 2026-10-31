@@ -4,7 +4,8 @@ import { materialsText } from '../game/items'
 import type { TownEvents, Which } from '../game/TownEvents'
 import { thumbnail } from './thumbnails'
 import type { Player } from '../game/Player'
-import { unlocksAt, xpForLevel } from '../game/progression'
+import { NEARBY_COLLECT_LEVEL, collectReach, unlocksAt, xpForLevel } from '../game/progression'
+import { MASTERIES, MASTERY_XP, MILESTONES, TOWN_TITLES, milestoneGoal, milestoneReward, type Goals } from '../game/goals'
 import { ACHIEVEMENTS, ACHIEVEMENT_XP, type Quests, type Reward } from '../game/quests'
 import { coins, el } from './dom'
 import { Sheet, button } from './Sheet'
@@ -13,7 +14,7 @@ import { Sheet, button } from './Sheet'
 // what's coming next), your level and what the next levels unlock,
 // achievements, and quests you've finished.
 
-const TABS = ['Quests', 'Events', 'Progress', 'Achievements', 'Done'] as const
+const TABS = ['Quests', 'Goals', 'Events', 'Progress', 'Achievements', 'Done'] as const
 type Tab = (typeof TABS)[number]
 
 function rewardText(r: { coins?: number; xp?: number; materials?: Reward['materials'] }): string {
@@ -36,8 +37,11 @@ export class QuestsPanel {
   private quests: Quests
   private player: Player
   private events: TownEvents
+  private goals: Goals
 
-  constructor(container: HTMLElement, quests: Quests, player: Player, events: TownEvents) {
+  constructor(container: HTMLElement, quests: Quests, player: Player, events: TownEvents, goals: Goals) {
+    this.goals = goals
+    goals.onChange(() => this.sheet.isOpen && this.render())
     this.quests = quests
     this.player = player
     this.events = events
@@ -92,6 +96,9 @@ export class QuestsPanel {
         if (this.quests.activeQuests().length === 0 && next.length === 0) parts.push(el('p', 'muted', 'Every quest is done. Well played!'))
         break
       }
+      case 'Goals':
+        parts.push(...this.renderGoals())
+        break
       case 'Events':
         parts.push(...this.renderEvents())
         break
@@ -103,6 +110,16 @@ export class QuestsPanel {
           el('p', 'detail-status', `⭐ Level ${level} · ${this.player.xp.toLocaleString()} XP`),
           bar(this.player.levelProgress),
           el('p', 'muted', `${(to - this.player.xp).toLocaleString()} XP to level ${level + 1} (${(to - from).toLocaleString()} XP for this level).`),
+        )
+        const reach = collectReach(level)
+        parts.push(
+          el(
+            'p',
+            'muted',
+            reach > 0
+              ? `🧺 Collecting also collects everything ready within ${reach} tiles${collectReach(level + 3) > reach ? ` (${reach + 1} from level ${level + 3 - ((level - NEARBY_COLLECT_LEVEL) % 3)})` : ''}.`
+              : `🧺 From level ${NEARBY_COLLECT_LEVEL}, collecting from one building also collects everything ready around it.`,
+          ),
         )
         // What the next few levels unlock.
         for (let l = level + 1; l <= level + 4; l++) {
@@ -143,6 +160,49 @@ export class QuestsPanel {
   }
 
   // This season's festival and this week's challenges.
+  // The town's title, its milestones, and mastery stars for everything
+  // unlocked so far (unfinished ones first).
+  private renderGoals(): HTMLElement[] {
+    const parts: HTMLElement[] = []
+    const population = this.goals.value(MILESTONES[0])
+    const next = TOWN_TITLES.find(([from]) => from > population)
+    parts.push(
+      el('p', 'detail-status', `🏘️ ${this.goals.title()} of ${population.toLocaleString()}`),
+      el('p', 'muted', next ? `Grows into a ${next[1]} at ${next[0].toLocaleString()} people.` : 'The biggest kind of town there is.'),
+    )
+    for (const kind of MILESTONES) {
+      const step = this.goals.stepOf(kind)
+      const goal = milestoneGoal(kind, step)
+      const value = this.goals.value(kind)
+      const row = el('section', 'achievement')
+      row.append(el('span', 'achievement-icon', kind.icon), el('strong', '', kind.label), el('span', 'achievement-stars', `#${step + 1}`))
+      row.append(el('span', 'muted achievement-detail', `${value.toLocaleString()}/${goal.toLocaleString()} · ${rewardText(milestoneReward(step))}`), bar(value / goal))
+      parts.push(row)
+    }
+    parts.push(el('h3', 'goals-heading', 'Mastery'), el('p', 'muted', 'Collect from each kind of building, and harvest each crop, to earn its three stars.'))
+    const level = this.player.level
+    const open = MASTERIES.filter((m) => (m.building ? m.building.unlockLevel : 1) <= level || this.goals.countOf(m) > 0)
+    // Unfinished first, the ones furthest along at the top.
+    const sorted = [...open].sort((a, b) => Number(this.goals.starsOf(a) === 3) - Number(this.goals.starsOf(b) === 3) || this.goals.countOf(b) - this.goals.countOf(a))
+    for (const m of sorted) {
+      const stars = this.goals.starsOf(m)
+      const count = this.goals.countOf(m)
+      const row = el('section', 'achievement')
+      const icon = el('span', 'achievement-icon', m.icon)
+      if (m.building) {
+        const img = el('img', 'goal-thumb') as HTMLImageElement
+        img.alt = ''
+        thumbnail(m.building).then((url) => (img.src = url))
+        icon.append(img)
+      }
+      row.append(icon, el('strong', '', m.name), el('span', 'achievement-stars', '★'.repeat(stars) + '☆'.repeat(3 - stars)))
+      const detail = stars < 3 ? `${count}/${m.goals[stars]} for the next star · ${rewardText({ coins: m.coins[stars], xp: MASTERY_XP[stars] })}` : `${count} · mastered`
+      row.append(el('span', 'muted achievement-detail', detail), bar(stars < 3 ? count / m.goals[stars] : 1))
+      parts.push(row)
+    }
+    return parts
+  }
+
   private renderEvents(): HTMLElement[] {
     if (!this.events.unlocked) return [el('p', 'muted', `Festivals and weekly challenges start at level ${EVENTS_UNLOCK_LEVEL}.`)]
     const parts: HTMLElement[] = []

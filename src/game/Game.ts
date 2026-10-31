@@ -24,6 +24,7 @@ import { TownPanel } from '../ui/TownPanel'
 import { WelcomeBackPanel } from '../ui/WelcomeBackPanel'
 import { TaxPanel } from '../ui/TaxPanel'
 import { FinancePanel } from '../ui/FinancePanel'
+import { NEARBY_COLLECT_LEVEL, collectReach } from './progression'
 import { Builder } from './Builder'
 import { CameraController } from './CameraController'
 import { sizeOf, type PlacedBuilding } from './City'
@@ -254,7 +255,7 @@ export class Game {
     const notice = (message: string) => this.hud.toast(message)
     const inventoryPanel = new InventoryPanel(container, this.city, this.inventory, (b) => builder.setMode({ kind: 'restore', building: b }), notice)
     const collectionsPanel = new CollectionsPanel(container, this.collections, this.inventory)
-    const questsPanel = new QuestsPanel(container, this.quests, this.player, this.state.townEvents)
+    const questsPanel = new QuestsPanel(container, this.quests, this.player, this.state.townEvents, this.state.goals)
     const landPanelForMap = (lot: Lot) => this.landPanel?.open(lot)
     const mapPanel: MapPanel = new MapPanel(
       container,
@@ -948,6 +949,13 @@ export class Game {
       if (e.kind === 'achievement') this.hud.toast(`${e.achievement.icon} Achievement: ${e.achievement.name} ${'★'.repeat(e.tier)}`)
       badge()
     })
+    this.state.goals.onChange((e) => {
+      if (e.kind === 'mastery') this.hud.toast(`${e.mastery.icon || '🏅'} ${e.mastery.name} mastery ${'★'.repeat(e.stars)} · +${e.coins} coins, +${e.xp} XP`)
+      if (e.kind === 'milestone') {
+        this.hud.toast(`${e.milestone.icon} ${e.milestone.label} ${e.goal.toLocaleString()}! +${e.coins} coins, +${e.xp} XP`)
+        if (e.title) this.hud.toast(`🏘️ Your town is now a ${e.title}!`)
+      }
+    })
     badge()
   }
 
@@ -965,7 +973,12 @@ export class Game {
   private showPlayerEvents(levelUpPanel: LevelUpPanel) {
     this.player.onChange((event) => {
       if (event.kind === 'xp' && event.building) this.incomeView.popup(event.building, `+${event.amount} ⭐`, 'xp')
-      if (event.kind === 'levelUp') levelUpPanel.show(event)
+      if (event.kind === 'levelUp') {
+        levelUpPanel.show(event)
+        const reach = collectReach(event.level)
+        if (reach > collectReach(event.level - 1))
+          this.hud.toast(reach === collectReach(NEARBY_COLLECT_LEVEL) ? '🧺 New: collecting from one building now collects everything ready around it too!' : `🧺 Collecting now reaches ${reach} tiles around`)
+      }
     })
   }
 

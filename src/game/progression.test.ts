@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { BUILDING_TYPES } from './buildings'
 import { CROP_TYPES } from './crops'
-import { buildXp, collectXp, levelForXp, maxEnergy, xpForLevel } from './progression'
+import { buildXp, collectReach, collectXp, convertOldXp, levelForXp, maxEnergy, xpForLevel, xpToNext } from './progression'
 
 describe('levels', () => {
   it('needs 10 more XP for each level than the last', () => {
@@ -47,5 +47,30 @@ describe('unlocks', () => {
   it('gives slower crops more XP', () => {
     const byTime = [...CROP_TYPES].sort((a, b) => a.growSeconds - b.growSeconds)
     for (let i = 1; i < byTime.length; i++) expect(byTime[i].xp).toBeGreaterThan(byTime[i - 1].xp)
+  })
+})
+
+describe('the late-game curve', () => {
+  it('keeps the first ten levels and makes later ones steeper', () => {
+    expect(xpForLevel(10)).toBe(450)
+    expect(xpToNext(10)).toBeGreaterThan(100)
+    for (let l = 10; l < 40; l++) expect(xpToNext(l + 1)).toBeGreaterThan(xpToNext(l))
+    expect(levelForXp(xpForLevel(25))).toBe(25)
+    expect(levelForXp(xpForLevel(25) - 1)).toBe(24)
+  })
+
+  it('converts XP from the first curve, keeping the level and progress', () => {
+    expect(convertOldXp(55)).toBe(55) // level 3, unchanged
+    const old15 = 5 * 14 * 15 // reached level 15 exactly
+    expect(levelForXp(convertOldXp(old15))).toBe(15)
+    expect(convertOldXp(old15)).toBe(xpForLevel(15))
+    expect(levelForXp(convertOldXp(old15 + 75))).toBe(15) // halfway through 15
+  })
+
+  it('collects nearby from level 10, reaching further as levels go up', () => {
+    expect(collectReach(9)).toBe(0)
+    expect(collectReach(10)).toBe(2)
+    expect(collectReach(13)).toBe(3)
+    expect(collectReach(100)).toBe(6)
   })
 })

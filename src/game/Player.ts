@@ -3,9 +3,11 @@ import type { BuildingType } from './buildings'
 import type { City, PlacedBuilding } from './City'
 import type { CropType } from './crops'
 import {
+  CURVE,
   ENERGY_REGEN_MS,
   buildXp,
   collectXp,
+  convertOldXp,
   levelForXp,
   levelReward,
   maxEnergy,
@@ -23,6 +25,7 @@ export interface PlayerSave {
   energy: number
   energyAt: number
   rewardedLevel?: number // the highest level whose reward was paid (older saves lack it)
+  curve?: number // which XP curve xp is on (progression.ts CURVE; older saves: the first)
 }
 
 export type PlayerEvent =
@@ -194,15 +197,16 @@ export class Player {
   }
 
   toSave(): PlayerSave {
-    return { xp: this._xp, energy: this.storedEnergy, energyAt: this.energyAt, rewardedLevel: this.rewardedLevel }
+    return { xp: this._xp, energy: this.storedEnergy, energyAt: this.energyAt, rewardedLevel: this.rewardedLevel, curve: CURVE }
   }
 
   load(save: PlayerSave) {
-    this._xp = save.xp
+    // A save from before the steeper curve keeps its level and progress through it.
+    this._xp = save.curve === CURVE ? save.xp : convertOldXp(save.xp)
     this.storedEnergy = save.energy
     this.energyAt = save.energyAt
     // Older saves: every level reached so far was already rewarded.
-    this.rewardedLevel = save.rewardedLevel ?? levelForXp(save.xp)
+    this.rewardedLevel = save.rewardedLevel ?? levelForXp(this._xp)
     this.emit({ kind: 'energy' })
   }
 
