@@ -1565,6 +1565,7 @@ button {
 /* Settings → Reduce motion: no bobbing, sliding or floating. Pop-ups still
    end (their animationend removes them), just almost instantly. */
 .reduce-motion *,
+.reduce-motion *::before,
 .reduce-motion *::after {
   animation-duration: 0.01ms !important;
   animation-iteration-count: 1 !important;
@@ -1808,6 +1809,299 @@ button {
 
 .sheet {
   padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* ---- Quest givers ----
+   Down the left side under the top bar: the townsperson behind each quest,
+   ringed in green by how far along it is, golden and glowing with a
+   bouncing ✓ once it's ready to claim. */
+
+.quest-givers {
+  position: absolute;
+  left: max(10px, env(safe-area-inset-left));
+  top: calc(var(--topbar-bottom, 48px) + 12px);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  zoom: var(--ui-scale, 1);
+}
+
+.quest-giver {
+  pointer-events: auto;
+  position: relative;
+  width: 52px;
+  height: 52px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: conic-gradient(#5cc07c calc(var(--share, 0) * 360deg), rgba(255, 255, 255, 0.9) 0);
+  box-shadow: var(--raised);
+  cursor: pointer;
+}
+
+.quest-giver:active {
+  translate: 0 2px;
+}
+
+.quest-face {
+  position: absolute;
+  inset: 4px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff 0, #ffe6b0 80%);
+  font-size: 28px;
+  line-height: 1;
+}
+
+.quest-giver.ready {
+  background: linear-gradient(#ffe680, #f5b52e);
+  animation: quest-glow 1.2s ease-in-out infinite;
+}
+
+.quest-ready {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: linear-gradient(#6fd08c, var(--good));
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  animation: bob 1s ease-in-out infinite;
+}
+
+@keyframes quest-glow {
+  50% {
+    box-shadow: 0 0 0 5px rgba(255, 216, 77, 0.55), var(--raised);
+  }
+}
+
+@media (max-width: 640px) {
+  .quest-givers {
+    gap: 8px;
+  }
+
+  .quest-giver {
+    width: 44px;
+    height: 44px;
+  }
+
+  .quest-face {
+    font-size: 23px;
+  }
+}
+
+/* Sideways phones: beside the toolbar, which runs down the left edge. */
+@media (orientation: landscape) and (max-height: 520px) {
+  .quest-givers {
+    left: calc(max(8px, env(safe-area-inset-left)) + 72px);
+    top: 50px;
+    gap: 6px;
+  }
+
+  .quest-giver {
+    width: 40px;
+    height: 40px;
+  }
+
+  .quest-face {
+    inset: 3px;
+    font-size: 21px;
+  }
+}
+
+/* ---- Level up ----
+   A ribbon header, the level on a big star with rays of light turning
+   behind it, and confetti. */
+
+.level-panel .panel-header {
+  background: linear-gradient(#ffd27a, #f6ae4b);
+  border-bottom: 3px solid #e0952f;
+}
+
+.level-panel .panel-header h2 {
+  font-size: 28px;
+  font-weight: 600;
+  color: #fff;
+  -webkit-text-stroke: 4px #b8641a;
+  paint-order: stroke fill;
+}
+
+.level-burst {
+  position: relative;
+  display: grid;
+  place-items: center;
+  height: 150px;
+  margin: 0 -18px;
+  overflow: hidden;
+}
+
+.level-rays {
+  position: absolute;
+  width: 340px;
+  height: 340px;
+  border-radius: 50%;
+  background: repeating-conic-gradient(rgba(255, 210, 80, 0.6) 0 10deg, transparent 10deg 20deg);
+  -webkit-mask: radial-gradient(circle, #000 15%, transparent 65%);
+  mask: radial-gradient(circle, #000 15%, transparent 65%);
+  animation: spin 14s linear infinite;
+}
+
+.level-star {
+  position: relative;
+  display: grid;
+  place-items: center;
+  animation: pop-in 0.55s cubic-bezier(0.2, 1.6, 0.4, 1) both;
+}
+
+.level-star-icon {
+  font-size: 110px;
+  line-height: 1;
+  filter: drop-shadow(0 4px 0 rgba(150, 90, 0, 0.35));
+}
+
+.level-number {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding-top: 8px;
+  color: #fff;
+  font-size: 34px;
+  font-weight: 700;
+  -webkit-text-stroke: 6px #b86b00;
+  paint-order: stroke fill;
+}
+
+.confetti {
+  position: absolute;
+  top: -14px;
+  width: 8px;
+  height: 12px;
+  border-radius: 2px;
+  opacity: 0;
+  animation: confetti-fall 2s ease-in infinite;
+}
+
+@keyframes confetti-fall {
+  from {
+    opacity: 1;
+    translate: 0 0;
+    rotate: 0deg;
+  }
+  to {
+    opacity: 1;
+    translate: 12px 180px;
+    rotate: 540deg;
+  }
+}
+
+@keyframes spin {
+  to {
+    rotate: 360deg;
+  }
+}
+
+@keyframes pop-in {
+  from {
+    scale: 0.2;
+    opacity: 0;
+  }
+}
+
+/* ---- The build menu as a shop: price tags and "New!" ribbons ---- */
+
+.build-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  width: 100%;
+  margin-top: 4px;
+}
+
+.build-size {
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+
+.build-price {
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: linear-gradient(#7fd65c, #43a047);
+  box-shadow: 0 2px 0 #2f7d32;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.25);
+  white-space: nowrap;
+}
+
+.build-card.unaffordable .build-price {
+  background: linear-gradient(#ece2cf, #d3c4a6);
+  box-shadow: 0 2px 0 #b5a483;
+  color: var(--ink-soft);
+  text-shadow: none;
+}
+
+.build-card.locked .build-price {
+  background: linear-gradient(#766c5f, #4a4238);
+  box-shadow: 0 2px 0 #2e2922;
+}
+
+.build-new {
+  display: none;
+  position: absolute;
+  top: 6px;
+  left: -5px;
+  z-index: 1;
+  padding: 2px 10px 2px 8px;
+  border-radius: 4px 999px 999px 4px;
+  background: linear-gradient(#ff7d6b, #e0453a);
+  box-shadow: 0 2px 0 #8e2a1c;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  rotate: -6deg;
+}
+
+.build-card.new .build-new {
+  display: block;
+}
+
+/* ---- Bubbles over buildings: glossy, and twinkling when there's
+   something to collect or harvest. ---- */
+
+.bubble-face {
+  background: radial-gradient(circle at 35% 30%, #fff6c8 0, var(--gold) 60%);
+}
+
+.bubble-coins .bubble-face::before,
+.bubble-harvest .bubble-face::before {
+  content: '✨';
+  position: absolute;
+  top: -9px;
+  right: -9px;
+  font-size: 14px;
+  animation: twinkle 1.6s ease-in-out infinite;
+}
+
+@keyframes twinkle {
+  0%,
+  100% {
+    opacity: 0.2;
+    scale: 0.6;
+  }
+  50% {
+    opacity: 1;
+    scale: 1.1;
+  }
 }
 
 /* ---- Phones held sideways ----

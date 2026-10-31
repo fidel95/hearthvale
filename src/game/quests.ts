@@ -71,6 +71,7 @@ export interface Reward {
 export interface Quest {
   id: string
   title: string
+  giver?: string // who asks: a townsperson, shown on the quest's bubble (Hud)
   intro: string
   tasks: Task[]
   reward: Reward
@@ -215,6 +216,13 @@ export class Quests {
   private measureTask(quest: Quest, task: Task): number {
     const value = task.stat ? this.stat(task.stat) - (this.active.get(quest.id)?.[task.stat] ?? 0) : measure(this.world, task.have!)
     return Math.min(task.count, value)
+  }
+
+  // How far along a quest is, from 0 to 1, over all its tasks.
+  share(quest: Quest): number {
+    const total = quest.tasks.reduce((sum, t) => sum + t.count, 0)
+    const got = quest.tasks.reduce((sum, t) => sum + Math.min(t.count, this.progress(quest, t)), 0)
+    return total > 0 ? got / total : 1
   }
 
   isDone(quest: Quest): boolean {

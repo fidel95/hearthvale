@@ -3,6 +3,7 @@
     {
       "id": "welcome",
       "title": "Welcome to Hearthvale",
+      "giver": "🧑‍💼",
       "intro": "Every town starts small. Collect the rent and bring in your first harvest.",
       "tasks": [
         {
@@ -24,6 +25,7 @@
     {
       "id": "growing",
       "title": "A Growing Town",
+      "giver": "🧑‍🌾",
       "intro": "More homes mean more rent. Keep the fields busy too.",
       "after": "welcome",
       "tasks": [
@@ -51,6 +53,7 @@
     {
       "id": "shop",
       "title": "Open for Business",
+      "giver": "🧑‍🍳",
       "intro": "Shops sell goods from their shelves, and need a road beside them. Stock one up and make some sales.",
       "after": "welcome",
       "level": 2,
@@ -84,6 +87,7 @@
     {
       "id": "utilities",
       "title": "Keep the Taps Running",
+      "giver": "👷",
       "intro": "The county only supplies a small town. Build your own water supply before you outgrow it.",
       "after": "growing",
       "level": 4,
@@ -114,6 +118,7 @@
     {
       "id": "storage",
       "title": "Room for the Harvest",
+      "giver": "🧑‍🌾",
       "intro": "Once you have a shop, harvests become goods. A barn holds more of them.",
       "after": "shop",
       "level": 5,
@@ -144,6 +149,7 @@
     {
       "id": "decorate",
       "title": "Green Thumb",
+      "giver": "🧑‍🎨",
       "intro": "Trees, flowers and benches make homes and shops beside them earn a little more (up to +10% from decorations).",
       "after": "growing",
       "level": 2,
@@ -164,6 +170,7 @@
     {
       "id": "roads",
       "title": "Paving the Way",
+      "giver": "👷",
       "intro": "Shops need a road beside them, homes beside a road earn more, and residents prefer to walk on them.",
       "after": "growing",
       "tasks": [
@@ -183,6 +190,7 @@
     {
       "id": "builder",
       "title": "Master Builder",
+      "giver": "👷",
       "intro": "Bigger buildings take time to build, then materials to finish. Build a Townhouse.",
       "after": "shop",
       "level": 3,
@@ -211,6 +219,7 @@
     {
       "id": "neighborly",
       "title": "Good Neighbors",
+      "giver": "🙋",
       "intro": "New neighbors have moved in nearby. Open the Map, then Neighbors, and pay one a visit.",
       "after": "community",
       "level": 7,
@@ -232,6 +241,7 @@
     {
       "id": "renovator",
       "title": "Renovator",
+      "giver": "🧑‍🔧",
       "intro": "Homes and shops can be upgraded to earn more. Upgrading is an improvement: its cost is depreciated, not deducted.",
       "after": "builder",
       "level": 10,
@@ -254,6 +264,7 @@
     {
       "id": "land",
       "title": "Room to Grow",
+      "giver": "🧑‍💼",
       "intro": "Buy the land next door. Land is taxed every year, but never depreciated.",
       "after": "utilities",
       "level": 8,
@@ -272,6 +283,7 @@
     {
       "id": "community",
       "title": "Community Spirit",
+      "giver": "🧑‍🏫",
       "intro": "Parks, schools and fire stations make nearby homes worth more, and make room for more residents.",
       "after": "utilities",
       "level": 6,
@@ -299,6 +311,7 @@
     {
       "id": "collector",
       "title": "Treasure Hunter",
+      "giver": "🕵️",
       "intro": "Collectibles turn up as you play. Complete a set and hand it in.",
       "after": "growing",
       "tasks": [
@@ -316,6 +329,7 @@
     {
       "id": "taxes",
       "title": "Good Citizen",
+      "giver": "🧑‍💼",
       "intro": "Tax Day comes after December. Open Taxes (tap your coins) to see what you will owe.",
       "after": "welcome",
       "tasks": [
@@ -333,6 +347,7 @@
     {
       "id": "harbor",
       "title": "Harbor Town",
+      "giver": "🧑‍✈️",
       "intro": "Build a dock on the shore and bring goods in by sea.",
       "after": "land",
       "level": 9,
@@ -361,6 +376,7 @@
     {
       "id": "tycoon",
       "title": "Tycoon",
+      "giver": "🤵",
       "intro": "Earn 5,000 coins from rent and sales. Mind the brackets on Tax Day!",
       "after": "builder",
       "level": 8,
@@ -379,6 +395,7 @@
     {
       "id": "landmark",
       "title": "A Town to Be Proud Of",
+      "giver": "🧑‍🎨",
       "intro": "Landmarks are long-term goals: expensive, one of a kind, and they need a well-run town. Check your city rating in the Town window.",
       "after": "tycoon",
       "level": 11,
@@ -406,6 +423,7 @@
     {
       "id": "factory",
       "title": "Made in Hearthvale",
+      "giver": "🧑‍🏭",
       "intro": "Factories turn goods into products that specialty shops sell for more. Keep the Cannery fed with goods from your farms or the docks, collect its preserves, and stock a Deli with them.",
       "after": "tycoon",
       "level": 12,
@@ -438,6 +456,7 @@
     {
       "id": "safe-streets",
       "title": "Safe Streets",
+      "giver": "👮",
       "intro": "A bigger town needs a police station. It makes room for more residents, brightens the neighborhood, and apartment buildings won't be happy without one nearby.",
       "after": "tycoon",
       "level": 12,
@@ -465,6 +484,7 @@
     {
       "id": "healthy-town",
       "title": "A Healthy Town",
+      "giver": "🧑‍⚕️",
       "intro": "A hospital is a big project: it makes room for many more residents, and apartment buildings want one within reach.",
       "after": "safe-streets",
       "level": 13,
@@ -494,6 +514,7 @@
     {
       "id": "moving-up",
       "title": "Moving Up",
+      "giver": "🤵",
       "intro": "Apartment blocks house sixteen residents on a small lot. Give them shops, a park, a school, a hospital and a police station nearby and they'll pay top rent.",
       "after": "healthy-town",
       "level": 14,
@@ -521,6 +542,7 @@
     {
       "id": "mall",
       "title": "Shop Till You Drop",
+      "giver": "🧑‍🍳",
       "intro": "A Shopping Center sells lots of goods at once and draws visitors from out of town. Keep its shelves full.",
       "after": "moving-up",
       "level": 15,
@@ -551,6 +573,7 @@
     {
       "id": "skyline",
       "title": "A City Skyline",
+      "giver": "👷",
       "intro": "The tallest homes in town: a High-Rise houses twenty-eight residents. Keep the city running well while you build up.",
       "after": "mall",
       "level": 17,
@@ -578,6 +601,7 @@
     {
       "id": "buses",
       "title": "All Aboard the Bus",
+      "giver": "🧑‍🔧",
       "intro": "Bus stops make the neighborhoods around them nicer, and buses run between them. Put a few near homes and shops, beside a road.",
       "after": "community",
       "level": 7,
@@ -598,6 +622,7 @@
     {
       "id": "railway",
       "title": "The Railway Comes to Town",
+      "giver": "🧑‍🔧",
       "intro": "Lay railway track and build a station beside it. Trains bring visitors who spend money all over town.",
       "after": "landmark",
       "level": 14,
@@ -625,6 +650,7 @@
     {
       "id": "airport",
       "title": "Cleared for Takeoff",
+      "giver": "🧑‍✈️",
       "intro": "An airport is the biggest thing a town can build: a runway, a terminal and planes coming and going, bringing visitors from far away.",
       "after": "railway",
       "level": 15,
@@ -645,6 +671,7 @@
     {
       "id": "beach",
       "title": "Fun in the Sun",
+      "giver": "🏄",
       "intro": "A beach on your shore draws sunbathers and swimmers, and makes the homes nearby nicer. Build one where the sand meets the sea.",
       "after": "harbor",
       "level": 9,
@@ -672,6 +699,7 @@
     {
       "id": "slopes",
       "title": "Hit the Slopes",
+      "giver": "⛷️",
       "intro": "A Ski Resort sells lift tickets all year round. It needs a road for visitors and plenty of room.",
       "after": "tycoon",
       "level": 13,
@@ -692,6 +720,7 @@
     {
       "id": "animals",
       "title": "Down on the Farm",
+      "giver": "🧑‍🌾",
       "intro": "Animals earn farm income: hens lay eggs and pigs grow. Build them a home with a yard to wander in.",
       "after": "growing",
       "level": 5,

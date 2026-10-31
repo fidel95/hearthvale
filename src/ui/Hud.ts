@@ -69,6 +69,8 @@ export class Hud {
   private toasts = el('div', 'toasts')
   private badges = new Map<string, HTMLElement>()
   private toolbar = el('nav', 'toolbar')
+  private questBubbles = el('div', 'quest-givers')
+  private onOpenQuests: () => void
   private visitBar = el('div', 'visit-bar')
   private visitText = el('div', 'visit-text')
   private visitAvatar = el('span', 'neighbor-avatar')
@@ -77,6 +79,7 @@ export class Hud {
 
   constructor(container: HTMLElement, builder: Builder, city: City, player: Player, services: Services, callbacks: HudCallbacks) {
     this.player = player
+    this.onOpenQuests = callbacks.onOpenQuests
     const hud = el('div', 'hud')
 
     // ---- Top bar
@@ -240,7 +243,7 @@ export class Hud {
     this.visitBar.append(this.visitAvatar, this.visitText, home)
     this.visitBar.hidden = true
 
-    hud.append(topbar, messages, toolbar, this.visitBar)
+    hud.append(topbar, this.questBubbles, messages, toolbar, this.visitBar)
     container.append(hud)
     // Hints and messages go just under the top bar, however many rows it
     // wraps onto (two on a narrow phone).
@@ -274,12 +277,31 @@ export class Hud {
   // Show the visit bar (or, with null, the toolbar again).
   setVisit(visit: { avatar: string; name: string; town: string; helpsLeft: number } | null) {
     this.toolbar.hidden = visit !== null
+    this.questBubbles.hidden = visit !== null
     this.visitBar.hidden = visit === null
     if (!visit) return
     this.visitAvatar.textContent = visit.avatar
     this.visitText.replaceChildren(
       el('strong', '', `${visit.name}'s ${visit.town}`),
       el('span', 'muted', visit.helpsLeft > 0 ? `Tap 🤝 to help · ${visit.helpsLeft} left today` : 'No helps left today: thanks for visiting!'),
+    )
+  }
+
+  // Down the left side, a bubble for each quest under way: the townsperson
+  // who asked, a ring for how far along it is, and a bouncing ✓ when it's
+  // ready to claim. Tapping one opens Quests.
+  setQuests(quests: { giver: string; title: string; share: number; ready: boolean }[]) {
+    this.questBubbles.replaceChildren(
+      ...quests.map((q) => {
+        const b = el('button', q.ready ? 'quest-giver ready' : 'quest-giver')
+        b.setAttribute('aria-label', `${q.title}: ${q.ready ? 'ready to claim' : `${Math.round(q.share * 100)}% done`}`)
+        b.title = q.title
+        b.style.setProperty('--share', String(q.share))
+        b.append(el('span', 'quest-face', q.giver))
+        if (q.ready) b.append(el('span', 'quest-ready', '✓'))
+        b.addEventListener('click', this.onOpenQuests)
+        return b
+      }),
     )
   }
 

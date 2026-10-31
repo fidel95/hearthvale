@@ -918,7 +918,12 @@ export class Game {
 
   private showQuestEvents() {
     const events = this.state.townEvents
-    const badge = () => this.hud.setBadge('Quests', this.quests.readyCount() + events.readyCount())
+    const badge = () => {
+      this.hud.setBadge('Quests', this.quests.readyCount() + events.readyCount())
+      this.hud.setQuests(
+        this.quests.activeQuests().map((q) => ({ giver: q.giver ?? '🧑', title: q.title, share: this.quests.share(q), ready: this.quests.isDone(q) })),
+      )
+    }
     events.onChange((e) => {
       if (e.kind === 'goalDone') this.hud.toast(`🎉 ${e.where}: “${e.label}” done! Claim it in Quests → Events.`)
       if (e.kind === 'prize') this.hud.toast(`🏆 You won the ${e.name}! It's in your Inventory, ready to place.`)

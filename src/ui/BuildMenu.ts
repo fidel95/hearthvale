@@ -11,8 +11,10 @@ import { PARADE } from '../game/Army'
 import { PRODUCTS, soldBy } from '../game/products'
 import { thumbnail } from './thumbnails'
 
-// The build menu: tabs by kind of building, a card for each with a picture,
-// cost, size, level and what it earns, and a preview of the chosen one with
+// The build menu, laid out like a shop: tabs by kind of building, a card for
+// each with a picture, what it earns, its size and a price tag (a padlock
+// and the level while it's locked, and a "New!" ribbon on what the latest
+// level unlocked), and a preview of the chosen one with
 // everything about it and a Place button. Locked and unaffordable cards stay
 // visible and say exactly what's missing.
 
@@ -93,7 +95,8 @@ export class BuildMenu {
   private tabs = el('div', 'catalog-tabs')
   private grid = el('div', 'catalog-grid')
   private preview = el('div', 'build-preview')
-  private cards: { card: HTMLButtonElement; status: HTMLElement; type: BuildingType }[] = []
+  private cards: { card: HTMLButtonElement; status: HTMLElement; price: HTMLElement; type: BuildingType }[] = []
+  private player: Player
   private chosen: BuildingType | null = null
   private placement: PlacementSystem
   private unlocks: UnlockSystem
@@ -111,6 +114,7 @@ export class BuildMenu {
   ) {
     this.placement = placement
     this.unlocks = unlocks
+    this.player = player
     this.onPlace = onPlace
     this.sheet = new Sheet(container, '🔨 Build', 'build-sheet')
     this.sheet.onClose = () => this.onClosed?.()
@@ -129,16 +133,13 @@ export class BuildMenu {
       const picture = el('img', 'build-thumb')
       picture.alt = ''
       const status = el('span', 'build-status')
-      card.append(
-        picture,
-        el('span', 'build-name', type.name),
-        el('span', 'build-meta', `🪙 ${type.cost.toLocaleString()} · ${type.size.x}×${type.size.z}`),
-        el('span', 'build-meta', headline(type)),
-        status,
-      )
+      const price = el('span', 'build-price')
+      const footer = el('span', 'build-footer')
+      footer.append(el('span', 'build-size', `${type.size.x}×${type.size.z}`), price)
+      card.append(picture, el('span', 'build-new', 'New!'), el('span', 'build-name', type.name), el('span', 'build-meta', headline(type)), status, footer)
       card.addEventListener('click', () => this.choose(type))
       this.grid.append(card)
-      this.cards.push({ card, status, type })
+      this.cards.push({ card, status, price, type })
     }
     this.showTab(TABS[0])
 
@@ -171,13 +172,16 @@ export class BuildMenu {
 
   // Lock and price status on every card.
   private refresh() {
-    for (const { card, status, type } of this.cards) {
+    for (const { card, status, price, type } of this.cards) {
       // The placement system says what's in the way; the menu only shows it.
       const check = this.placement.check(type)
       const locked = !this.unlocks.isUnlocked(type)
       card.classList.toggle('locked', locked)
       card.classList.toggle('unaffordable', !locked && !check.ok)
-      status.textContent = check.problems[0] ?? ''
+      card.classList.toggle('new', !locked && type.unlockLevel === this.player.level && this.player.level > 1)
+      price.textContent = locked ? `🔒 Level ${type.unlockLevel}` : this.placement.freeBuild ? 'Free' : `🪙 ${type.cost.toLocaleString()}`
+      // The price tag already says it's locked.
+      status.textContent = locked ? '' : (check.problems[0] ?? '')
       status.hidden = status.textContent === ''
     }
     if (this.chosen) this.choose(this.chosen)
