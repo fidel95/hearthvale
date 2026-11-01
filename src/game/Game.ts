@@ -39,7 +39,7 @@ import { GRANT, canClaimGrant } from './safetyNet'
 import { CROPS_BY_ID, CROP_TYPES } from './crops'
 import { BUILDING_TYPES, isTrack } from './buildings'
 import { FEATURE_LEVELS } from './UnlockSystem'
-import { MONTH_NAMES } from './GameClock'
+import { MONTH_MS, MONTH_NAMES, YEAR_MS } from './GameClock'
 import { QualityGovernor, type QualityLevel } from './quality'
 import { GameState } from './GameState'
 import { SaveSystem } from './SaveSystem'
@@ -549,6 +549,7 @@ export class Game {
     const seconds = frameTime / 1000
     this.lotView.update()
     this.landView.update(seconds)
+    this.landView.setSeason((this.clock.playedMs % YEAR_MS) / MONTH_MS)
     this.shipView.update(life, this.lifeTime)
     // (The port's ships and crane keep to the docks' own timetable.)
     this.portView.update(life, seconds, now)

@@ -1,6 +1,6 @@
 import * as THREE from 'three'
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
-import { footprint, type BuildingType, type Rotation, isTrack, isPlot } from './buildings'
+import { footprint, type BuildingType, type Rotation, isDrawn, isTrack, isPlot } from './buildings'
 import type { CameraController, Carry } from './CameraController'
 import { duration, outOfEnergyMessage } from '../ui/dom'
 import { sizeOf, type City, type PlacedBuilding } from './City'
@@ -252,10 +252,10 @@ export class Builder {
     // A moved building keeps its turn; new ones start facing the default way.
     this.rotation = mode.kind === 'move' ? mode.carrying.rotation : 0
     if (mode.kind === 'move') this.cityView.setVisible(mode.carrying.id, false)
-    // Roads are drawn by dragging, and picked for removal by dragging;
-    // everything else drags the camera.
+    // Roads (and paths, hedges and flower beds) are drawn by dragging, and
+    // roads picked for removal by dragging; everything else drags the camera.
     this.controls.paint =
-      mode.kind === 'build' && isTrack(mode.type)
+      mode.kind === 'build' && isDrawn(mode.type)
         ? (x, y, first) => this.paintRoad(x, y, first)
         : mode.kind === 'removeRoads'
           ? (x, y, first) => this.dragPick(x, y, first)
@@ -396,7 +396,7 @@ export class Builder {
     }
   }
 
-  // One step of a road drag: place road on every tile from the last one painted
+  // One step of a road drag (or a path, hedge or flower bed): place one on every tile from the last one painted
   // to this one (a fast drag can jump several tiles between pointer events).
   private paintRoad(clientX: number, clientY: number, first: boolean) {
     if (this.mode.kind !== 'build') return
@@ -628,11 +628,11 @@ export class Builder {
   }
 
   // A tap in build mode: two steps, tap to put the building down, then ✓ to
-  // buy it (several spots can be picked first). Roads and track skip this:
-  // they're drawn. (Also used by "Build here" on an empty tile.)
+  // buy it (several spots can be picked first). Roads, track, paths, hedges
+  // and flower beds skip this: they're drawn. (Also used by "Build here" on an empty tile.)
   private buildAt(type: BuildingType, tile: Tile) {
     const anchor = anchorFor(type, tile, this.rotation)
-    if (isTrack(type) || !this.confirmPurchases) {
+    if (isDrawn(type) || !this.confirmPurchases) {
       const check = this.placement.check(type, { tile: anchor, rotation: this.rotation })
       if (!check.ok) this.onNotice?.(check.problems[0])
       else this.city.place(type, anchor, { rotation: this.rotation, free: this.placement.freeBuild, basis: this.placement.freeBuild ? 0 : type.cost })
@@ -654,7 +654,7 @@ export class Builder {
   // "Build here": start building this type with the tapped tile as the first spot.
   startBuildAt(type: BuildingType, tile: Tile) {
     this.setMode({ kind: 'build', type })
-    if (!isTrack(type)) this.buildAt(type, tile)
+    if (!isDrawn(type)) this.buildAt(type, tile)
   }
 
   // ✓: buy the building waiting at the pending spot. Stay in build mode, so

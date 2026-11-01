@@ -18,7 +18,13 @@ function hintFor(mode: Mode): string {
     case 'select':
       return ''
     case 'build':
-      return mode.type.category === 'road' ? 'Drag to draw road' : mode.type.id === 'rail' ? 'Drag to lay track' : `Tap a spot for each ${mode.type.name}`
+      return mode.type.category === 'road'
+        ? 'Drag to draw road'
+        : mode.type.id === 'rail'
+          ? 'Drag to lay track'
+          : mode.type.drawn
+            ? `Drag to lay ${mode.type.name.toLowerCase()}s, or tap one tile`
+            : `Tap a spot for each ${mode.type.name}`
     case 'move':
       return 'Drag it, or tap where it should go'
     case 'restore':

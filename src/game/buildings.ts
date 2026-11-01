@@ -104,6 +104,8 @@ export interface BuildingType {
   upkeep?: number
   // Community buildings: homes and shops within `radius` tiles earn `bonus` more (communityRules.ts).
   amenity?: { bonus: number; radius: number }
+  // Laid in lines by dragging, like roads (garden paths, hedges, flower beds).
+  drawn?: boolean
   // Room for this many more residents in town (see utilityRules.ts, population capacity).
   populationCapacity?: number
   // Walkers like to visit, and linger this many seconds (PeopleView).
@@ -751,6 +753,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     size: { x: 1, z: 1 },
     cost: 25,
     unlockLevel: 2,
+    drawn: true,
     amenity: { bonus: 0.02, radius: 1 },
     placeholder: { shape: 'flowers', color: '#7a5233', accent: '#e8579a', height: 0.3 },
   },
@@ -761,6 +764,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     size: { x: 1, z: 1 },
     cost: 15,
     unlockLevel: 2,
+    drawn: true,
     amenity: { bonus: 0.01, radius: 0 },
     model: suburban('path-stones-short'),
     placeholder: { shape: 'road', color: '#9a9a94', accent: '#cfccc4', height: 0.03 },
@@ -802,6 +806,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     size: { x: 1, z: 1 },
     cost: 15,
     unlockLevel: 3,
+    drawn: true,
     amenity: { bonus: 0.01, radius: 1 },
     placeholder: { shape: 'hedge', color: '#3f8f3a', accent: '#2e6e2b', height: 0.35 },
   },
@@ -1553,6 +1558,12 @@ export function isPlot(type: BuildingType): boolean {
 // as one connected network (RoadView, RailView) rather than one by one.
 export function isTrack(type: BuildingType): boolean {
   return type.category === 'road' || type.id === 'rail'
+}
+
+// Anything placed by dragging along a line: roads, track, and the decorations
+// that are drawn (paths, hedges, flower beds), one tile at a time.
+export function isDrawn(type: BuildingType): boolean {
+  return isTrack(type) || !!type.drawn
 }
 
 // A building can be turned in quarter turns (0–3). Turned a quarter, its

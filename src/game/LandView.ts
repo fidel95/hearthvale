@@ -8,12 +8,14 @@ import {
   LOT_FOOTPRINT,
   LOT_SIZE,
   footprintCenter,
+  inBounds,
   lotCorner,
   lotKey,
   tileToWorld,
   type Lot,
 } from './grid'
 import { Scenery } from './scenery'
+import { grassTint } from './seasons'
 import { RIVER, RIVER_HALF_WIDTH, coastZ, isRock, isWater, riverDistance } from './terrain'
 
 // Draws the ground: the whole world as muted land, the lots the town owns as
@@ -82,6 +84,10 @@ function lawnTexture(): THREE.CanvasTexture {
 // Mown stripes: every other row of tiles a shade lighter.
 const STRIPE = 0.045
 
+// Where the town's land meets land it doesn't own, its grass fades out over
+// this much of a tile instead of stopping at a hard edge.
+const EDGE_FADE = 0.45
+
 export class LandView {
   // Called when a "for sale" sign is clicked.
   onLotClick?: (lot: Lot) => void
@@ -89,6 +95,7 @@ export class LandView {
   private scene: THREE.Scene
   private city: City
   private owned: THREE.Mesh | null = null
+  private edge: THREE.Mesh | null = null
   private grid: THREE.LineSegments | null = null
   private signs = new Map<string, CSS2DObject>()
   private sea: THREE.Mesh<THREE.BufferGeometry, THREE.MeshStandardMaterial>
@@ -108,6 +115,10 @@ export class LandView {
     // Brighter than white, so the texture's gray comes out as the grass's own green.
     color: new THREE.Color(255 / LAWN_GRAY, 255 / LAWN_GRAY, 255 / LAWN_GRAY),
   })
+  // The fade at the land's edge: the lawn, see-through by vertex.
+  private edgeMaterial = new THREE.MeshStandardMaterial({ vertexColors: true, map: this.lawnMaterial.map, color: this.lawnMaterial.color.clone(), transparent: true, depthWrite: false })
+  private worldMaterial = new THREE.MeshStandardMaterial({ color: COLORS.unowned })
+  private season = -1
 
   // showSigns: false for a neighbor's town, where there's nothing for you to buy.
   constructor(scene: THREE.Scene, city: City, { showSigns = true } = {}) {
@@ -118,7 +129,7 @@ export class LandView {
     // The whole world, under everything.
     const world = new THREE.Mesh(
       new THREE.PlaneGeometry(GRID_SIZE, GRID_SIZE).rotateX(-Math.PI / 2),
-      new THREE.MeshStandardMaterial({ color: COLORS.unowned }),
+      this.worldMaterial,
     )
     world.receiveShadow = true
     scene.add(world)
@@ -138,7 +149,7 @@ export class LandView {
   }
 
   private rebuild() {
-    for (const obj of [this.owned, this.grid]) {
+    for (const obj of [this.owned, this.grid, this.edge]) {
       if (!obj) continue
       obj.removeFromParent()
       obj.geometry.dispose()
@@ -188,6 +199,9 @@ export class LandView {
     this.owned = new THREE.Mesh(mergeGeometries(squares), this.lawnMaterial)
     this.owned.receiveShadow = true
     for (const g of squares) g.dispose()
+    this.edge = this.createEdge(shadeAt)
+    this.edge.receiveShadow = true
+    this.scene.add(this.edge)
     const lineGeometry = new THREE.BufferGeometry()
     lineGeometry.setAttribute('position', new THREE.Float32BufferAttribute(lines, 3))
     // Faint white lines: there to build by, not to look at.
@@ -208,6 +222,74 @@ export class LandView {
       }
     }
     this.refreshSigns()
+  }
+
+  // The soft edge of the town's land: a strip along every side that faces
+  // land it doesn't own, from its grass to clear, and a quarter-square at each
+  // outside corner so the strips meet.
+  private createEdge(shadeAt: (x: number, z: number) => THREE.Color): THREE.Mesh {
+    const positions: number[] = []
+    const colors: number[] = []
+    const uvs: number[] = []
+    const indices: number[] = []
+    const open = (t: { x: number; z: number }) => inBounds(t) && !this.city.ownsTile(t) && !isWater(t) && t.z < coastZ(t.x)
+    // A four-cornered patch, each corner with its own opacity.
+    const quad = (corners: [number, number, number][]) => {
+      const first = positions.length / 3
+      for (const [x, z, alpha] of corners) {
+        positions.push(x, 0.004, z)
+        colors.push(...shadeAt(x, z).toArray(), alpha)
+        uvs.push(x / LAWN_REPEAT, z / LAWN_REPEAT)
+      }
+      // Wound to face up whichever way the corners go round.
+      const [a, b, c] = corners
+      const up = (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]) < 0
+      indices.push(...(up ? [0, 1, 2, 0, 2, 3] : [0, 2, 1, 0, 3, 2]).map((i) => first + i))
+    }
+    const f = EDGE_FADE
+    for (const { lot } of this.city.ownedLots()) {
+      const corner = lotCorner(lot)
+      for (let i = 0; i < LOT_SIZE; i++) {
+        for (let j = 0; j < LOT_SIZE; j++) {
+          const tile = { x: corner.x + i, z: corner.z + j }
+          if (tile.z >= coastZ(tile.x)) continue
+          const c = tileToWorld(tile)
+          const [x0, x1, z0, z1] = [c.x - 0.5, c.x + 0.5, c.z - 0.5, c.z + 0.5]
+          const w = open({ x: tile.x - 1, z: tile.z })
+          const e = open({ x: tile.x + 1, z: tile.z })
+          const nn = open({ x: tile.x, z: tile.z - 1 })
+          const s = open({ x: tile.x, z: tile.z + 1 })
+          if (w) quad([[x0, z0, 1], [x0, z1, 1], [x0 - f, z1, 0], [x0 - f, z0, 0]])
+          if (e) quad([[x1, z0, 1], [x1, z1, 1], [x1 + f, z1, 0], [x1 + f, z0, 0]])
+          if (nn) quad([[x0, z0, 1], [x1, z0, 1], [x1, z0 - f, 0], [x0, z0 - f, 0]])
+          if (s) quad([[x0, z1, 1], [x1, z1, 1], [x1, z1 + f, 0], [x0, z1 + f, 0]])
+          if (w && nn) quad([[x0, z0, 1], [x0, z0 - f, 0], [x0 - f, z0 - f, 0], [x0 - f, z0, 0]])
+          if (e && nn) quad([[x1, z0, 1], [x1, z0 - f, 0], [x1 + f, z0 - f, 0], [x1 + f, z0, 0]])
+          if (w && s) quad([[x0, z1, 1], [x0, z1 + f, 0], [x0 - f, z1 + f, 0], [x0 - f, z1, 0]])
+          if (e && s) quad([[x1, z1, 1], [x1, z1 + f, 0], [x1 + f, z1 + f, 0], [x1 + f, z1, 0]])
+        }
+      }
+    }
+    const geometry = new THREE.BufferGeometry()
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3))
+    geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 4))
+    geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2))
+    geometry.setIndex(indices)
+    geometry.computeVertexNormals()
+    return new THREE.Mesh(geometry, this.edgeMaterial)
+  }
+
+  // The season's tint on the grass, owned and not (month: 0 to 12 through the
+  // year, with fractions). Cheap: just the materials' colors.
+  setSeason(month: number) {
+    const key = Math.round(month * 20)
+    if (key === this.season) return
+    this.season = key
+    const tint = new THREE.Color(...grassTint(month))
+    const lawn = tint.clone().multiplyScalar(255 / LAWN_GRAY)
+    this.lawnMaterial.color.copy(lawn)
+    this.edgeMaterial.color.copy(lawn)
+    this.worldMaterial.color.set(COLORS.unowned).multiply(tint)
   }
 
   // The lawn's tufts and flowers, on owned tiles with nothing built. Building

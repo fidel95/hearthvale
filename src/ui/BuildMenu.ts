@@ -82,6 +82,7 @@ function details(type: BuildingType): string[] {
   if (type.id === 'tunnel-works') lines.push('🛠️ A tunnel boring machine drills into the mountain, and a conveyor brings out the rock')
   if (type.id === 'cable-car') lines.push('🚡 Cabins ride up and down the mountainside')
   if (type.requiresRoad) lines.push('🛣️ Needs a road touching one of its sides to open')
+  if (type.drawn) lines.push('Drag to lay a line of them, one tile at a time')
   if (type.id === 'rail') lines.push('Drag to lay track. A Train Station beside it runs a train to the end of the line and back')
   if (type.requiresRail) lines.push('🛤️ Needs railway track touching one of its sides; its train runs along the track')
   if (type.id === 'bus-stop') lines.push('🚌 Buses drive from stop to stop on your roads')

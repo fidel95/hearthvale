@@ -26,3 +26,24 @@ export function seasonOf(month: number): Season {
 export function seasonBonus(crop: CropType, month: number): number {
   return crop.season === seasonOf(month) ? IN_SEASON_BONUS : 0
 }
+
+// The grass through the year: a tint (red, green and blue multipliers) over
+// every green, cool and dull in winter, fresh in spring, warm in summer,
+// golden in fall. month runs from 0 to 12 through the year, with fractions;
+// the tints are keyed at the middle of January, April, July and October and
+// eased between, so the grass turns slowly.
+const GRASS_TINTS: [number, number, number][] = [
+  [0.94, 0.97, 0.98],
+  [0.98, 1.04, 0.95],
+  [1.04, 1.02, 0.88],
+  [1.12, 0.97, 0.78],
+]
+export function grassTint(month: number): [number, number, number] {
+  const at = ((((month - 0.5) % 12) + 12) % 12) / 3 // 0 to 4 through the keys
+  const i = Math.floor(at)
+  const t = at - i
+  const ease = t * t * (3 - 2 * t)
+  const a = GRASS_TINTS[i % 4]
+  const b = GRASS_TINTS[(i + 1) % 4]
+  return [0, 1, 2].map((k) => a[k] + (b[k] - a[k]) * ease) as [number, number, number]
+}
