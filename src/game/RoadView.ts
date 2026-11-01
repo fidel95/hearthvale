@@ -100,7 +100,7 @@ export class RoadView {
     let m = this.materials.get(color)
     if (!m) {
       const glow = color === GLOW.classic || color === GLOW.lantern
-      m = new THREE.MeshStandardMaterial({ color, ...(glow ? { emissive: color, emissiveIntensity: 0.7 } : {}) })
+      m = new THREE.MeshStandardMaterial({ color, side: color === BRIDGE.stone ? THREE.DoubleSide : THREE.FrontSide, ...(glow ? { emissive: color, emissiveIntensity: 0.7 } : {}) })
       this.materials.set(color, m)
     }
     return m
@@ -244,8 +244,33 @@ export class RoadView {
       for (const g of tilePieces) {
         const pos = g.getAttribute('position')
         for (let i = 0; i < pos.count; i++) {
-          if (!bridge && pos.getY(i) < 0.0005) continue
           pos.setY(i, pos.getY(i) + liftOnTile(this.city, b.tile, pos.getX(i), pos.getZ(i)))
+        }
+      }
+      // A ramp: one solid wedge from the ground up to just under the road, so
+      // there's no hollow under it and no overlapping sides to flicker.
+      if (!bridge) {
+        const lift = (x: number, z: number) => liftOnTile(this.city, b.tile, x, z)
+        const alongX = Math.abs(lift(c.x + 0.5, c.z) - lift(c.x - 0.5, c.z)) >= Math.abs(lift(c.x, c.z + 0.5) - lift(c.x, c.z - 0.5))
+        if (lift(c.x + 0.5, c.z) + lift(c.x - 0.5, c.z) + lift(c.x, c.z + 0.5) + lift(c.x, c.z - 0.5) > 0.001) {
+          const N = 6
+          const W = 0.49
+          const pos: number[] = []
+          const quad = (a: number[], b2: number[], c2: number[], d: number[]) => pos.push(...a, ...b2, ...c2, ...a, ...c2, ...d)
+          for (let i = 0; i < N; i++) {
+            const t0 = -0.5 + i / N
+            const t1 = -0.5 + (i + 1) / N
+            const at = (t: number, s: number, y: number) => (alongX ? [c.x + t, y, c.z + s] : [c.x + s, y, c.z + t])
+            const h = (t: number) => Math.max(0, (alongX ? lift(c.x + t, c.z) : lift(c.x, c.z + t)) - 0.002)
+            for (const s of [-W, W]) quad(at(t0, s, 0), at(t1, s, 0), at(t1, s, h(t1)), at(t0, s, h(t0)))
+            if (i === 0) quad(at(t0, -W, 0), at(t0, -W, h(t0)), at(t0, W, h(t0)), at(t0, W, 0))
+            if (i === N - 1) quad(at(t1, -W, 0), at(t1, W, 0), at(t1, W, h(t1)), at(t1, -W, h(t1)))
+          }
+          const wedge = new THREE.BufferGeometry()
+          wedge.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3))
+          wedge.setAttribute('uv', new THREE.Float32BufferAttribute(new Array((pos.length / 3) * 2).fill(0), 2))
+          wedge.computeVertexNormals()
+          add(BRIDGE.stone, wedge)
         }
       }
       // Its piers, at the corners clear of the track.
