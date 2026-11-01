@@ -10,7 +10,7 @@ import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js'
 // A character is a copy of one model (bones and all, so each moves on its
 // own) with an AnimationMixer, scaled to HEIGHT and facing +z.
 
-export const HEIGHT = 0.4 // world units (a tile is 1)
+export const HEIGHT = 0.24 // world units (a tile is 1): about a doorway tall, and narrow enough for the sidewalk (0.16 wide)
 const NAMES = ['a', 'b', 'c', 'd', 'e', 'f'].flatMap((l) => [`character-female-${l}`, `character-male-${l}`])
 const url = (name: string) => `${import.meta.env.BASE_URL}models/people/${name}.glb`
 

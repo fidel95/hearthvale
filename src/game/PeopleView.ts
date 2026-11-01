@@ -21,13 +21,16 @@ import { HEIGHT, charactersReady, loadCharacters, makeCharacter, type Character 
 // still), they step aside to pass. People standing about keep a little apart.
 
 const MAX_WALKERS = 40
-const SPEED = 1.1 // tiles per second
+const SPEED = 0.75 // tiles per second
 const SPAWN_EVERY = 0.8 // seconds between new walkers, so they trickle out
-const ROOM = 0.17 // how close two people come (between their middles)
-const LOOK_AHEAD = 0.34 // how far ahead a walker watches for someone in the way
-const STEP_ASIDE = 0.13 // how far a walker steps aside to pass someone
+// Sizes below are for a person HEIGHT tall; S scales the shapes that were
+// made for one 0.4 tall (hat, backpack, umbrella).
+const S = HEIGHT / 0.4
+const ROOM = HEIGHT * 0.42 // how close two people come (between their middles)
+const LOOK_AHEAD = HEIGHT * 0.85 // how far ahead a walker watches for someone in the way
+const STEP_ASIDE = HEIGHT * 0.32 // how far a walker steps aside to pass someone
 const QUEUE_FOR = 1.2 // seconds a walker stays behind a slower one before stepping out to pass
-const WALK_ANIMATION = 1.6 // the walk animation's speed to match SPEED
+const WALK_ANIMATION = (1.6 * (SPEED / 1.1)) / S // the walk animation's speed, so feet keep pace with the ground
 const SHIRTS = ['#e0553f', '#3f7fe0', '#e8b33a', '#4fa36b', '#9b59b6', '#e67e9f', '#2bb3b1', '#f2f2f2']
 const SKIN = ['#f1c9a5', '#d9a47c', '#a86f4c', '#6b4430']
 const PANTS = ['#34405a', '#4a3b2f', '#2d2d2d', '#5a6b7a']
@@ -90,8 +93,8 @@ function createTourist(): { object: THREE.Group; character: Character | null } {
   // On a character the hat sits higher (it's taller, with a bigger head).
   const hat = made.character ? new THREE.Group() : person
   if (made.character) {
-    hat.scale.setScalar(1.6)
-    hat.position.set(0, HEIGHT * 0.94 - 0.37 * 1.6, 0)
+    hat.scale.setScalar(1.6 * S)
+    hat.position.set(0, HEIGHT * 0.94 - 0.37 * 1.6 * S, 0)
     person.add(hat)
   }
   for (const [shape, color] of [
@@ -105,7 +108,10 @@ function createTourist(): { object: THREE.Group; character: Character | null } {
   const pack = new THREE.Mesh(TOURIST.pack, material(pick(['#e0453a', '#2f7fe0', '#ffd23f', '#3fae6b'])))
   pack.castShadow = true
   // On its back (the characters face +z).
-  if (made.character) pack.position.set(0.07, HEIGHT * 0.5 - 0.2, -0.09)
+  if (made.character) {
+    pack.scale.setScalar(S)
+    pack.position.set(0.07 * S, HEIGHT * 0.5 - 0.2 * S, -0.09 * S)
+  }
   person.add(pack)
   return made
 }
@@ -120,8 +126,8 @@ function createPerson(): { object: THREE.Group; character: Character | null } {
   umbrella.name = 'umbrella'
   if (character) {
     // Held up in one hand, just over the (big) head.
-    umbrella.scale.setScalar(1.2)
-    umbrella.position.set(0.02, HEIGHT * 1.22 - 0.49 * 1.2, 0)
+    umbrella.scale.setScalar(1.2 * S)
+    umbrella.position.set(0.02 * S, HEIGHT * 1.22 - 0.49 * 1.2 * S, 0)
     character.root.add(umbrella)
     character.play('walk', 0)
     return { object: character.root, character }
@@ -137,7 +143,7 @@ function createPerson(): { object: THREE.Group; character: Character | null } {
     person.add(mesh)
   }
   person.add(umbrella)
-  person.scale.setScalar(1.4) // a little larger than true scale, so they read at a glance
+  person.scale.setScalar(HEIGHT / 0.36) // the figure is 0.36 tall as made
   return { object: person, character: null }
 }
 
@@ -453,7 +459,7 @@ export class PeopleView {
     const r = walker.object.rotation.y
     const want = new THREE.Vector2(Math.cos(r), -Math.sin(r)).multiplyScalar(walker.aside * STEP_ASIDE).add(walker.push)
     walker.shift.lerp(want, easeShare(6, dt))
-    const bob = walking && !walker.character ? Math.abs(Math.sin(walker.phase)) * 0.03 : 0
+    const bob = walking && !walker.character ? Math.abs(Math.sin(walker.phase)) * 0.03 * S : 0
     walker.object.position.set(pos.x + walker.shift.x, bob, pos.z + walker.shift.y)
     const c = walker.character
     if (c) {
