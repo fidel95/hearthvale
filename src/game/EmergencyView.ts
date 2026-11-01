@@ -9,6 +9,7 @@ import { footprintCenter, tileToWorld, type Tile } from './grid'
 import { findPath } from './pathfinding'
 import { Polyline } from './routes'
 import { PRIORITY, type RoadSpace } from './roadSpace'
+import { liftVehicle } from './bridges'
 import { makeKitCar } from './TrafficView'
 
 // Fires, and the emergency services that answer them.
@@ -292,6 +293,7 @@ export class EmergencyView {
     const pose = r.line.at(r.s, LANE)
     r.object.position.set(pose.x, 0, pose.z)
     r.object.rotation.y = pose.angle
+    liftVehicle(this.city, r.object)
   }
 
   // Water arcing from the engine onto the flames.

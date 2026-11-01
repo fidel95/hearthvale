@@ -1546,7 +1546,22 @@ export const PRIZE_TYPES: BuildingType[] = [
   prize('festive-fir', 'Festive Fir', 'Winter Lights', { x: 1, z: 1 }, { shape: 'fir', color: '#2e7d4f', accent: '#ffd23f', height: 1.5 }),
 ]
 
-export const BUILDINGS_BY_ID = new Map([...BUILDING_TYPES, ...PRIZE_TYPES].map((b) => [b.id, b]))
+// A road bridge over the railway (bridges.ts): one tile that's both road and
+// track. Never sold in the build menu: drawing a road across the track (or
+// track across a road) builds one. Its cost is a road's and a bridge's.
+export const OVERPASS_TYPE: BuildingType = {
+  id: 'overpass',
+  name: 'Road Bridge',
+  category: 'road',
+  size: { x: 1, z: 1 },
+  cost: 120,
+  unlockLevel: 14,
+  xpReward: 0,
+  road: { bonus: 0.05, style: 'asphalt' },
+  placeholder: { shape: 'road', color: '#5d6168', accent: '#f2f2f2', height: 0.03 },
+}
+
+export const BUILDINGS_BY_ID = new Map([...BUILDING_TYPES, ...PRIZE_TYPES, OVERPASS_TYPE].map((b) => [b.id, b]))
 
 // A crop plot: plowed soil to plant on. (Pens, orchards, workshops, the
 // market and the tractor shed are farm buildings too.)

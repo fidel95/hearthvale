@@ -32,7 +32,7 @@ export class RailView {
     this.scene = scene
     this.city = city
     city.onChange((event) => {
-      if ((event.kind === 'added' || event.kind === 'removed' || event.kind === 'moved') && event.building.type.id === 'rail') this.dirty = true
+      if ((event.kind === 'added' || event.kind === 'removed' || event.kind === 'moved') && (event.building.type.id === 'rail' || event.building.type.id === 'overpass')) this.dirty = true
     })
   }
 
@@ -51,7 +51,7 @@ export class RailView {
       parts[kind].push(new THREE.BoxGeometry(w, h, d).translate(x, y + h / 2, z))
 
     for (const b of this.city.all()) {
-      if (b.type.id !== 'rail') continue
+      if (b.type.id !== 'rail' && b.type.id !== 'overpass') continue // the track runs on under a road bridge
       const c = tileToWorld(b.tile)
       const mask = roadMask(b.tile, this.city.isRail)
       // A lone tile, or the end of a line, still shows a short straight piece.

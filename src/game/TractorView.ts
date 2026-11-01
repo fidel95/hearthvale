@@ -9,6 +9,7 @@ import { findPath } from './pathfinding'
 import { Polyline } from './routes'
 import { isRiver, isRock } from './terrain'
 import { PRIORITY, type RoadSpace } from './roadSpace'
+import { liftVehicle } from './bridges'
 
 // The Tractor Shed's tractor: it drives out to each field with a ripe or
 // withered crop, makes a pass across it, and Game harvests (or clears) it and
@@ -161,8 +162,10 @@ export class TractorView {
     const speed = t.state === 'pass' ? PASS_SPEED : SPEED
     t.s = Math.min(t.line.length, t.s + speed * dt)
     const pose = t.line.at(t.s)
-    t.object.position.set(pose.x, 0.03 + Math.abs(Math.sin(t.s * 9)) * 0.008, pose.z)
+    t.object.position.set(pose.x, 0, pose.z)
     t.object.rotation.y = pose.angle
+    liftVehicle(this.city, t.object) // over a road bridge
+    t.object.position.y += 0.03 + Math.abs(Math.sin(t.s * 9)) * 0.008
     for (const w of t.wheels) w.rotation.z -= (speed * dt) / (w.name === 'wheel-back' ? 0.17 : 0.09)
     if (t.s < t.line.length) return
 

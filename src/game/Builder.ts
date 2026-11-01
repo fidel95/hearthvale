@@ -1,6 +1,6 @@
 import * as THREE from 'three'
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
-import { footprint, type BuildingType, type Rotation, isDrawn, isTrack, isPlot } from './buildings'
+import { footprint, type BuildingType, type Rotation, isDrawn, isTrack, isPlot, OVERPASS_TYPE } from './buildings'
 import type { CameraController, Carry } from './CameraController'
 import { duration, outOfEnergyMessage } from '../ui/dom'
 import { sizeOf, type City, type PlacedBuilding } from './City'
@@ -412,21 +412,33 @@ export class Builder {
     steps.push({ x, z })
     while (x !== tile.x) steps.push({ x: (x += Math.sign(tile.x - x)), z })
     while (z !== tile.z) steps.push({ x, z: (z += Math.sign(tile.z - z)) })
-    for (const t of steps) {
-      // Drawing one kind of road over another swaps it (a dirt road paved into an avenue, say).
-      const other = this.city.buildingAt(t)
-      const swap = other && type.category === 'road' && other.type.category === 'road' && other.type !== type
-      if (!swap && !this.city.canPlace(type, t)) continue
-      if (!this.placement.freeBuild && !this.city.canAfford(type)) {
-        if (first) this.onNotice?.(`Not enough coins for a ${type.name}`)
-        break
-      }
-      if (swap) this.city.remove(other.id)
-      this.city.place(type, t, { free: this.placement.freeBuild, basis: this.placement.freeBuild ? 0 : type.cost })
-    }
+    this.lay(type, steps, first)
     this.lastPainted = tile
     this.hoverTile = tile
     this.refresh()
+  }
+
+  // Lay road (or track, a path, a hedge...) on each of these tiles that'll
+  // take it. Returns how many it laid.
+  private lay(type: BuildingType, tiles: Tile[], first: boolean): number {
+    let laid = 0
+    for (const t of tiles) {
+      const other = this.city.buildingAt(t)
+      // A road across the track, or track across a road, makes a road bridge (bridges.ts).
+      const bridge =
+        other && other.type.id !== OVERPASS_TYPE.id && ((type.category === 'road' && other.type.id === 'rail') || (type.id === 'rail' && other.type.category === 'road'))
+      // Drawing one kind of road over another swaps it (a dirt road paved into an avenue, say).
+      const swap = !bridge && other && type.category === 'road' && other.type.category === 'road' && other.type !== type && other.type.id !== OVERPASS_TYPE.id
+      const placing = bridge ? OVERPASS_TYPE : type
+      if (!swap && !bridge && !this.city.canPlace(type, t)) continue
+      if (!this.placement.freeBuild && !this.city.canAfford(placing)) {
+        if (first) this.onNotice?.(`Not enough coins for a ${placing.name}`)
+        break
+      }
+      if (other && (swap || bridge)) this.city.remove(other.id)
+      if (this.city.place(placing, t, { free: this.placement.freeBuild, basis: this.placement.freeBuild ? 0 : placing.cost })) laid++
+    }
+    return laid
   }
 
   // Is there income to collect here, or a ripe crop to harvest?
@@ -632,6 +644,14 @@ export class Builder {
   // and flower beds skip this: they're drawn. (Also used by "Build here" on an empty tile.)
   private buildAt(type: BuildingType, tile: Tile) {
     const anchor = anchorFor(type, tile, this.rotation)
+    // A tap with road or track: lay it there (over the other, a bridge).
+    if (isTrack(type)) {
+      if (this.lay(type, [anchor], true) === 0) {
+        const check = this.placement.check(type, { tile: anchor, rotation: this.rotation })
+        if (!check.ok) this.onNotice?.(check.problems[0])
+      }
+      return
+    }
     if (isDrawn(type) || !this.confirmPurchases) {
       const check = this.placement.check(type, { tile: anchor, rotation: this.rotation })
       if (!check.ok) this.onNotice?.(check.problems[0])

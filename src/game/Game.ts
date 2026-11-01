@@ -37,7 +37,7 @@ import type { Neighbor } from './neighborData'
 import { Visit } from './Visit'
 import { GRANT, canClaimGrant } from './safetyNet'
 import { CROPS_BY_ID, CROP_TYPES } from './crops'
-import { BUILDING_TYPES, isTrack } from './buildings'
+import { BUILDING_TYPES, BUILDINGS_BY_ID, OVERPASS_TYPE, isTrack } from './buildings'
 import { FEATURE_LEVELS } from './UnlockSystem'
 import { MONTH_MS, MONTH_NAMES, YEAR_MS } from './GameClock'
 import { QualityGovernor, type QualityLevel } from './quality'
@@ -637,7 +637,11 @@ export class Game {
         button('Keep', () => confirmRemove.close(), 'panel-button secondary'),
         button('Remove', () => {
           confirmRemove.close()
-          for (const b of list) this.city.remove(b.id)
+          for (const b of list) {
+            this.city.remove(b.id)
+            // A road bridge goes, but the track under it stays.
+            if (b.type.id === OVERPASS_TYPE.id) this.city.place(BUILDINGS_BY_ID.get('rail')!, b.tile, { free: true, basis: 0 })
+          }
           onDone?.()
         }, 'panel-button danger'),
       )

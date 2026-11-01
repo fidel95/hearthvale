@@ -205,7 +205,8 @@ export class City {
   }
 
   isRoad = (tile: Tile): boolean => this.buildingAt(tile)?.type.category === 'road'
-  isRail = (tile: Tile): boolean => this.buildingAt(tile)?.type.id === 'rail'
+  // A road bridge (bridges.ts) is road and railway both.
+  isRail = (tile: Tile): boolean => this.buildingAt(tile)?.type.id === 'rail' || this.buildingAt(tile)?.type.id === 'overpass'
 
   // The road rule: a road on any tile touching one side of the footprint.
   // (ignoring: pretend this road tile is gone, to check what removing it would cut off.)

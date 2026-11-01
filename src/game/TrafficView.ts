@@ -9,6 +9,7 @@ import { easeShare, turnToward } from './motion'
 import { nextTile, pathToFarthest, Polyline, trainRoute } from './routes'
 import { lightFor, signalJunctions, type Light } from './signals'
 import { PRIORITY, type RoadSpace } from './roadSpace'
+import { liftVehicle } from './bridges'
 
 // Everything that moves along roads and track: cars, buses, trains, and the
 // army's marching squad and patrol jeep. Purely for looks, like PeopleView:
@@ -466,6 +467,7 @@ export class TrafficView {
     if (!car.placed) {
       car.object.position.set(x, 0, z)
       car.object.rotation.y = heading
+      liftVehicle(this.city, car.object)
       car.placed = true
       return
     }
@@ -476,6 +478,8 @@ export class TrafficView {
     car.object.position.x += (x - car.object.position.x) * share
     car.object.position.z += (z - car.object.position.z) * share
     car.object.rotation.y = turnToward(car.object.rotation.y, heading, CORNERING, dt)
+    // Up and over a road bridge.
+    liftVehicle(this.city, car.object)
   }
 
   // ---- Buses
@@ -625,7 +629,10 @@ export class TrafficView {
       }
     }
     const line = s.lines[s.line]
-    if (s.kind === 'bus' || s.kind === 'truck') return place(s.objects[0], line.at(s.s, LANE))
+    if (s.kind === 'bus' || s.kind === 'truck') {
+      place(s.objects[0], line.at(s.s, LANE))
+      return liftVehicle(this.city, s.objects[0])
+    }
     if (s.kind === 'train') {
       // Out, the locomotive leads; back, it pushes from the rear.
       const n = s.objects.length

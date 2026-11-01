@@ -6,6 +6,7 @@ import { roadMask } from './communityRules'
 import { tileToWorld } from './grid'
 import { loadMeshParts } from './models'
 import { isRiver } from './terrain'
+import { BRIDGE_HEIGHT, OVERPASS, bridgeAlongX, liftOnTile } from './bridges'
 
 // Draws every road as one network. Each road tile's shape (straight, corner,
 // T, crossroads, dead end) comes from which neighbors are roads too: see
@@ -20,6 +21,9 @@ import { isRiver } from './terrain'
 //   each side that looks out over the water.
 // - Avenue: in the colors of Kenney's Modular Road Kit, with a raised
 //   median down the middle carrying the kit's double street lamps.
+// - A Road Bridge over the railway (bridges.ts): the road on a deck up on
+//   four piers, with railings, and the road tiles either side ramped up to it
+//   (built up as embankments).
 //
 // All the pieces are merged into one mesh per color, so a town with hundreds
 // of road tiles still costs only a few draw calls; the avenue lamps are drawn
@@ -114,16 +118,20 @@ export class RoadView {
     this.meshes = []
 
     const parts = new Map<string, THREE.BufferGeometry[]>()
+    // The pieces of the tile being drawn, to raise onto a bridge or a ramp.
+    let tilePieces: THREE.BufferGeometry[] = []
     const add = (color: string, geometry: THREE.BufferGeometry) => {
       const list = parts.get(color) ?? []
       list.push(geometry)
       parts.set(color, list)
+      tilePieces.push(geometry)
     }
     const box = (color: string, w: number, h: number, d: number, x: number, y: number, z: number) => add(color, new THREE.BoxGeometry(w, h, d).translate(x, y + h / 2, z))
     const kitLamps: { x: number; z: number; turn: number }[] = []
 
     for (const b of this.city.all()) {
       if (b.type.category !== 'road') continue
+      tilePieces = []
       const style = b.type.road?.style ?? 'asphalt'
       const look = LOOKS[style]
       const top = look.top
@@ -216,6 +224,33 @@ export class RoadView {
         add(POST, new THREE.CylinderGeometry(0.014, 0.02, 0.42, 6).translate(x, 0.21, z))
         add(POST, new THREE.CylinderGeometry(0.05, 0.035, 0.03, 4).rotateY(Math.PI / 4).translate(x, 0.53, z)) // its cap
         add(GLOW.lantern, new THREE.BoxGeometry(0.06, 0.09, 0.06).translate(x, 0.465, z))
+      }
+
+      // A road bridge: the deck's underside, and railings along the sides
+      // over the track; then the whole tile goes up onto it.
+      const bridge = b.type.id === OVERPASS
+      if (bridge) {
+        const alongX = bridgeAlongX(this.city, b.tile)
+        box(BRIDGE.stone, 1, 0.07, 1, c.x, -0.07, c.z)
+        for (const side of [-1, 1]) {
+          const x = c.x + (alongX ? 0 : side * 0.48)
+          const z = c.z + (alongX ? side * 0.48 : 0)
+          box(BRIDGE.rail, alongX ? 1 : 0.025, 0.025, alongX ? 0.025 : 1, x, 0.17, z)
+          for (const along of [-0.4, 0, 0.4]) box(BRIDGE.rail, 0.025, 0.12, 0.025, x + (alongX ? along : 0), 0.05, z + (alongX ? 0 : along))
+        }
+      }
+      // Raise it: the whole deck on a bridge; on a ramp, just the tops, so
+      // what's under them fills in like an embankment.
+      for (const g of tilePieces) {
+        const pos = g.getAttribute('position')
+        for (let i = 0; i < pos.count; i++) {
+          if (!bridge && pos.getY(i) < 0.0005) continue
+          pos.setY(i, pos.getY(i) + liftOnTile(this.city, b.tile, pos.getX(i), pos.getZ(i)))
+        }
+      }
+      // Its piers, at the corners clear of the track.
+      if (bridge) {
+        for (const sx of [-1, 1]) for (const sz of [-1, 1]) box(BRIDGE.stone, 0.09, BRIDGE_HEIGHT - 0.07, 0.09, c.x + sx * 0.4, 0, c.z + sz * 0.4)
       }
     }
 

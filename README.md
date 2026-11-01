@@ -141,6 +141,7 @@ the right on a wide screen) so the town stays in view.
 - **A river through the Highlands**, from the mountains to the sea. Roads cross it as bridges, and construction trucks bring loads to every building site.
 - **Emergencies:** now and then a fire breaks out. Your fire station sends an engine to hose it down, with the police and an ambulance, lights flashing; with no engine coming, tap the 🔥 yourself. Between fires, ambulances and police cars go out on calls.
 - **Traffic lights** at every paved junction; cars stop on red and queue behind each other.
+- **Road bridges over the railway:** draw a road across the track (or track across a road) and it becomes a bridge: the road climbs a ramp, crosses on a deck, and trains run underneath. Tearing down the bridge leaves the track.
 - **Trains** run round a loop of track through the station (stopping there each lap), go out and round a loop at the end of a branch, or run end to end along a plain line.
 - **People and traffic that make room:** residents are animated characters (Kenney's Mini Characters) who walk, stand about, and step aside or slow down rather than walk through each other. Cars, buses, trucks, emergency vehicles and the tractor wait for whatever's in front, take turns through junctions (one car at a time), and a car stuck too long turns back. A yellow submarine dives and surfaces out at sea.
 - **Turn the view** to look from any side; mountains in the way turn see-through.

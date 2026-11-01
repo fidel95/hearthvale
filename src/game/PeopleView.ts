@@ -5,6 +5,7 @@ import { levelFactor } from './construction'
 import { findPath } from './pathfinding'
 import { isTrack } from './buildings'
 import { easeShare, turnToward } from './motion'
+import { roadLift } from './bridges'
 import { SIDEWALK } from './RoadView'
 import { HEIGHT, charactersReady, loadCharacters, makeCharacter, type Character } from './characters'
 
@@ -460,7 +461,9 @@ export class PeopleView {
     const want = new THREE.Vector2(Math.cos(r), -Math.sin(r)).multiplyScalar(walker.aside * STEP_ASIDE).add(walker.push)
     walker.shift.lerp(want, easeShare(6, dt))
     const bob = walking && !walker.character ? Math.abs(Math.sin(walker.phase)) * 0.03 * S : 0
-    walker.object.position.set(pos.x + walker.shift.x, bob, pos.z + walker.shift.y)
+    const x = pos.x + walker.shift.x
+    const z = pos.z + walker.shift.y
+    walker.object.position.set(x, bob + roadLift(this.city, x, z), z) // up and over a road bridge
     const c = walker.character
     if (c) {
       c.play(walking ? 'walk' : 'idle')
