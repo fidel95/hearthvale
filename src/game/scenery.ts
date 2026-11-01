@@ -9,6 +9,9 @@ import { loadMeshParts, NATURE_GREENS } from './models'
 // empty. Purely decoration: it's never saved and never blocks anything, and
 // it's cleared from a lot the moment the town buys it.
 //
+// In lawn mode it's the town's own grass instead: just tufts of long grass,
+// a few flowers and the odd clump of mushrooms on tiles with nothing built.
+//
 // The models come from Kenney's Nature Kit (leafy, autumn and slim trees,
 // bushes, flowers, grass, mushrooms, rocks, stumps) and Mini Forest pack
 // (pines and boulders). Until they've loaded, or if they can't, the
@@ -54,6 +57,9 @@ const KINDS = {
 } satisfies Record<string, Kind>
 type KindName = keyof typeof KINDS
 
+// The kinds that grow in a lawn.
+const LAWN_KINDS: KindName[] = ['grass', 'red', 'yellow', 'purple', 'mushrooms']
+
 // Which kinds a roll can pick, with how often.
 const TREES: [KindName, number][] = [['pine', 3], ['tallPine', 2], ['leafy', 3], ['oak', 3], ['round', 2], ['branchy', 2], ['slim', 2], ['fallOak', 1], ['fallBirch', 1]]
 const ROCKS: [KindName, number][] = [['boulders', 2], ['rock', 2], ['stump', 1], ['logs', 1]]
@@ -63,10 +69,38 @@ const MOUNTAIN_ROCKS: [KindName, number][] = [['boulders', 3], ['rock', 2]]
 const BUSHES: [KindName, number][] = [['bush', 2], ['shrub', 1]]
 const FLOWERS: KindName[] = ['red', 'yellow', 'purple']
 
-interface Part {
+export interface Part {
   geometry: THREE.BufferGeometry
   material: THREE.MeshStandardMaterial
   leaves: boolean // painted a green per copy
+}
+
+// A nature model's parts, sized to its height and standing on the ground at
+// its middle. snow (0 to 1) whitens them, by a shader tweak (tinting can't
+// make the textured ones lighter). Leaves come out white, to be painted a
+// green per copy.
+export async function loadStanding(url: string, node: string | undefined, height: number, snow: { value: number }): Promise<Part[]> {
+  const parts = await loadMeshParts(url, node)
+  const box = new THREE.Box3()
+  for (const p of parts) {
+    p.geometry.computeBoundingBox()
+    box.union(p.geometry.boundingBox!)
+  }
+  const center = box.getCenter(new THREE.Vector3())
+  const scale = height / (box.max.y - box.min.y)
+  return parts.map(({ geometry, material }) => {
+    geometry.translate(-center.x, -box.min.y, -center.z).scale(scale, scale, scale)
+    const leaves = NATURE_GREENS.has(material.name)
+    const m = (material as THREE.MeshStandardMaterial).clone()
+    if (leaves) m.color.set('#ffffff')
+    m.onBeforeCompile = (shader) => {
+      shader.uniforms.snow = snow
+      shader.fragmentShader = shader.fragmentShader
+        .replace('#include <common>', '#include <common>\nuniform float snow;')
+        .replace('#include <color_fragment>', '#include <color_fragment>\ndiffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.94, 0.96, 0.99), snow);')
+    }
+    return { geometry, material: m, leaves }
+  })
 }
 
 // The same "random" choice for a tile every time (so scenery doesn't shuffle
@@ -106,39 +140,22 @@ export class Scenery {
   // the textured ones lighter).
   private snowUniform = { value: 0 }
   private lastOpen: ((tile: Tile) => boolean) | null = null
+  private lawn: boolean
+  private kinds: KindName[]
 
-  constructor(scene: THREE.Scene) {
+  constructor(scene: THREE.Scene, { lawn = false } = {}) {
+    this.lawn = lawn
+    this.kinds = lawn ? LAWN_KINDS : (Object.keys(KINDS) as KindName[])
     scene.add(this.group)
-    void Promise.all((Object.keys(KINDS) as KindName[]).map(async (kind) => (this.models[kind] = await this.load(KINDS[kind]))))
+    void Promise.all(this.kinds.map(async (kind) => (this.models[kind] = await this.load(KINDS[kind]))))
       .then(() => {
         if (this.lastOpen) this.rebuild(this.lastOpen)
       })
       .catch((err) => console.warn("Couldn't load the countryside models; it keeps its round trees", err))
   }
 
-  // A model's parts, sized to its height and standing on the ground.
-  private async load(kind: Kind): Promise<Part[]> {
-    const parts = await loadMeshParts(kind.url, kind.node)
-    const box = new THREE.Box3()
-    for (const p of parts) {
-      p.geometry.computeBoundingBox()
-      box.union(p.geometry.boundingBox!)
-    }
-    const center = box.getCenter(new THREE.Vector3())
-    const scale = kind.height / (box.max.y - box.min.y)
-    return parts.map(({ geometry, material }) => {
-      geometry.translate(-center.x, -box.min.y, -center.z).scale(scale, scale, scale)
-      const leaves = NATURE_GREENS.has(material.name)
-      const m = (material as THREE.MeshStandardMaterial).clone()
-      if (leaves) m.color.set('#ffffff') // each copy's own green comes in as its instance color
-      m.onBeforeCompile = (shader) => {
-        shader.uniforms.snow = this.snowUniform
-        shader.fragmentShader = shader.fragmentShader
-          .replace('#include <common>', '#include <common>\nuniform float snow;')
-          .replace('#include <color_fragment>', '#include <color_fragment>\ndiffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.94, 0.96, 0.99), snow);')
-      }
-      return { geometry, material: m, leaves }
-    })
+  private load(kind: Kind): Promise<Part[]> {
+    return loadStanding(kind.url, kind.node, kind.height, this.snowUniform)
   }
 
   // Scatter scenery on every tile where open(tile) is true.
@@ -155,7 +172,7 @@ export class Scenery {
       this.group.remove(mesh)
     }
 
-    const loaded = Object.keys(this.models).length === Object.keys(KINDS).length
+    const loaded = Object.keys(this.models).length === this.kinds.length
     const trees: (Placed & { color: string })[] = []
     const placed = new Map<KindName, Placed[]>()
     const put = (kind: KindName, p: Placed) => {
@@ -168,6 +185,10 @@ export class Scenery {
     for (let x = 0; x < GRID_SIZE; x++) {
       for (let z = 0; z < GRID_SIZE; z++) {
         if (!open({ x, z })) continue
+        if (this.lawn) {
+          if (loaded) this.lawnTile(x, z, put)
+          continue
+        }
         const mountainside = nearMountain({ x, z }, 2.5)
         const roll = noise(x, z, 1) * (mountainside ? 0.55 : 1)
         const c = tileToWorld({ x, z })
@@ -256,6 +277,25 @@ export class Scenery {
     this.crownColors = trees.map((t) => new THREE.Color(t.color))
     this.bushes = bush
     this.setSnow(this.snow)
+  }
+
+  // A lawn tile: now and then a tuft of long grass, a few flowers, or mushrooms.
+  private lawnTile(x: number, z: number, put: (kind: KindName, p: Placed) => void) {
+    const roll = noise(x, z, 11)
+    if (roll > 0.2) return
+    const c = tileToWorld({ x, z })
+    const green = new THREE.Color(LEAVES[Math.floor(noise(x, z, 5) * LEAVES.length)])
+    const spot = (salt: number, spread: number) => c.clone().add(new THREE.Vector3(noise(x, z, salt) - 0.5, 0, noise(x, z, salt + 1) - 0.5).multiplyScalar(spread))
+    if (roll < 0.13) {
+      // A tuft or two of grass.
+      for (let i = 0; i < 1 + Math.floor(noise(x, z, 12) * 2); i++) put('grass', { at: spot(20 + i * 2, 0.8), size: 0.55 + noise(x, z, 30 + i) * 0.35, turn: noise(x, z, 40 + i) * 6.3, green })
+    } else if (roll < 0.19) {
+      // Three flowers of one color.
+      const kind = FLOWERS[Math.floor(noise(x, z, 13) * FLOWERS.length)]
+      for (let i = 0; i < 3; i++) put(kind, { at: spot(50 + i * 2, 0.6), size: 0.6 + noise(x, z, 60 + i) * 0.3, turn: noise(x, z, 70 + i) * 6.3, green })
+    } else {
+      put('mushrooms', { at: spot(80, 0.5), size: 0.6, turn: noise(x, z, 81) * 6.3, green })
+    }
   }
 
   // A model standing at its spot: turned, sized, and leaning a little from

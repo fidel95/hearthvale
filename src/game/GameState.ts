@@ -21,6 +21,7 @@ import { Quests } from './quests'
 import { Goals } from './goals'
 import { Daily } from './daily'
 import { FarmMarket } from './market'
+import { Wilds } from './wilds'
 import { Services } from './Services'
 import { SettingsStore } from './settings'
 import { Taxes } from './Taxes'
@@ -51,6 +52,7 @@ export class GameState {
   readonly goals: Goals
   readonly daily: Daily
   readonly market: FarmMarket
+  readonly wilds: Wilds
   readonly settings = new SettingsStore()
   readonly tutorial = new Tutorial(this.city)
   readonly army = new Army(this.city)
@@ -78,6 +80,7 @@ export class GameState {
     this.goals = new Goals(this.city, this.player, this.services, this.quests)
     this.daily = new Daily(this.city, this.player)
     this.market = new FarmMarket(this.city, this.player)
+    this.wilds = new Wilds(this.city, this.player, this.inventory)
     this.city.production.cropStars = (crop) => this.goals.cropStars(crop.id)
     this.townEvents = new TownEvents(this.city, this.player, this.quests)
     this.finances = new Finances(this.city, this.taxes, this.clock)
@@ -90,5 +93,7 @@ export class GameState {
       if (start.crop) this.city.production.plant(b.id, CROPS_BY_ID.get(start.crop.cropId)!, { now: now - start.crop.secondsIn * 1000, free: true })
     }
     for (const id of MATERIAL_IDS) this.inventory.add(id, STARTING_MATERIALS[id] ?? 0)
+    // A few trees and rocks to clear on the starting land.
+    for (const { lot } of this.city.ownedLots()) this.wilds.spawnOnLot(lot, 3)
   }
 }

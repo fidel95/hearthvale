@@ -111,6 +111,10 @@ One JSON document in `localStorage` under `hearthvale.save`
   "market": {                                // the Farmers' Market (optional: added with the market)
     "orders": [{ "items": { "eggs": 8, "milk": 3 }, "coins": 144, "xp": 12 }, null, …],
     "nextAt": [0, 1793284700000, 0]          // when each empty slot gets a new order
+  },
+  "wilds": {                                 // trees and rocks on the town's land (optional: added with them)
+    "list": [[34, 27, "tree"], [41, 22, "rock"]], // x, z, kind (tree, pine, rock, bush or stump)
+    "nextGrowAt": 1793286500000              // when the next one springs up
   }
 }
 ```

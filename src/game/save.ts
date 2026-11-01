@@ -12,6 +12,7 @@ import type { QuestsSave } from './quests'
 import type { GoalsSave } from './goals'
 import type { DailySave } from './daily'
 import type { MarketSave } from './market'
+import type { WildsSave } from './wilds'
 import type { Settings } from './settings'
 import type { TaxesSave } from './Taxes'
 import type { ArmySave } from './Army'
@@ -56,6 +57,7 @@ export interface SaveData {
   goals?: GoalsSave // mastery and milestones (added with goals)
   daily?: DailySave // the daily gift calendar (added with daily gifts)
   market?: MarketSave // the Farmers' Market's orders (added with the market)
+  wilds?: WildsSave // trees and rocks growing on the town's land (added with them)
 }
 
 // The City's part of the save, pieced back together from the file's sections.

@@ -14,7 +14,7 @@ import { HelpPanel } from '../ui/HelpPanel'
 import { SettingsPanel } from '../ui/SettingsPanel'
 import { Sound } from '../ui/sound'
 import { QuestsPanel } from '../ui/QuestsPanel'
-import { el } from '../ui/dom'
+import { el, outOfEnergyMessage } from '../ui/dom'
 import { Modal, Sheet, button } from '../ui/Sheet'
 import { DockPanel } from '../ui/DockPanel'
 import { MarketPanel } from '../ui/MarketPanel'
@@ -72,6 +72,9 @@ import { WeatherView } from './WeatherView'
 import { DisasterView } from './DisasterView'
 import { EmergencyView } from './EmergencyView'
 import { TractorView } from './TractorView'
+import { WildsView } from './WildsView'
+import { MATERIALS } from './items'
+import { WILDS } from './wilds'
 import { PortView } from './PortView'
 import { ShipView } from './ShipView'
 import { AutoSaver } from './save'
@@ -155,6 +158,7 @@ export class Game {
   private disasterView: DisasterView
   private emergencyView: EmergencyView
   private tractorView: TractorView
+  private wildsView: WildsView
   private mountains: MountainView
   private flashEl = document.createElement('div')
   private lastSnow = -1
@@ -246,6 +250,7 @@ export class Game {
     this.tractorView.onTend = (plot) => {
       if (this.city.production.tend(plot.id, Date.now())) this.effects.dust(footprintCenter(plot.tile, sizeOf(plot)).setY(0.05), sizeOf(plot))
     }
+    this.wildsView = new WildsView(this.scene, this.state.wilds)
     this.flashEl.className = 'flash'
     container.append(this.flashEl)
     const builder = new Builder(this.scene, this.city, this.player, this.docks, this.cityView, this.controls, this.renderer.domElement)
@@ -372,6 +377,7 @@ export class Game {
     window.setInterval(() => {
       this.city.production.runFactories(Date.now())
       this.state.market.refresh(Date.now())
+      this.state.wilds.update(Date.now())
     }, 1000)
     this.setUpJuice()
 
@@ -404,6 +410,17 @@ export class Game {
     builder.onDockRequest = (dock) => dockPanel.open(dock)
     const marketPanel = new MarketPanel(container, this.city, this.state.market, (message) => this.hud.toast(message))
     builder.onMarketRequest = () => marketPanel.open()
+    // Trees, rocks and bushes on your land: a tap clears one.
+    builder.wildAt = (tile) => !!this.state.wilds.at(tile)
+    this.city.onChange((e) => {
+      if (e.kind === 'land' && e.bought && this.loaded) this.hud.toast('🌳 New land! Tap its trees, rocks and bushes to clear them for coins and XP (and sometimes lumber or bricks).')
+    })
+    builder.onWildTap = (tile) => {
+      const now = Date.now()
+      if (!this.player.hasEnergy(now)) return this.hud.toast(outOfEnergyMessage(this.player, now), 'warn')
+      const cleared = this.state.wilds.clear(tile, now)
+      if (cleared?.material) this.hud.toast(`${WILDS[cleared.wild.kind].icon} Cleared! It left ${MATERIALS[cleared.material].icon} 1 ${MATERIALS[cleared.material].name.toLowerCase()}`)
+    }
     this.incomeView.marketReady = () => this.state.market.anyDeliverable()
 
     this.saver = new AutoSaver(() => this.saves.toSave())
@@ -419,6 +436,7 @@ export class Game {
     // From now on new buildings spring into place (unless motion is reduced).
     this.loaded = true
     this.cityView.popIn = !this.settings.values.reduceMotion
+    this.wildsView.animate = !this.settings.values.reduceMotion
     this.loadProblem = problem
     this.setUpSounds(builder)
     if (this.loadProblem) {
@@ -508,10 +526,12 @@ export class Game {
     this.disasterView.update(Math.min(dt, 100) / 1000)
     this.emergencyView.update(life)
     this.tractorView.update(life)
+    this.wildsView.update(Math.min(dt, 100) / 1000)
     // Snow settling or melting: update the land, trees and hills as it changes.
     if (Math.abs(this.weather.snowCover - this.lastSnow) > 0.02 || (this.weather.snowCover !== this.lastSnow && (this.weather.snowCover === 0 || this.weather.snowCover === 1))) {
       this.lastSnow = this.weather.snowCover
       this.landView.setSnow(this.weather.snowCover)
+      this.wildsView.setSnow(this.weather.snowCover)
       this.mountains.setSnow(this.weather.snowCover)
     }
     this.sound.setRain(this.weather.intensity)
@@ -712,7 +732,7 @@ export class Game {
   private setUpSounds(builder: Builder) {
     this.city.onChange((e) => {
       if (e.kind === 'collected' || e.kind === 'made') this.sound.play('collect')
-      if (e.kind === 'harvested') this.sound.play('harvest')
+      if (e.kind === 'harvested' || e.kind === 'wildCleared') this.sound.play('harvest')
       if (e.kind === 'added' && e.paid > 0) this.sound.play('place')
       if (e.kind === 'finished' || e.kind === 'upgraded') this.sound.play('place')
       if (e.kind === 'goodsIn') this.sound.play('ship')
@@ -815,7 +835,8 @@ export class Game {
     const center = (b: PlacedBuilding) => footprintCenter(b.tile, sizeOf(b))
     const top = (b: PlacedBuilding) => center(b).setY(this.cityView.topOf(b.id))
     window.setInterval(() => (this.flights = 0), 1000)
-    const fly = (b: PlacedBuilding, icon: string, kind: 'coins' | 'xp' | 'goods', count: number) => {
+    const fly = (b: PlacedBuilding, icon: string, kind: 'coins' | 'xp' | 'goods', count: number) => flyFrom(top(b), icon, kind, count)
+    const flyFrom = (at: THREE.Vector3, icon: string, kind: 'coins' | 'xp' | 'goods', count: number) => {
       const chip = this.hud.chip(kind)
       if (!this.effects.enabled || this.flights >= 8) {
         chip.classList.remove('bump')
@@ -824,7 +845,7 @@ export class Game {
         return
       }
       this.flights++
-      flyToHud(this.toScreen(top(b)), icon, chip, count)
+      flyToHud(this.toScreen(at), icon, chip, count)
     }
     this.city.onChange((e) => {
       if (!this.loaded) return
@@ -860,6 +881,14 @@ export class Game {
           this.cityView.bounce(e.building.id)
           fly(e.building, PRODUCTS[e.product].icon, 'goods', 3)
           break
+        case 'wildCleared': {
+          const at = tileToWorld(e.tile)
+          this.effects.dust(at.clone().setY(0.05), { x: 1, z: 1 })
+          this.effects.sparkle(at.clone().setY(0.5), 8)
+          flyFrom(at.clone().setY(0.6), '🪙', 'coins', 2)
+          flyFrom(at.clone().setY(0.6), '⭐', 'xp', 1)
+          break
+        }
       }
     })
     this.player.onChange((e) => {

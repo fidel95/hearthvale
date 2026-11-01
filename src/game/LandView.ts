@@ -39,6 +39,49 @@ function grassNoise(x: number, z: number): number {
 // How far the sea reaches past the edges of the world, so it fades into the distance.
 const SEA_BEYOND = 40
 
+// The lawn's texture: thousands of short blades, a little lighter or darker
+// than a light gray, which the grass colors tint green. One texture covers
+// LAWN_REPEAT tiles each way and repeats, its blades wrapped at the edges so
+// the seams don't show. Drawn once, on a canvas.
+const LAWN_REPEAT = 4
+const LAWN_GRAY = 225
+function lawnTexture(): THREE.CanvasTexture {
+  const size = 512
+  const canvas = document.createElement('canvas')
+  canvas.width = canvas.height = size
+  const ctx = canvas.getContext('2d')!
+  ctx.fillStyle = `rgb(${LAWN_GRAY},${LAWN_GRAY},${LAWN_GRAY})`
+  ctx.fillRect(0, 0, size, size)
+  let seed = 12345
+  const rand = () => (seed = (seed * 16807) % 2147483647) / 2147483647
+  ctx.lineCap = 'round'
+  for (let i = 0; i < 14000; i++) {
+    const x = rand() * size
+    const y = rand() * size
+    const length = 4 + rand() * 7
+    const lean = (rand() - 0.5) * 5
+    const v = rand() < 0.6 ? 150 + rand() * 50 : 245 + rand() * 10
+    ctx.strokeStyle = `rgb(${v},${v},${v})`
+    ctx.lineWidth = 1 + rand() * 1.2
+    // A blade near an edge is drawn again across it, so the texture repeats seamlessly.
+    for (const dx of x < 12 ? [0, size] : x > size - 12 ? [0, -size] : [0]) {
+      for (const dy of y < 12 ? [0, size] : [0]) {
+        ctx.beginPath()
+        ctx.moveTo(x + dx, y + dy)
+        ctx.lineTo(x + dx + lean, y + dy - length)
+        ctx.stroke()
+      }
+    }
+  }
+  const texture = new THREE.CanvasTexture(canvas)
+  texture.wrapS = texture.wrapT = THREE.RepeatWrapping
+  texture.anisotropy = 8
+  return texture
+}
+
+// Mown stripes: every other row of tiles a shade lighter.
+const STRIPE = 0.045
+
 export class LandView {
   // Called when a "for sale" sign is clicked.
   onLotClick?: (lot: Lot) => void
@@ -56,6 +99,15 @@ export class LandView {
   private showSigns: boolean
   private scenery: Scenery
   private snowSheet: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshStandardMaterial> | null = null
+  // Tufts, flowers and mushrooms on the town's empty grass.
+  private lawn: Scenery
+  private lawnTimer = 0
+  private lawnMaterial = new THREE.MeshStandardMaterial({
+    vertexColors: true,
+    map: lawnTexture(),
+    // Brighter than white, so the texture's gray comes out as the grass's own green.
+    color: new THREE.Color(255 / LAWN_GRAY, 255 / LAWN_GRAY, 255 / LAWN_GRAY),
+  })
 
   // showSigns: false for a neighbor's town, where there's nothing for you to buy.
   constructor(scene: THREE.Scene, city: City, { showSigns = true } = {}) {
@@ -71,6 +123,7 @@ export class LandView {
     world.receiveShadow = true
     scene.add(world)
     this.scenery = new Scenery(scene)
+    this.lawn = new Scenery(scene, { lawn: true })
     this.sea = this.createSea()
     scene.add(this.sea, this.createBeach(), this.createRiver(RIVER_HALF_WIDTH + 0.4, COLORS.bank, 0.009), this.createRiver(RIVER_HALF_WIDTH + 0.1, COLORS.river, 0.013))
 
@@ -79,6 +132,7 @@ export class LandView {
       // The price shown on every sign goes up after each purchase, and
       // whether you can afford it changes with coins.
       if (event.kind === 'coins') this.refreshSigns()
+      if (['added', 'removed', 'moved', 'stored', 'restored'].includes(event.kind)) this.rebuildLawn()
     })
     this.rebuild()
   }
@@ -109,10 +163,17 @@ export class LandView {
           const c = tileToWorld(tile)
           const square = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2).translate(c.x, 0.005, c.z)
           // Each corner takes the grass color at its spot, so colors blend smoothly across tiles.
+          // And the lawn texture runs on across tiles, by where each corner is in the world.
           const pos = square.getAttribute('position')
           const colors: number[] = []
-          for (let v = 0; v < pos.count; v++) colors.push(...shadeAt(pos.getX(v), pos.getZ(v)).toArray())
+          const uvs: number[] = []
+          const stripe = tile.x % 2 === 0 ? 1 + STRIPE : 1 - STRIPE
+          for (let v = 0; v < pos.count; v++) {
+            colors.push(...shadeAt(pos.getX(v), pos.getZ(v)).multiplyScalar(stripe).toArray())
+            uvs.push(pos.getX(v) / LAWN_REPEAT, pos.getZ(v) / LAWN_REPEAT)
+          }
           square.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3))
+          square.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2))
           squares.push(square)
         }
       }
@@ -124,7 +185,7 @@ export class LandView {
         lines.push(x0, 0.01, z0 + i, x0 + LOT_SIZE, 0.01, z0 + i)
       }
     }
-    this.owned = new THREE.Mesh(mergeGeometries(squares), new THREE.MeshStandardMaterial({ vertexColors: true }))
+    this.owned = new THREE.Mesh(mergeGeometries(squares), this.lawnMaterial)
     this.owned.receiveShadow = true
     for (const g of squares) g.dispose()
     const lineGeometry = new THREE.BufferGeometry()
@@ -135,6 +196,7 @@ export class LandView {
     this.scene.add(this.owned, this.grid)
     // Scenery everywhere that isn't the town's, the sea or the beach.
     this.scenery.rebuild((t) => !this.city.ownsTile(t) && t.z < coastZ(t.x) - 2 && !isRock(t) && riverDistance(t.x + 0.5, t.z + 0.5) > RIVER_HALF_WIDTH + 0.6)
+    this.rebuildLawn()
 
     // A sign on every lot that could be bought next.
     for (const sign of this.signs.values()) sign.removeFromParent()
@@ -146,6 +208,23 @@ export class LandView {
       }
     }
     this.refreshSigns()
+  }
+
+  // The lawn's tufts and flowers, on owned tiles with nothing built. Building
+  // (a road drawn tile by tile) can change many tiles quickly, so it waits a
+  // moment and redoes them all once.
+  private rebuildLawn() {
+    window.clearTimeout(this.lawnTimer)
+    this.lawnTimer = window.setTimeout(() => {
+      this.lawn.rebuild(
+        (t) =>
+          this.city.ownsTile(t) &&
+          !this.city.buildingAt(t) &&
+          t.z < coastZ(t.x) - 2 &&
+          !isRock(t) &&
+          riverDistance(t.x + 0.5, t.z + 0.5) > RIVER_HALF_WIDTH + 0.6,
+      )
+    }, 150)
   }
 
   // Snow mode: a blanket of snow over the land (roads, farm fields and the
@@ -163,6 +242,7 @@ export class LandView {
     this.snowSheet.material.opacity = amount * 0.92
     this.snowSheet.visible = amount > 0.01
     this.scenery.setSnow(amount)
+    this.lawn.setSnow(amount)
   }
 
   // Trees in the countryside sway in the breeze.

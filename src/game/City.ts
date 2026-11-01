@@ -19,6 +19,7 @@ import {
 import { START_LOTS, START_LOT_VALUE, expansionPrice } from './land'
 import { edgeTiles } from './communityRules'
 import type { ProductId, Recipe } from './products'
+import type { WildKind } from './wilds'
 import { isRiver, isRock, isWater, nearMountain } from './terrain'
 
 // The city's state: coins, which buildings exist and which tiles they cover.
@@ -134,6 +135,8 @@ export type CityEvent =
   // A disaster damaged it, or it was repaired (Disasters.ts).
   | { kind: 'damaged'; building: PlacedBuilding; cause: string }
   | { kind: 'repaired'; building: PlacedBuilding; cost: number }
+  // A tree, boulder or bush on the town's land was cleared (wilds.ts); the coins come as an award.
+  | { kind: 'wildCleared'; tile: Tile; wild: WildKind; coins: number; xp: number }
 
 export class City {
   private buildings = new Map<number, PlacedBuilding>()

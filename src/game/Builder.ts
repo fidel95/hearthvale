@@ -53,6 +53,9 @@ export class Builder {
   // An idle dock was tapped: show the shipments to order.
   onDockRequest?: (dock: PlacedBuilding) => void
   onMarketRequest?: () => void
+  // Is a tree, rock or bush growing on this tile (wilds.ts)? Tapping one clears it.
+  wildAt?: (tile: Tile) => boolean
+  onWildTap?: (tile: Tile) => void
   // Tapping an empty tile of your land offers "Build here" (Game opens the
   // build menu); tapping land you could buy offers it.
   onBuildHere?: (tile: Tile) => void
@@ -577,6 +580,7 @@ export class Builder {
         this.showTileMenu(null)
         if (clicked && clicked !== this.selected && this.hasQuickAction(clicked, Date.now())) this.tap(clicked)
         else if (clicked || this.selected) this.select(clicked && clicked !== this.selected ? clicked : null)
+        else if (this.wildAt?.(tile)) this.onWildTap?.(tile)
         // An empty tile: on your land, offer to build there; next to it, offer the land.
         else if (this.city.ownsTile(tile) && !menuWasHere) this.showTileMenu(tile)
         else if (!this.city.ownsTile(tile) && this.city.canBuyLot(lotOf(tile))) this.onLotRequest?.(lotOf(tile))
