@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { nextTile, pathToFarthest, Polyline, reachable, trackNeighbors } from './routes'
+import { nextTile, pathToFarthest, Polyline, reachable, trackNeighbors, trainRoute } from './routes'
 
 // A small network: a line along z = 5 from x = 0 to 6, with a branch up from x = 3.
 const tiles = new Set(['0,5', '1,5', '2,5', '3,5', '4,5', '5,5', '6,5', '3,4', '3,3'])
@@ -38,5 +38,40 @@ describe('routes', () => {
     // Heading +x, the right-hand side is +z.
     expect(line.at(1, 0.2)).toMatchObject({ x: 1, z: 0.2 })
     expect(line.at(99)).toMatchObject({ x: 2, z: 2 })
+  })
+})
+
+describe('Train routes', () => {
+  // A ring of track: the edge of the square from (0,0) to (5,5).
+  const ring = new Set<string>()
+  for (let i = 0; i <= 5; i++) for (const t of [`${i},0`, `${i},5`, `0,${i}`, `5,${i}`]) ring.add(t)
+  const onRing = (t: { x: number; z: number }) => ring.has(`${t.x},${t.z}`)
+  const adjacent = (a: { x: number; z: number }, b: { x: number; z: number }) => Math.abs(a.x - b.x) + Math.abs(a.z - b.z) === 1
+
+  it('goes all the way round a loop through the station, back to it', () => {
+    const route = trainRoute({ x: 2, z: 0 }, onRing)
+    expect(route.loop).toBe(true)
+    expect(route.tiles[0]).toEqual({ x: 2, z: 0 })
+    expect(route.tiles.at(-1)).toEqual({ x: 2, z: 0 })
+    expect(new Set(route.tiles.map((t) => `${t.x},${t.z}`)).size).toBe(ring.size) // every tile of it
+    for (let i = 1; i < route.tiles.length; i++) expect(adjacent(route.tiles[i - 1], route.tiles[i])).toBe(true)
+  })
+
+  it('out along a branch to a loop, round it, and back', () => {
+    const lollipop = new Set([...ring, '2,6', '2,7', '2,8'])
+    const route = trainRoute({ x: 2, z: 8 }, (t) => lollipop.has(`${t.x},${t.z}`))
+    expect(route.loop).toBe(false)
+    expect(route.tiles[0]).toEqual({ x: 2, z: 8 })
+    expect(route.tiles.at(-1)).toEqual({ x: 2, z: 8 })
+    expect(new Set(route.tiles.map((t) => `${t.x},${t.z}`)).size).toBe(lollipop.size)
+    for (let i = 1; i < route.tiles.length; i++) expect(adjacent(route.tiles[i - 1], route.tiles[i])).toBe(true)
+  })
+
+  it('on a plain line, from end to end, stopping at a station partway', () => {
+    const line = (t: { x: number; z: number }) => t.z === 0 && t.x >= 0 && t.x <= 8
+    const route = trainRoute({ x: 3, z: 0 }, line)
+    expect(route.loop).toBe(false)
+    expect(route.tiles).toHaveLength(9)
+    expect(route.tiles[route.station]).toEqual({ x: 3, z: 0 })
   })
 })

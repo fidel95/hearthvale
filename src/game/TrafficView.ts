@@ -6,7 +6,7 @@ import { findPath } from './pathfinding'
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
 import { construction, DUMP_TRUCK_TURN, modelCopy, modelFitted } from './models'
 import { easeShare, turnToward } from './motion'
-import { nextTile, pathToFarthest, Polyline } from './routes'
+import { nextTile, pathToFarthest, Polyline, trainRoute } from './routes'
 import { lightFor, signalJunctions, type Light } from './signals'
 import { PRIORITY, type RoadSpace } from './roadSpace'
 
@@ -23,7 +23,10 @@ import { PRIORITY, type RoadSpace } from './roadSpace'
 // - Buses: one per bus stop (up to two), looping from stop to stop and
 //   pausing at each; with a single stop, out to the far end and back.
 // - Trains: from the station to the far end of the line and back, pausing at
-//   each end; the locomotive pulls going out and pushes coming back.
+//   each end; the locomotive pulls going out and pushes coming back. On a
+//   loop of track through the station it goes round and round instead,
+//   stopping at the station each time; out to a loop at the end of a branch,
+//   it goes round that and back. A station partway along a line is a stop.
 // - Army: a jeep patrols the roads (the base's own life is ArmyView).
 // - Construction trucks: while a building is going up, a truck comes in from
 //   the far end of the road to the site, waits while it unloads, drives off,
@@ -216,6 +219,7 @@ interface Shuttle {
   spacing: number // distance between the train's carriages, or the squad's rows
   kind: 'bus' | 'train' | 'truck'
   phase: number
+  loop?: boolean // a train going round a loop: it carries on round, rather than starting the line over
 }
 
 export class TrafficView {
@@ -524,10 +528,13 @@ export class TrafficView {
     const station = all.find((b) => b.type.id === 'train-station' && this.city.isOperating(b))
     const start = station && edgeTiles(station).find(this.city.isRail)
     if (!start) return
-    const path = pathToFarthest(start, this.city.isRail)
+    const route = trainRoute(start, this.city.isRail)
+    const path = route.tiles
     if (path.length < 3) return
     const out = new Polyline(path.map(center))
     const back = new Polyline([...path].reverse().map(center))
+    // How far along the run the station is (where it stops on the way).
+    const atStation = new Polyline(path.slice(0, route.station + 1).map(center)).length
     const spacing = 0.8
     const carriages = Math.max(1, Math.min(3, Math.floor(out.length / spacing) - 1))
     // Coaches behind the engine, and now and then a goods wagon at the end.
@@ -538,9 +545,21 @@ export class TrafficView {
     ]
     for (const o of objects) this.scene.add(o)
     const length = spacing * (objects.length - 1)
+    if (route.loop) {
+      // Round and round, from the station, stopping there each time.
+      this.shuttles.push({
+        kind: 'train', objects, lines: [out], line: 0, s: 0, loop: true,
+        stops: [[out.length]], nextStop: 0, pause: PAUSE.train, pauseFor: PAUSE.train,
+        speed: SPEED.train, spacing, phase: 0,
+      })
+      return
+    }
+    const midway = atStation > 0.5 && atStation < out.length - 0.5
+    const s = Math.max(length, atStation)
+    const stops = midway ? [[atStation, out.length], [back.length - atStation, back.length]] : [[out.length], [back.length]]
     this.shuttles.push({
-      kind: 'train', objects, lines: [out, back], line: 0, s: length,
-      stops: [[out.length], [back.length]], nextStop: 0, pause: PAUSE.train, pauseFor: PAUSE.train,
+      kind: 'train', objects, lines: [out, back], line: 0, s,
+      stops, nextStop: stops[0].findIndex((d) => d > s), pause: PAUSE.train, pauseFor: PAUSE.train,
       speed: SPEED.train, spacing, phase: 0,
     })
   }
@@ -591,10 +610,18 @@ export class TrafficView {
       }
       const line = s.lines[s.line]
       if (s.s >= line.length && s.pause <= 0) {
-        // End of the line: a loop starts over; out-and-back turns around.
-        s.line = (s.line + 1) % s.lines.length
-        s.s = s.kind === 'train' ? s.spacing * (s.objects.length - 1) : 0
-        s.nextStop = 0
+        if (s.loop) {
+          // Round the loop again (the carriages behind are still coming round).
+          s.s -= line.length
+          s.nextStop = 0
+        } else {
+          // End of the line: a bus loop starts over; out-and-back turns around.
+          s.line = (s.line + 1) % s.lines.length
+          s.s = s.kind === 'train' ? s.spacing * (s.objects.length - 1) : 0
+          // Stops it's already past (the train's own length in) don't count.
+          const ahead = s.stops[s.line].findIndex((d) => d > s.s)
+          s.nextStop = ahead < 0 ? s.stops[s.line].length : ahead
+        }
       }
     }
     const line = s.lines[s.line]
@@ -604,7 +631,8 @@ export class TrafficView {
       const n = s.objects.length
       for (let i = 0; i < n; i++) {
         const object = s.line === 0 ? s.objects[i] : s.objects[n - 1 - i]
-        place(object, line.at(s.s - i * s.spacing))
+        const d = s.s - i * s.spacing
+        place(object, line.at(s.loop ? ((d % line.length) + line.length) % line.length : d))
       }
     }
   }

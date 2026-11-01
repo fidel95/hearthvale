@@ -1,8 +1,8 @@
 import { inBounds, type Tile } from './grid'
 
 // Route-finding for things that move along roads and track (TrafficView):
-// cars wander, buses go from stop to stop, trains shuttle to the end of the
-// line, soldiers march out and back. Pure functions on tiles, so they can be
+// cars wander, buses go from stop to stop, trains run round loops or from end
+// to end of the line, soldiers march out and back. Pure functions on tiles, so they can be
 // tested without drawing anything.
 
 export type IsTrack = (tile: Tile) => boolean
@@ -50,6 +50,75 @@ export function pathToFarthest(start: Tile, isTrack: IsTrack): Tile[] {
   let best = [start]
   for (const path of reachable(start, isTrack).values()) if (path.length > best.length) best = path
   return best
+}
+
+// The shortest way from a to b, not passing through any tile in avoid.
+function pathAvoiding(a: Tile, b: Tile, isTrack: IsTrack, avoid: Set<string>): Tile[] | null {
+  const key = (t: Tile) => `${t.x},${t.z}`
+  const paths = new Map<string, Tile[]>([[key(a), [a]]])
+  const queue = [a]
+  while (queue.length > 0) {
+    const at = queue.shift()!
+    if (same(at, b)) return paths.get(key(at))!
+    for (const next of trackNeighbors(at, isTrack)) {
+      if (paths.has(key(next)) || avoid.has(key(next))) continue
+      paths.set(key(next), [...paths.get(key(at))!, next])
+      queue.push(next)
+    }
+  }
+  return null
+}
+
+// A loop of track through tile at: out by one neighbor and back in by
+// another (the biggest such loop), as the tiles from at round to the last
+// before it. Null if no loop runs through it.
+function loopThrough(at: Tile, isTrack: IsTrack, avoid: Set<string>): Tile[] | null {
+  const key = (t: Tile) => `${t.x},${t.z}`
+  const ways = trackNeighbors(at, isTrack).filter((t) => !avoid.has(key(t)))
+  let best: Tile[] | null = null
+  for (let i = 0; i < ways.length; i++) {
+    for (let j = i + 1; j < ways.length; j++) {
+      const round = pathAvoiding(ways[i], ways[j], isTrack, new Set([...avoid, key(at)]))
+      if (round && round.length >= 3 && (!best || round.length + 1 > best.length)) best = [at, ...round]
+    }
+  }
+  return best
+}
+
+// A train's run from its station (start), over as much of the line as it
+// can. tiles is the run, and station the index in it where the station is.
+// - The station on a loop: round and round it (loop; tiles end back at the station).
+// - A branch out to a loop: out along the branch, round the loop and back
+//   (then the same the other way round).
+// - A plain line: from one end to the other, through the station, and back.
+export interface TrainRoute {
+  tiles: Tile[]
+  loop: boolean
+  station: number
+}
+
+export function trainRoute(start: Tile, isTrack: IsTrack): TrainRoute {
+  const key = (t: Tile) => `${t.x},${t.z}`
+  const circle = loopThrough(start, isTrack, new Set())
+  if (circle) return { tiles: [...circle, start], loop: true, station: 0 }
+  // Along the branch from the station to the first junction, if there's a loop there.
+  const branch = [start]
+  let prev: Tile | null = null
+  let at = start
+  for (;;) {
+    const onward = trackNeighbors(at, isTrack).filter((t) => !prev || !same(t, prev))
+    if (onward.length !== 1 || branch.length > 2000) break
+    prev = at
+    at = onward[0]
+    branch.push(at)
+  }
+  const ring = branch.length > 1 ? loopThrough(at, isTrack, new Set(branch.slice(0, -1).map(key))) : null
+  if (ring) return { tiles: [...branch, ...ring.slice(1), ...[...branch].reverse()], loop: false, station: 0 }
+  // A line: end to end, through the station if it's on the way.
+  const end = pathToFarthest(start, isTrack).at(-1)!
+  const across = pathToFarthest(end, isTrack)
+  const station = across.findIndex((t) => same(t, start))
+  return station >= 0 ? { tiles: across, loop: false, station } : { tiles: pathToFarthest(start, isTrack), loop: false, station: 0 }
 }
 
 // ---- Moving along a path
