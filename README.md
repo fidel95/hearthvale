@@ -84,12 +84,13 @@ the right on a wide screen) so the town stays in view.
 | Turn the view | 🔄, or Q / E | 🔄, or twist two fingers |
 | Collect, harvest, restock, finish, unload | Click the building or its bubble | Tap |
 | Select a building (context menu) | Click it when it has nothing ready | Tap |
-| Draw roads | Drag with Road selected | Drag |
+| Place a building | Drag it into place, then ✓ (or Enter); R turns it | Drag it into place, then ✓ |
+| Draw roads | Drag with Road selected, then ✓ | Drag, then ✓ |
 | Close a menu | Esc, ✕, or click the map | ✕ or tap the map |
 
 ### The screens
 
-- **Build:** tabs for homes, businesses, community, farms, roads and decor. Each card shows a picture, price, size and what it earns; locked ones say which level unlocks them, and ones you can't afford say how much more you need. Pick a card to preview everything about it, press **Place**, tap the map, then ✓ to buy (✕ to try elsewhere). Roads are drawn by dragging.
+- **Build:** tabs for homes, businesses, community, farms, roads and decor. Each card shows a picture, price, size and what it earns; locked ones say which level unlocks them, and ones you can't afford say how much more you need. Pick a card to preview everything about it, press **Place**, and the building appears on the nearest free spot, standing on its tiles (green where they're free, red where something's in the way). Drag it or tap a spot to move it, ⟳ to turn it, then ✓ to buy; the next one waits beside it. Roads, track, paths, hedges and flower beds are drawn by dragging (drag back to rub out, tap a tile to add or remove it) and built together with ✓.
 - **Context menu:** tap a building to select it: its name, what it's doing, and **Details**, **Move**, **Store** and **Remove**.
 - **Building details:** status; a progress bar for production, a growing crop, construction or a ship; the shop's stock; location and utility effects; its value and property tax; and actions: Collect, Restock, Finish, Upgrade, Move, Store, Remove.
 - **Quests:** active quests with task progress and rewards, what's coming next and why it's locked, your level and what the next levels unlock, achievements with three stars each, and finished quests. A red badge on Quests means a reward is waiting.

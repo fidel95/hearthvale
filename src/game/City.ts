@@ -291,16 +291,19 @@ export class City {
     return this.economy.canAfford(type.cost)
   }
 
+  // Could this tile take part of this building: in bounds, the town's land,
+  // not sea or rock, and empty (ignoreId: a building being moved may overlap
+  // itself)? Only roads go over the river (as bridges).
+  tileFree(type: BuildingType, t: Tile, ignoreId?: number): boolean {
+    if (!inBounds(t) || !this.ownsTile(t) || isWater(t) || isRock(t)) return false
+    if (isRiver(t) && type.category !== 'road') return false
+    const id = this.occupied[t.z * GRID_SIZE + t.x]
+    return id === null || id === ignoreId
+  }
+
   // ignoreId lets a building being moved (or turned) overlap its own current spot.
   canPlace(type: BuildingType, tile: Tile, ignoreId?: number, rotation: Rotation = 0): boolean {
-    const fits = footprintTiles(tile, footprint(type, rotation)).every((t) => {
-      if (!inBounds(t) || !this.ownsTile(t) || isWater(t) || isRock(t)) return false
-      // Only roads go over the river (as bridges).
-      if (isRiver(t) && type.category !== 'road') return false
-      const id = this.occupied[t.z * GRID_SIZE + t.x]
-      return id === null || id === ignoreId
-    })
-    if (!fits) return false
+    if (!footprintTiles(tile, footprint(type, rotation)).every((t) => this.tileFree(type, t, ignoreId))) return false
     // Docks stand on the shore: at least two of the tiles along their edges must be sea.
     if (type.onShore) return edgeTiles({ type, tile, rotation }).filter(isWater).length >= 2
     // Highland buildings stand at the foot of a mountain: one of their tiles right beside its rock.

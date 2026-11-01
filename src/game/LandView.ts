@@ -26,6 +26,8 @@ import { RIVER, RIVER_HALF_WIDTH, coastZ, isRock, isWater, riverDistance } from 
 // Owned grass is a natural lawn: greens that drift softly across the land,
 // with darker and sunnier patches. Land beyond the town is a paler green,
 // still clearly not yours.
+const GRID_FAINT = 0.28
+const GRID_STRONG = 0.6 // while building, so every tile is easy to see
 const COLORS = { owned: ['#69c055', '#93db6e', '#4ea544'], unowned: '#a8dc8c', grid: '#ffffff', sand: '#f6e3a4', sea: '#2fa3e0', river: '#3cb0e6', bank: '#d8c68e' }
 
 // Smooth noise (0 to 1) over the ground, so the grass varies gently instead
@@ -100,6 +102,7 @@ export class LandView {
   private signs = new Map<string, CSS2DObject>()
   private sea: THREE.Mesh<THREE.BufferGeometry, THREE.MeshStandardMaterial>
   private gridVisible = true
+  private gridStrong = false
   // With reduced motion the sea holds still.
   calmSea = false
 
@@ -205,7 +208,7 @@ export class LandView {
     const lineGeometry = new THREE.BufferGeometry()
     lineGeometry.setAttribute('position', new THREE.Float32BufferAttribute(lines, 3))
     // Faint white lines: there to build by, not to look at.
-    this.grid = new THREE.LineSegments(lineGeometry, new THREE.LineBasicMaterial({ color: COLORS.grid, transparent: true, opacity: 0.28 }))
+    this.grid = new THREE.LineSegments(lineGeometry, new THREE.LineBasicMaterial({ color: COLORS.grid, transparent: true, opacity: this.gridStrong ? GRID_STRONG : GRID_FAINT }))
     this.grid.visible = this.gridVisible
     this.scene.add(this.owned, this.grid)
     // Scenery everywhere that isn't the town's, the sea or the beach.
@@ -332,9 +335,13 @@ export class LandView {
     this.scenery.sway(seconds)
   }
 
-  setGridVisible(visible: boolean) {
+  // strong: clearer lines, while building.
+  setGridVisible(visible: boolean, strong = false) {
     this.gridVisible = visible
-    if (this.grid) this.grid.visible = visible
+    this.gridStrong = strong
+    if (!this.grid) return
+    this.grid.visible = visible
+    ;(this.grid.material as THREE.LineBasicMaterial).opacity = strong ? GRID_STRONG : GRID_FAINT
   }
 
   // Called every frame: a slow swell across the sea.

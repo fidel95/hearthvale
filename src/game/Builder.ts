@@ -7,9 +7,10 @@ import { sizeOf, type City, type PlacedBuilding } from './City'
 import type { CityView } from './CityView'
 import { cropState } from './crops'
 import type { Docks } from './Docks'
-import { footprintCenter, footprintTiles, lotOf, worldToTile, type Lot, type Tile } from './grid'
+import { footprintCenter, footprintTiles, lotOf, tileToWorld, worldToTile, type Lot, type Tile } from './grid'
 import { createBuildingObject } from './models'
-import type { PlacementSystem, Spot } from './PlacementSystem'
+import type { PlacementCheck, PlacementSystem } from './PlacementSystem'
+import { TileCells, type Cell } from './TileCells'
 import { PRODUCTS, inputsText, soldBy } from './products'
 import { MARKET_ID } from './market'
 import { collectReach } from './progression'
@@ -23,7 +24,9 @@ export type Mode =
   | { kind: 'restore'; building: PlacedBuilding } // placing a stored building back
   | { kind: 'removeRoads'; picked: Set<number> } // picking road tiles to remove together
 
-const COLORS = { hover: '#ffffff', ok: '#4ade80', blocked: '#ef4444' }
+const COLORS = { hover: '#ffffff', ok: '#4ade80', warn: '#facc15', blocked: '#ef4444' }
+// How far (in tiles) to look for an empty spot to put a new building down.
+const SEARCH_RADIUS = 10
 
 // The pointer's tile should sit near the middle of a big footprint, not at its
 // corner, so shift the footprint back by half its size.
@@ -33,8 +36,16 @@ function anchorFor(type: BuildingType, tile: Tile, rotation: Rotation): Tile {
 }
 
 // Handles taps on the map: collecting and tending buildings, selecting one
-// for its context menu, placing new buildings (a ghost preview, then ✓ to buy)
-// and moving them. Shows the colored footprint under the pointer.
+// for its context menu, placing new buildings and moving them.
+//
+// Placing is two steps, so nothing lands where you didn't mean it to:
+// - A building appears straight away on the nearest empty spot, as a
+//   see-through copy standing on colored tiles (green where a tile is free,
+//   red where it isn't). Drag it (or tap a spot) to move it, ⟳ to turn it,
+//   then ✓ to buy it, and the next one is ready beside it.
+// - Roads, track, paths, hedges and flower beds are drawn: drag along the
+//   tiles (back over them to undo), tap single tiles in or out, and ✓ builds
+//   the lot.
 export class Builder {
   mode: Mode = { kind: 'select' }
   private modeListeners: ((mode: Mode) => void)[] = []
@@ -83,7 +94,8 @@ export class Builder {
   private docks: Docks
   // Whether the spot under the pointer works, in words (not just green or red).
   onPlacementInfo?: (text: string | null) => void
-  // Settings: when false, a tap buys and places right away, without the ✓ step.
+  // Settings: when false, a tap buys and places right away (and a drawn
+  // road is built as soon as you let go), without the ✓ step.
   confirmPurchases = true
   // Every placement rule (unlocks, coins, room, rating, fit, roads). Game sets it.
   placement!: PlacementSystem
@@ -92,20 +104,25 @@ export class Builder {
   private hoverTile: Tile | null = null
   private footprint: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>
   private ghost: THREE.Group | null = null
+  // The tiles under whatever's being placed, each green or red.
+  private cells: TileCells
   // While placing a community building: the area its bonus reaches.
   private area: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>
-  // The last tile painted in a road drag, to fill in tiles a fast drag skips over.
-  private lastPainted: Tile | null = null
-  // Where a new building would go, waiting for ✓ (buy) or ✗ (cancel).
   private tileMenu: CSS2DObject
   private menuTile: Tile | null = null
-  private pending: Tile | null = null // restoring: the spot waiting for ✓
-  // Building new: every spot picked so far, each with its own see-through
-  // copy of the building, all bought together with one ✓.
-  private spots: { tile: Tile; rotation: Rotation; ghost: THREE.Group }[] = []
-  private spotMaterial = new THREE.MeshLambertMaterial({ color: '#4ade80', transparent: true, opacity: 0.55 })
-  // How many spots are picked and what they cost together (for the Buy button).
-  onSpotsChanged?: (count: number, totalCost: number) => void
+  // Building new (or putting a stored one back): where its corner is, waiting
+  // for ✓. It's dragged or tapped about until then.
+  private draft: Tile | null = null
+  // Drawing roads (or track, paths...): the tiles drawn so far, in order,
+  // waiting for ✓. strokeFrom: where the drag in progress began in the list
+  // (dragging back over its own tiles takes them off again).
+  private plan: Tile[] = []
+  private strokeFrom = 0
+  private painting = false
+  // The last tile of a drag, to fill in tiles a fast drag skips over.
+  private lastPainted: Tile | null = null
+  // The Buy button's label (null: no button), e.g. "✓ Buy · 🪙 100".
+  onBuyChanged?: (label: string | null) => void
   // Roads picked for removal are marked in red.
   private pickedMarks = new THREE.Group()
   private pickedMaterial = new THREE.MeshBasicMaterial({ color: '#ef4444', transparent: true, opacity: 0.55, depthWrite: false })
@@ -116,6 +133,7 @@ export class Builder {
   // How the building being placed or moved is turned (⟳ or the R key).
   private rotation: Rotation = 0
   private confirm: CSS2DObject
+  private turnButton: HTMLButtonElement
   // An outline around the selected building.
   private selection: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>
   // One shared see-through material for the ghost; we just recolor it.
@@ -143,6 +161,7 @@ export class Builder {
     )
     this.footprint.visible = false
     scene.add(this.footprint)
+    this.cells = new TileCells(scene)
     this.area = new THREE.Mesh(
       new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2),
       new THREE.MeshBasicMaterial({ color: '#5aa0e0', transparent: true, opacity: 0.18, depthWrite: false }),
@@ -186,17 +205,14 @@ export class Builder {
     no.className = 'place-no'
     no.textContent = '✕'
     no.title = 'Cancel'
-    no.addEventListener('click', () => {
-      this.setPending(null)
-      this.clearSpots()
-      this.showSpots()
-    })
+    no.addEventListener('click', () => this.cancel())
     const turn = document.createElement('button')
     turn.className = 'place-turn'
     turn.textContent = '⟳'
     turn.title = 'Turn (R)'
     turn.addEventListener('click', () => this.turn())
     confirmEl.append(no, turn, yes)
+    this.turnButton = turn
     this.confirm = new CSS2DObject(confirmEl)
     this.confirm.center.set(0.5, 1)
     this.confirm.visible = false
@@ -207,6 +223,15 @@ export class Builder {
       this.hoverTile = null
       this.refresh()
     })
+    // Letting go ends a drag drawing roads (the camera says when one starts).
+    const endStroke = () => {
+      if (!this.painting) return
+      this.painting = false
+      if (!this.confirmPurchases) this.confirmPlacement()
+      this.refresh()
+    }
+    canvas.addEventListener('pointerup', endStroke)
+    canvas.addEventListener('pointercancel', endStroke)
     canvas.addEventListener('contextmenu', (e) => {
       e.preventDefault() // right-click cancels instead of opening the browser menu
       if (this.dragOffset) return // some phones send this on a long press: that's a pick-up
@@ -215,6 +240,7 @@ export class Builder {
     window.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') this.setMode({ kind: 'select' })
       if (e.key === 'r' || e.key === 'R') this.turn()
+      if (e.key === 'Enter' && this.mode.kind !== 'select' && !(e.target instanceof HTMLButtonElement || e.target instanceof HTMLInputElement)) this.confirmPlacement()
     })
     controls.onClick = (x, y) => this.onClick(x, y)
     controls.grab = (x, y, held) => this.grab(x, y, held)
@@ -233,11 +259,11 @@ export class Builder {
 
   setMode(mode: Mode) {
     this.showTileMenu(null)
-    // Clean up the old mode: cancel any building waiting for ✓ (first, while
-    // the old mode's ghost still exists), drop the ghost and un-hide anything
-    // we were carrying.
-    this.setPending(null)
-    this.clearSpots()
+    // Clean up the old mode: drop whatever was waiting for ✓ and the ghost,
+    // and un-hide anything we were carrying.
+    this.draft = null
+    this.plan = []
+    this.painting = false
     if (this.ghost) this.scene.remove(this.ghost)
     this.ghost = null
     if (this.mode.kind === 'move') this.cityView.setVisible(this.mode.carrying.id, true)
@@ -252,6 +278,8 @@ export class Builder {
     // A moved building keeps its turn; new ones start facing the default way.
     this.rotation = mode.kind === 'move' ? mode.carrying.rotation : 0
     if (mode.kind === 'move') this.cityView.setVisible(mode.carrying.id, false)
+    // A new building appears at once, on the nearest empty spot to the middle of the screen.
+    if (type && mode.kind !== 'move' && !isDrawn(type)) this.draft = this.nearestFit(type, worldToTile(this.controls.target) ?? { x: 0, z: 0 })
     // Roads (and paths, hedges and flower beds) are drawn by dragging, and
     // roads picked for removal by dragging; everything else drags the camera.
     this.controls.paint =
@@ -270,18 +298,7 @@ export class Builder {
   turn() {
     if (!this.placingType()) return
     this.rotation = ((this.rotation + 1) % 4) as Rotation
-    // A building waiting for ✓ turns where it stands, if it still fits.
-    if (this.pending) this.setPending(this.pending)
-    // So does the last spot picked, if it still fits among the others.
-    const last = this.spots.at(-1)
-    if (last && this.mode.kind === 'build') {
-      const turned = this.spots.map((s) => ({ tile: s.tile, rotation: s === last ? this.rotation : s.rotation }))
-      if (this.placement.checkMany(this.mode.type, turned).ok) {
-        last.rotation = this.rotation
-        this.showSpots()
-      }
-    }
-    this.refresh()
+    this.refresh() // a building waiting for ✓ turns where it stands
   }
 
   // Turn a placed building in place, if it fits turned.
@@ -396,49 +413,80 @@ export class Builder {
     }
   }
 
-  // One step of a road drag (or a path, hedge or flower bed): place one on every tile from the last one painted
-  // to this one (a fast drag can jump several tiles between pointer events).
+  // One step of a drag drawing road (or a path, hedge or flower bed): add
+  // every tile from the last one to this one (a fast drag can jump several
+  // tiles between pointer events). Nothing's built until ✓.
   private paintRoad(clientX: number, clientY: number, first: boolean) {
     if (this.mode.kind !== 'build') return
-    const type = this.mode.type
     const point = this.controls.groundPointAt(clientX, clientY)
     const tile = point && worldToTile(point)
     if (!tile) return
-    if (first) this.lastPainted = null
+    if (first) {
+      this.lastPainted = null
+      this.strokeFrom = this.plan.length
+      this.painting = true
+    }
     const from = this.lastPainted ?? tile
     // Step one tile at a time along x, then along z.
-    const steps: Tile[] = []
     let { x, z } = from
-    steps.push({ x, z })
-    while (x !== tile.x) steps.push({ x: (x += Math.sign(tile.x - x)), z })
-    while (z !== tile.z) steps.push({ x, z: (z += Math.sign(tile.z - z)) })
-    this.lay(type, steps, first)
+    this.draw({ x, z })
+    while (x !== tile.x) this.draw({ x: (x += Math.sign(tile.x - x)), z })
+    while (z !== tile.z) this.draw({ x, z: (z += Math.sign(tile.z - z)) })
     this.lastPainted = tile
     this.hoverTile = tile
     this.refresh()
   }
 
+  // Add a tile to the drag being drawn. Back onto one of its own tiles, and
+  // everything drawn after that comes off again; tiles from an earlier drag stay.
+  private draw(tile: Tile) {
+    const at = this.plan.findIndex((t) => t.x === tile.x && t.z === tile.z)
+    if (at >= this.strokeFrom) this.plan.length = at + 1
+    else if (at < 0) this.plan.push(tile)
+  }
+
+  // What laying road (or track, a path...) here would do: put it down
+  // (`replace`: swapping out the road or track there), 'there' if it already
+  // is, or null if it can't go here.
+  private layAs(type: BuildingType, t: Tile): { placing: BuildingType; replace?: PlacedBuilding } | 'there' | null {
+    const other = this.city.buildingAt(t)
+    if (!other) return this.city.canPlace(type, t) ? { placing: type } : null
+    if (other.type === type || other.type.id === OVERPASS_TYPE.id) return 'there'
+    // A road across the track, or track across a road, makes a road bridge (bridges.ts).
+    if ((type.category === 'road' && other.type.id === 'rail') || (type.id === 'rail' && other.type.category === 'road')) return { placing: OVERPASS_TYPE, replace: other }
+    // Drawing one kind of road over another swaps it (a dirt road paved into an avenue, say).
+    if (type.category === 'road' && other.type.category === 'road') return { placing: type, replace: other }
+    return null
+  }
+
   // Lay road (or track, a path, a hedge...) on each of these tiles that'll
-  // take it. Returns how many it laid.
-  private lay(type: BuildingType, tiles: Tile[], first: boolean): number {
+  // take it, until the coins run out. Returns how many it laid.
+  private lay(type: BuildingType, tiles: Tile[]): number {
     let laid = 0
     for (const t of tiles) {
-      const other = this.city.buildingAt(t)
-      // A road across the track, or track across a road, makes a road bridge (bridges.ts).
-      const bridge =
-        other && other.type.id !== OVERPASS_TYPE.id && ((type.category === 'road' && other.type.id === 'rail') || (type.id === 'rail' && other.type.category === 'road'))
-      // Drawing one kind of road over another swaps it (a dirt road paved into an avenue, say).
-      const swap = !bridge && other && type.category === 'road' && other.type.category === 'road' && other.type !== type && other.type.id !== OVERPASS_TYPE.id
-      const placing = bridge ? OVERPASS_TYPE : type
-      if (!swap && !bridge && !this.city.canPlace(type, t)) continue
-      if (!this.placement.freeBuild && !this.city.canAfford(placing)) {
-        if (first) this.onNotice?.(`Not enough coins for a ${placing.name}`)
+      const as = this.layAs(type, t)
+      if (!as || as === 'there') continue
+      if (!this.placement.freeBuild && !this.city.canAfford(as.placing)) {
+        this.onNotice?.(`Not enough coins for a ${as.placing.name}${laid ? ` (built ${laid})` : ''}`)
         break
       }
-      if (other && (swap || bridge)) this.city.remove(other.id)
-      if (this.city.place(placing, t, { free: this.placement.freeBuild, basis: this.placement.freeBuild ? 0 : placing.cost })) laid++
+      if (as.replace) this.city.remove(as.replace.id)
+      if (this.city.place(as.placing, t, { free: this.placement.freeBuild, basis: this.placement.freeBuild ? 0 : as.placing.cost })) laid++
     }
     return laid
+  }
+
+  // The drawn tiles that would be built, and what they'd cost together.
+  private planCost(type: BuildingType): { tiles: Tile[]; cost: number } {
+    const tiles: Tile[] = []
+    let cost = 0
+    for (const t of this.plan) {
+      const as = this.layAs(type, t)
+      if (!as || as === 'there') continue
+      tiles.push(t)
+      cost += as.placing.cost
+    }
+    return { tiles, cost: this.placement.freeBuild ? 0 : cost }
   }
 
   // Is there income to collect here, or a ripe crop to harvest?
@@ -494,8 +542,10 @@ export class Builder {
   }
 
   // Pick up a building to drag it: a press held on any building, or a drag
-  // that starts on the selected one. Anywhere else, dragging pans the map.
+  // that starts on the selected one, or on a new one waiting for ✓. Anywhere
+  // else, dragging pans the map.
   private grab(clientX: number, clientY: number, held: boolean): Carry | null {
+    if (this.draft && this.onDraft(clientX, clientY)) return this.carryDraft(clientX, clientY)
     if (this.mode.kind !== 'select' || !this.allowDrag()) return null
     const point = this.controls.groundPointAt(clientX, clientY)
     const tile = point && worldToTile(point)
@@ -519,6 +569,48 @@ export class Builder {
         if (!this.city.move(b.id, to, rotation)) this.onNotice?.("It doesn't fit there, so it stayed put")
       },
       cancel: finish,
+    }
+  }
+
+  // Is this screen spot on the building waiting for ✓: its see-through copy,
+  // or the ground within a tile of it (fingers are wide)?
+  private onDraft(clientX: number, clientY: number): boolean {
+    const type = this.placingType()
+    if (!this.draft || !type) return false
+    if (this.ghost && this.controls.rayAt(clientX, clientY).intersectObject(this.ghost, true).length > 0) return true
+    const point = this.controls.groundPointAt(clientX, clientY)
+    const tile = point && worldToTile(point)
+    if (!tile) return false
+    const size = footprint(type, this.rotation)
+    return tile.x >= this.draft.x - 1 && tile.x <= this.draft.x + size.x && tile.z >= this.draft.z - 1 && tile.z <= this.draft.z + size.z
+  }
+
+  // Drag the building waiting for ✓ about. It keeps the same spot under the
+  // finger, and stays where it's let go (still waiting for ✓).
+  private carryDraft(clientX: number, clientY: number): Carry | null {
+    const tileAt = (x: number, y: number) => {
+      const point = this.controls.groundPointAt(x, y)
+      return point && worldToTile(point)
+    }
+    const start = tileAt(clientX, clientY)
+    const from = this.draft
+    if (!start || !from) return null
+    const follow = (x: number, y: number) => {
+      const tile = tileAt(x, y)
+      if (!tile) return
+      this.draft = { x: from.x + tile.x - start.x, z: from.z + tile.z - start.z }
+      this.refresh()
+    }
+    return {
+      move: follow,
+      drop: (x, y) => {
+        follow(x, y)
+        navigator.vibrate?.(10)
+      },
+      cancel: () => {
+        this.draft = from
+        this.refresh()
+      },
     }
   }
 
@@ -601,13 +693,10 @@ export class Builder {
       case 'build':
         this.buildAt(mode.type, tile)
         break
-      case 'restore': {
-        const anchor = anchorFor(mode.building.type, tile, this.rotation)
-        const check = this.placement.check(mode.building.type, { tile: anchor, rotation: this.rotation }, { free: true })
-        if (check.ok) this.setPending(anchor)
-        else this.onNotice?.(check.problems[0])
+      case 'restore':
+        // Tap a spot: the building goes there, waiting for ✓.
+        this.draft = anchorFor(mode.building.type, tile, this.rotation)
         break
-      }
       case 'removeRoads': {
         const road = this.city.buildingAt(tile)
         if (road && isTrack(road.type)) this.togglePick(road)
@@ -628,176 +717,213 @@ export class Builder {
     this.refresh()
   }
 
-  private setPending(tile: Tile | null) {
-    this.pending = tile
-    this.confirm.visible = tile !== null
-    const type = this.placingType()
-    if (tile && type) {
-      const size = footprint(type, this.rotation)
-      this.confirm.position.copy(footprintCenter(tile, size)).setY(Math.max(size.x, size.z) * 0.6 + 0.6)
+  // A tap in build mode. A building moves there, waiting for ✓ (or, with
+  // the ✓ step turned off in Settings, is bought there and then). A drawn
+  // tile is added to the plan, or taken off it if it was on it already. Also
+  // used by "Build here" on an empty tile.
+  private buildAt(type: BuildingType, tile: Tile) {
+    if (isDrawn(type)) {
+      if (!this.confirmPurchases) {
+        if (this.lay(type, [tile]) === 0 && this.layAs(type, tile) !== 'there') {
+          const check = this.placement.check(type, { tile, rotation: 0 })
+          if (!check.ok) this.onNotice?.(check.problems[0])
+        }
+        return
+      }
+      const at = this.plan.findIndex((t) => t.x === tile.x && t.z === tile.z)
+      if (at >= 0) this.plan.splice(at, 1)
+      else if (this.layAs(type, tile) === null) this.onNotice?.(this.placement.check(type, { tile, rotation: 0 }).problems[0] ?? "It can't go there")
+      else this.plan.push(tile)
+      return
     }
+    this.draft = anchorFor(type, tile, this.rotation)
+    if (!this.confirmPurchases) this.confirmPlacement()
+  }
+
+  // "Build here": start building this type on the tapped tile (or, if it
+  // doesn't fit there, the nearest spot it does).
+  startBuildAt(type: BuildingType, tile: Tile) {
+    this.setMode({ kind: 'build', type })
+    if (isDrawn(type)) this.buildAt(type, tile)
+    else this.draft = this.nearestFit(type, tile)
     this.refresh()
   }
 
-  // A tap in build mode: two steps, tap to put the building down, then ✓ to
-  // buy it (several spots can be picked first). Roads, track, paths, hedges
-  // and flower beds skip this: they're drawn. (Also used by "Build here" on an empty tile.)
-  private buildAt(type: BuildingType, tile: Tile) {
-    const anchor = anchorFor(type, tile, this.rotation)
-    // A tap with road or track: lay it there (over the other, a bridge).
-    if (isTrack(type)) {
-      if (this.lay(type, [anchor], true) === 0) {
-        const check = this.placement.check(type, { tile: anchor, rotation: this.rotation })
-        if (!check.ok) this.onNotice?.(check.problems[0])
-      }
-      return
+  // The nearest spot to a tile where this building fits (as turned now), for
+  // its corner; just centered on the tile if there's none near.
+  private nearestFit(type: BuildingType, around: Tile, ignoreId?: number): Tile {
+    const tries: Tile[] = []
+    for (let dx = -SEARCH_RADIUS; dx <= SEARCH_RADIUS; dx++) {
+      for (let dz = -SEARCH_RADIUS; dz <= SEARCH_RADIUS; dz++) tries.push({ x: around.x + dx, z: around.z + dz })
     }
-    if (isDrawn(type) || !this.confirmPurchases) {
-      const check = this.placement.check(type, { tile: anchor, rotation: this.rotation })
-      if (!check.ok) this.onNotice?.(check.problems[0])
-      else this.city.place(type, anchor, { rotation: this.rotation, free: this.placement.freeBuild, basis: this.placement.freeBuild ? 0 : type.cost })
-      return
+    const away = (t: Tile) => Math.hypot(t.x - around.x, t.z - around.z)
+    tries.sort((a, b) => away(a) - away(b))
+    for (const t of tries) {
+      const anchor = anchorFor(type, t, this.rotation)
+      if (this.city.canPlace(type, anchor, ignoreId, this.rotation)) return anchor
     }
-    // Tapping a picked spot takes it back; anywhere else picks one more.
-    const at = this.spots.findIndex((s) => footprintTiles(s.tile, footprint(type, s.rotation)).some((t) => t.x === tile.x && t.z === tile.z))
-    if (at >= 0) {
-      this.scene.remove(this.spots[at].ghost)
-      this.spots.splice(at, 1)
-    } else {
-      const check = this.placement.checkMany(type, [...this.spotList(), { tile: anchor, rotation: this.rotation }])
-      if (!check.ok) this.onNotice?.(check.problems[0])
-      else this.addSpot(anchor, this.rotation)
-    }
-    this.showSpots()
+    return anchorFor(type, around, this.rotation)
   }
 
-  // "Build here": start building this type with the tapped tile as the first spot.
-  startBuildAt(type: BuildingType, tile: Tile) {
-    this.setMode({ kind: 'build', type })
-    if (!isDrawn(type)) this.buildAt(type, tile)
+  // Whether the building waiting for ✓ can go where it is, with every reason.
+  // Moving and restoring are free; building new is checked in full.
+  private draftCheck(type: BuildingType, anchor: Tile): PlacementCheck {
+    const ignoreId = this.mode.kind === 'move' ? this.mode.carrying.id : undefined
+    return this.placement.check(type, { tile: anchor, rotation: this.rotation, ignoreId }, { free: this.mode.kind !== 'build' })
   }
 
-  // ✓: buy the building waiting at the pending spot. Stay in build mode, so
-  // you can place another of the same.
-  private confirmPlacement() {
-    if (this.mode.kind === 'restore' && this.pending) {
-      const b = this.mode.building
-      if (this.city.restore(b.id, this.pending, Date.now(), this.rotation)) {
+  // ✓ (or the Buy button, or Enter): buy the building waiting there, or
+  // build every road tile drawn. Stay in build mode to carry on: the next
+  // building appears on the nearest empty spot beside the last.
+  confirmPlacement() {
+    const mode = this.mode
+    if (mode.kind === 'restore' && this.draft) {
+      const b = mode.building
+      const check = this.draftCheck(b.type, this.draft)
+      if (!check.ok) this.onNotice?.(check.problems[0])
+      else if (this.city.restore(b.id, this.draft, Date.now(), this.rotation)) {
         this.setMode({ kind: 'select' })
         this.select(b)
       }
       return
     }
-    this.buySpots()
-  }
-
-  // ✓ (or the Buy button): buy every picked spot. Everything was checked
-  // together when each spot was picked; it's checked once more in case the
-  // town changed since (coins spent elsewhere, say). Stay in build mode, so
-  // you can carry on placing more.
-  buySpots() {
-    if (this.mode.kind !== 'build' || this.spots.length === 0) return
-    const type = this.mode.type
-    const check = this.placement.checkMany(type, this.spotList())
+    if (mode.kind !== 'build') return
+    const type = mode.type
+    if (isDrawn(type)) {
+      const { tiles } = this.planCost(type)
+      if (tiles.length === 0) {
+        if (this.plan.length > 0) this.onNotice?.('None of those tiles can take it')
+        return
+      }
+      this.lay(type, tiles)
+      this.plan = []
+      this.refresh()
+      return
+    }
+    if (!this.draft) return
+    const check = this.draftCheck(type, this.draft)
     if (!check.ok) {
       this.onNotice?.(check.problems[0])
       return
     }
-    for (const s of this.spots) this.city.place(type, s.tile, { rotation: s.rotation, free: this.placement.freeBuild, basis: this.placement.freeBuild ? 0 : type.cost })
-    this.clearSpots()
-    this.showSpots()
-  }
-
-  private spotList(): Spot[] {
-    return this.spots.map((s) => ({ tile: s.tile, rotation: s.rotation }))
-  }
-
-  private addSpot(tile: Tile, rotation: Rotation) {
-    if (this.mode.kind !== 'build') return
-    const ghost = createBuildingObject(this.mode.type, this.spotMaterial)
-    this.scene.add(ghost)
-    this.spots.push({ tile, rotation, ghost })
-  }
-
-  private clearSpots() {
-    for (const s of this.spots) this.scene.remove(s.ghost)
-    this.spots = []
-    this.onSpotsChanged?.(0, 0) // the Buy button goes too
-  }
-
-  // Put each spot's ghost in place, the ✓ over the last one, and tell the HUD.
-  private showSpots() {
-    const type = this.mode.kind === 'build' ? this.mode.type : null
-    for (const s of this.spots) {
-      const size = footprint(type!, s.rotation)
-      s.ghost.position.copy(footprintCenter(s.tile, size))
-      s.ghost.rotation.y = (-s.rotation * Math.PI) / 2
+    const placed = this.city.place(type, this.draft, { rotation: this.rotation, free: this.placement.freeBuild, basis: this.placement.freeBuild ? 0 : type.cost })
+    if (!placed) return
+    if (type.unique) {
+      this.setMode({ kind: 'select' })
+      return
     }
-    const last = this.spots.at(-1)
-    if (this.mode.kind !== 'restore') this.confirm.visible = last !== undefined
-    if (last && type) {
-      const size = footprint(type, last.rotation)
-      this.confirm.position.copy(footprintCenter(last.tile, size)).setY(Math.max(size.x, size.z) * 0.6 + 0.6)
-    }
-    this.onSpotsChanged?.(this.spots.length, (type?.cost ?? 0) * this.spots.length)
+    this.draft = this.nearestFit(type, footprintCenterTile(this.draft, footprint(type, this.rotation)))
     this.refresh()
   }
 
-  // Redraw the footprint and ghost for the current mode and hovered tile.
+  // ✕: rub out the drawn tiles, or stop building.
+  private cancel() {
+    if (this.plan.length > 0) {
+      this.plan = []
+      this.refresh()
+    } else this.setMode({ kind: 'select' })
+  }
+
+  // Redraw the footprint, ghost and ✓ for the current mode and hovered tile.
   private refresh() {
     this.footprint.visible = false
     this.area.visible = false
+    this.cells.clear()
     if (this.ghost) this.ghost.visible = false
+    this.confirm.visible = false
     this.selection.visible = this.selected !== null
     if (this.selected) {
       const size = sizeOf(this.selected)
       this.selection.position.copy(footprintCenter(this.selected.tile, size)).setY(0.025)
       this.selection.scale.set(size.x + 0.3, 1, size.z + 0.3)
     }
-    // A building waiting for ✓ stays put; otherwise placing follows the pointer.
-    const tile = this.pending ?? this.hoverTile
+    const tile = this.hoverTile
     // The info card only shows in select mode with nothing selected, so it doesn't get in the way.
     this.onHoverBuilding?.(tile && this.mode.kind === 'select' && !this.selected ? (this.city.buildingAt(tile) ?? null) : null)
-    if (!tile) return
-
     const type = this.placingType()
-    if (type) {
-      const size = footprint(type, this.rotation)
-      const anchor = this.pending ?? this.anchorAt(type, tile)
-      const ignoreId = this.mode.kind === 'move' ? this.mode.carrying.id : undefined
-      // Moving and restoring are free; building new is checked in full,
-      // together with any spots already picked.
-      const spot = { tile: anchor, rotation: this.rotation, ignoreId }
-      const check =
-        this.mode.kind === 'build' && this.spots.length > 0
-          ? this.placement.checkMany(type, [...this.spotList(), spot])
-          : this.placement.check(type, spot, { free: this.mode.kind !== 'build' })
-      // Over a picked spot: tapping takes it back, so don't draw a second ghost there.
-      if (this.spots.some((s) => s.tile.x === anchor.x && s.tile.z === anchor.z)) {
-        this.onPlacementInfo?.('Tap again to take this one back')
-        return
-      }
-      const color = check.ok ? COLORS.ok : COLORS.blocked
-      // Say it in words too: color alone isn't enough for everyone.
-      this.onPlacementInfo?.(!check.ok ? `✗ ${check.problems[0]}` : check.warnings.length ? `⚠ Fits, but ${check.warnings[0].toLowerCase()}` : '✓ Fits here')
-      this.showFootprint(anchor, size, color)
-      this.ghostMaterial.color.set(color)
-      this.ghost!.position.copy(footprintCenter(anchor, size))
-      this.ghost!.rotation.y = (-this.rotation * Math.PI) / 2
-      this.ghost!.visible = true
-      if (type.amenity) {
-        // Show the reach: the footprint grown by the radius on every side.
-        const r = type.amenity.radius
-        this.area.position.copy(footprintCenter(anchor, size)).setY(0.015)
-        this.area.scale.set(size.x + 2 * r, 1, size.z + 2 * r)
-        this.area.visible = true
-      }
+
+    if (this.mode.kind === 'build' && isDrawn(this.mode.type)) {
+      this.showPlan(this.mode.type)
+      if (tile && !this.painting && this.plan.length === 0) this.showFootprint(tile, { x: 1, z: 1 }, COLORS.hover)
       return
     }
-
-    this.onPlacementInfo?.(null)
+    // A new (or stored) building waiting for ✓ stays put; one being moved follows the pointer.
+    const anchor = this.mode.kind === 'move' ? tile && type && this.anchorAt(type, tile) : this.draft
+    if (type && anchor) {
+      this.showBuilding(type, anchor)
+      return
+    }
+    this.onBuyChanged?.(null)
+    this.onPlacementInfo?.(type ? 'Tap where it should go' : null)
     // Not placing anything: highlight the tile under the pointer.
-    this.showFootprint(tile, { x: 1, z: 1 }, COLORS.hover)
+    if (tile && !type) this.showFootprint(tile, { x: 1, z: 1 }, COLORS.hover)
+  }
+
+  // A building about to be placed: its see-through copy on its tiles (each
+  // green, or red where something's in the way), its reach if it has one, and
+  // what's wrong in words (color alone isn't enough for everyone).
+  private showBuilding(type: BuildingType, anchor: Tile) {
+    const size = footprint(type, this.rotation)
+    const ignoreId = this.mode.kind === 'move' ? this.mode.carrying.id : undefined
+    const check = this.draftCheck(type, anchor)
+    const tiles = footprintTiles(anchor, size)
+    const free = tiles.map((t) => this.city.tileFree(type, t, ignoreId))
+    const blocked = free.includes(false)
+    const fine = check.ok ? (check.warnings.length ? COLORS.warn : COLORS.ok) : blocked ? COLORS.ok : COLORS.blocked
+    this.cells.show(tiles.map((t, i): Cell => ({ tile: t, color: free[i] ? fine : COLORS.blocked })))
+    this.onPlacementInfo?.(!check.ok ? `✗ ${check.problems[0]}` : check.warnings.length ? `⚠ Fits, but ${check.warnings[0].toLowerCase()}` : '✓ Fits here')
+    this.ghostMaterial.color.set(check.ok ? COLORS.ok : COLORS.blocked)
+    const center = footprintCenter(anchor, size)
+    this.ghost!.position.copy(center)
+    this.ghost!.rotation.y = (-this.rotation * Math.PI) / 2
+    this.ghost!.visible = true
+    if (type.amenity) {
+      // Show the reach: the footprint grown by the radius on every side.
+      const r = type.amenity.radius
+      this.area.position.copy(center).setY(0.015)
+      this.area.scale.set(size.x + 2 * r, 1, size.z + 2 * r)
+      this.area.visible = true
+    }
+    if (this.mode.kind === 'move') {
+      this.onBuyChanged?.(null)
+      return
+    }
+    this.turnButton.hidden = false
+    this.confirm.visible = true
+    this.confirm.position.copy(center).setY(Math.max(size.x, size.z) * 0.6 + 0.6)
+    const costsNothing = this.mode.kind === 'restore' || this.placement.freeBuild
+    this.onBuyChanged?.(costsNothing ? '✓ Place' : `✓ Buy · 🪙 ${type.cost.toLocaleString()}`)
+  }
+
+  // Road (or track, path...) drawn so far: green tiles to build, white where
+  // it's there already, red where it can't go, and ✓ over the last tile.
+  private showPlan(type: BuildingType) {
+    if (this.plan.length === 0) {
+      this.onBuyChanged?.(null)
+      this.onPlacementInfo?.(null)
+      return
+    }
+    const cells = this.plan.map((t): Cell => {
+      const as = this.layAs(type, t)
+      return { tile: t, color: as === null ? COLORS.blocked : as === 'there' ? COLORS.hover : COLORS.ok }
+    })
+    this.cells.show(cells)
+    const { tiles, cost } = this.planCost(type)
+    const blocked = cells.filter((c) => c.color === COLORS.blocked).length
+    const short = cost - this.city.coins
+    this.onPlacementInfo?.(
+      short > 0 && !this.placement.freeBuild
+        ? `✗ Need 🪙 ${short.toLocaleString()} more for all ${tiles.length}`
+        : blocked > 0
+          ? `⚠ ${blocked} red tile${blocked > 1 ? 's' : ''} can't take it`
+          : `${tiles.length} to build`,
+    )
+    this.onBuyChanged?.(tiles.length === 0 ? null : this.placement.freeBuild ? `✓ Build ${tiles.length}` : `✓ Build ${tiles.length} · 🪙 ${cost.toLocaleString()}`)
+    if (this.painting) return
+    const last = this.plan.at(-1)!
+    this.turnButton.hidden = true // roads don't turn
+    this.confirm.visible = true
+    this.confirm.position.copy(tileToWorld(last)).setY(0.7)
   }
 
   private showFootprint(tile: Tile, size: { x: number; z: number }, color: string) {
@@ -807,4 +933,9 @@ export class Builder {
     this.footprint.material.color.set(color)
     this.footprint.visible = true
   }
+}
+
+// The tile in the middle of a footprint (for looking around it).
+function footprintCenterTile(tile: Tile, size: { x: number; z: number }): Tile {
+  return { x: tile.x + Math.floor(size.x / 2), z: tile.z + Math.floor(size.z / 2) }
 }

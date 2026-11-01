@@ -45,7 +45,7 @@ export const TUTORIAL: TutorialStep[] = [
   },
   {
     id: 'build',
-    text: 'Tap 🔨 Build, choose a Cottage, tap the map, then ✓ to buy it.',
+    text: 'Tap 🔨 Build and choose a Cottage. Drag it where you like, then tap ✓ to buy it.',
     doneWhen: (e) => e.kind === 'added' && e.paid > 0 && e.building.type.category === 'home',
     alreadyDone: (city) => count(city, (c) => c === 'home') >= 2,
   },

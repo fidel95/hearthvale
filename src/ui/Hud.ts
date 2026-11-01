@@ -19,16 +19,16 @@ function hintFor(mode: Mode): string {
       return ''
     case 'build':
       return mode.type.category === 'road'
-        ? 'Drag to draw road'
+        ? 'Drag to draw the road, then ✓'
         : mode.type.id === 'rail'
-          ? 'Drag to lay track'
+          ? 'Drag to draw the track, then ✓'
           : mode.type.drawn
-            ? `Drag to lay ${mode.type.name.toLowerCase()}s, or tap one tile`
-            : `Tap a spot for each ${mode.type.name}`
+            ? `Drag or tap to draw ${mode.type.name.toLowerCase()}s, then ✓`
+            : `Drag the ${mode.type.name} into place, then ✓`
     case 'move':
       return 'Drag it, or tap where it should go'
     case 'restore':
-      return `Tap where the ${mode.building.type.name} should go`
+      return `Drag the ${mode.building.type.name} into place, then ✓`
     case 'removeRoads':
       return 'Tap roads or track to pick them, or drag along them'
   }
@@ -153,12 +153,12 @@ export class Hud {
       removeRoads.textContent = `🗑️ Remove ${count}`
       removeRoads.disabled = count === 0
     }
-    // Building several: buy every spot picked, with the total.
+    // Buy what's waiting (a building, or the roads drawn), with the price.
     const buy = el('button', 'hint-done hint-buy', '')
-    buy.addEventListener('click', () => builder.buySpots())
-    builder.onSpotsChanged = (count, total) => {
-      buy.hidden = count === 0
-      buy.textContent = builder.placement.freeBuild ? `✓ Place ${count}` : `✓ Buy ${count} · 🪙 ${total.toLocaleString()}`
+    buy.addEventListener('click', () => builder.confirmPlacement())
+    builder.onBuyChanged = (label) => {
+      buy.hidden = label === null
+      buy.textContent = label ?? ''
     }
     buy.hidden = true
     hint.append(hintText, placeInfo, buy, removeRoads, done)

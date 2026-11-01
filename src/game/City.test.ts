@@ -38,6 +38,15 @@ describe('City', () => {
     expect(city.canPlace(cottage, at(19, 0))).toBe(false) // hangs off the edge of the town's land
   })
 
+  it('says which single tiles are free (for the green and red tiles while placing)', () => {
+    const city = new City()
+    const home = city.place(cottage, at(4, 4), { free: true })!
+    expect(city.tileFree(cottage, at(5, 5))).toBe(false) // under the cottage
+    expect(city.tileFree(cottage, at(5, 5), home.id)).toBe(true) // ...unless it's the one being moved
+    expect(city.tileFree(cottage, at(6, 5))).toBe(true)
+    expect(city.tileFree(cottage, { x: 0, z: 0 })).toBe(false) // not the town's land
+  })
+
   it('finds a building from any tile it covers', () => {
     const city = new City()
     const placed = city.place(store, at(2, 3), { free: true })!

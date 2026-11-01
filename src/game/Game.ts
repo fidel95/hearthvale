@@ -192,6 +192,8 @@ export class Game {
     this.renderer.toneMappingExposure = 1.05
     container.appendChild(this.renderer.domElement)
     this.labelRenderer.domElement.className = 'labels'
+    // Clipped, not just hidden: a button focused off-screen mustn't scroll every label sideways.
+    this.labelRenderer.domElement.style.overflow = 'clip'
     container.appendChild(this.labelRenderer.domElement)
 
     this.scene.background = new THREE.Color('#9fd4f0')
@@ -341,7 +343,7 @@ export class Game {
     this.controls.onMove = () => this.tutorial.complete('camera')
     this.hud.onGoHome = () => this.endVisit()
     // The tile grid shows while building (or always, if that's turned on).
-    const showGrid = () => landView.setGridVisible(this.settings.values.alwaysGrid || this.builder.mode.kind !== 'select')
+    const showGrid = () => landView.setGridVisible(this.settings.values.alwaysGrid || this.builder.mode.kind !== 'select', this.builder.mode.kind !== 'select')
     this.builder.onModeChange(showGrid)
     // Apply settings now and whenever they change.
     this.settings.onChange((s) => {

@@ -82,34 +82,6 @@ export class PlacementSystem {
     return { ok: problems.length === 0, problems, warnings }
   }
 
-  // Several of the same building at once (tap spot after spot, then buy them
-  // all): every spot must pass on its own, the spots mustn't overlap each
-  // other, and the town must afford them all, and have room for all their
-  // residents, together.
-  checkMany(type: BuildingType, spots: Spot[]): PlacementCheck {
-    const problems: string[] = []
-    const warnings: string[] = []
-    for (const spot of spots) {
-      const one = this.check(type, spot)
-      problems.push(...one.problems)
-      warnings.push(...one.warnings)
-    }
-    const taken = new Set<string>()
-    for (const spot of spots) {
-      const tiles = footprintTiles(spot.tile, footprint(type, spot.rotation)).map((t) => `${t.x},${t.z}`)
-      if (tiles.some((t) => taken.has(t))) problems.push('Those spots overlap')
-      for (const t of tiles) taken.add(t)
-    }
-    if (spots.length > 1 && !this.freeBuild) {
-      const total = type.cost * spots.length
-      if (!this.city.economy.canAfford(total)) problems.push(`Need 🪙 ${(total - this.city.coins).toLocaleString()} more for ${spots.length}`)
-      if (type.unique) problems.push(`There can only be one ${type.name}`)
-      if (!this.services.roomFor((type.residents ?? 0) * spots.length)) problems.push('👥 Not enough room for all their residents')
-    }
-    const unique = (list: string[]) => [...new Set(list)]
-    return { ok: problems.length === 0, problems: unique(problems), warnings: unique(warnings) }
-  }
-
   // Rules beyond coins and space: one of a kind, a minimum rating, room for residents.
   private uniqueTaken(type: BuildingType): boolean {
     return !!type.unique && [...this.city.all(), ...this.city.storedBuildings()].some((b) => b.type.id === type.id)

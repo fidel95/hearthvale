@@ -48,39 +48,6 @@ describe('PlacementSystem', () => {
   })
 })
 
-describe('PlacementSystem.checkMany', () => {
-  const spot = (x: number, z: number) => ({ tile: at(x, z), rotation: 0 as const })
-
-  it('accepts several spots that each fit and that the town can afford together', () => {
-    const { city, placement } = setup()
-    city.economy.adjust(1000)
-    expect(placement.checkMany(b('cottage'), [spot(0, 0), spot(3, 0), spot(6, 0)]).ok).toBe(true)
-  })
-
-  it('refuses spots that overlap each other', () => {
-    const { city, placement } = setup()
-    city.economy.adjust(1000)
-    expect(placement.checkMany(b('cottage'), [spot(0, 0), spot(1, 1)]).problems).toContain('Those spots overlap')
-  })
-
-  it('needs coins for all of them together, not just one', () => {
-    const { city, placement } = setup()
-    city.economy.bill(city.coins - 250) // enough for two cottages, not three
-    expect(placement.checkMany(b('cottage'), [spot(0, 0), spot(3, 0)]).ok).toBe(true)
-    expect(placement.checkMany(b('cottage'), [spot(0, 0), spot(3, 0), spot(6, 0)]).problems[0]).toMatch(/Need 🪙 50 more for 3/)
-  })
-
-  it('allows only one of a one-of-a-kind building', () => {
-    const { city, placement, player } = setup()
-    player.grantXp(100_000)
-    city.economy.adjust(100_000)
-    city.place(b('road'), at(5, 4), { free: true })
-    city.place(b('oak-tree'), at(9, 9), { free: true })
-    const problems = placement.checkMany(b('clock-tower'), [spot(0, 0), spot(4, 0)]).problems
-    expect(problems.some((p) => p.includes('only be one'))).toBe(true)
-  })
-})
-
 describe('quotes', () => {
   it('say what an upgrade needs, and agree with the action', () => {
     const { city, player, inventory, services } = setup()
