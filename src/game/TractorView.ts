@@ -8,6 +8,7 @@ import { footprintCenter, footprintTiles, inBounds, tileToWorld, worldToTile, ty
 import { findPath } from './pathfinding'
 import { Polyline } from './routes'
 import { isRiver, isRock } from './terrain'
+import { PRIORITY, type RoadSpace } from './roadSpace'
 
 // The Tractor Shed's tractor: it drives out to each field with a ripe or
 // withered crop, makes a pass across it, and Game harvests (or clears) it and
@@ -42,8 +43,11 @@ export class TractorView {
   private unreachable = new Map<number, number>() // plot id → seconds until it's tried again
   private claimed = new Set<number>() // plots a tractor is on its way to
 
-  constructor(scene: THREE.Scene, city: City) {
+  private space: RoadSpace
+
+  constructor(scene: THREE.Scene, city: City, space: RoadSpace) {
     this.city = city
+    this.space = space
     scene.add(this.group)
     city.onChange((e) => {
       if (e.kind === 'added' || e.kind === 'removed' || e.kind === 'moved' || e.kind === 'finished' || e.kind === 'stored' || e.kind === 'restored' || e.kind === 'land') this.sync()
@@ -57,6 +61,7 @@ export class TractorView {
     for (const [id, t] of this.tractors) {
       if (sheds.some((s) => s.id === id && s.tile === t.shed.tile && s.rotation === t.shed.rotation)) continue
       this.group.remove(t.object)
+      this.space.remove(t.object)
       if (t.target) this.claimed.delete(t.target.id)
       this.tractors.delete(id)
     }
@@ -66,6 +71,7 @@ export class TractorView {
       this.group.add(root)
       const t: Tractor = { shed, object: root, wheels, line: null, s: 0, state: 'parked', target: null, look: Math.random() }
       this.park(t)
+      this.space.add(root, 0.16, PRIORITY.heavy)
       this.tractors.set(shed.id, t)
     }
   }
@@ -150,6 +156,8 @@ export class TractorView {
       }
     }
     if (!t.line) return
+    // Something on the road ahead: wait for it.
+    if (t.state !== 'pass' && this.space.blocked(t.object)) return
     const speed = t.state === 'pass' ? PASS_SPEED : SPEED
     t.s = Math.min(t.line.length, t.s + speed * dt)
     const pose = t.line.at(t.s)

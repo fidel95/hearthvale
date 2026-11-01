@@ -72,6 +72,7 @@ import { WeatherView } from './WeatherView'
 import { DisasterView } from './DisasterView'
 import { EmergencyView } from './EmergencyView'
 import { TractorView } from './TractorView'
+import { RoadSpace } from './roadSpace'
 import { WildsView } from './WildsView'
 import { MATERIALS } from './items'
 import { WILDS } from './wilds'
@@ -140,6 +141,8 @@ export class Game {
   private roadView: RoadView
   private railView: RailView
   private trafficView: TrafficView
+  // Room on the roads: vehicles wait for what's in front instead of driving through it.
+  private roadSpace = new RoadSpace()
   private flightView: FlightView
   private leisureView: LeisureView
   private armyView: ArmyView
@@ -215,7 +218,7 @@ export class Game {
     this.peopleView.visitors = () => this.state.tourism.report().visitors
     this.roadView = new RoadView(this.scene, this.city)
     this.railView = new RailView(this.scene, this.city)
-    this.trafficView = new TrafficView(this.scene, this.city)
+    this.trafficView = new TrafficView(this.scene, this.city, this.roadSpace)
     this.flightView = new FlightView(this.scene, this.city)
     this.leisureView = new LeisureView(this.scene, this.city)
     this.armyView = new ArmyView(this.scene, this.city, this.state.army)
@@ -239,14 +242,14 @@ export class Game {
       setStorm: (on) => this.weather.setStorm(on),
     })
     // ?fire starts the first fire after a few seconds (development only, for browser checks).
-    this.emergencyView = new EmergencyView(this.scene, this.city, this.cityView, this.state.disasters, import.meta.env.DEV && new URLSearchParams(location.search).has('fire'))
+    this.emergencyView = new EmergencyView(this.scene, this.city, this.cityView, this.state.disasters, this.roadSpace, import.meta.env.DEV && new URLSearchParams(location.search).has('fire'))
     this.emergencyView.onNotice = (message, warn) => this.hud.toast(message, warn ? 'warn' : 'info')
     this.emergencyView.onSiren = () => this.sound.siren()
     this.emergencyView.onPutOut = () => {
       this.player.grantXp(5)
       this.hud.toast('🧯 You put out the fire! +5 XP')
     }
-    this.tractorView = new TractorView(this.scene, this.city)
+    this.tractorView = new TractorView(this.scene, this.city, this.roadSpace)
     this.tractorView.onTend = (plot) => {
       if (this.city.production.tend(plot.id, Date.now())) this.effects.dust(footprintCenter(plot.tile, sizeOf(plot)).setY(0.05), sizeOf(plot))
     }
@@ -435,6 +438,8 @@ export class Game {
     }
     // From now on new buildings spring into place (unless motion is reduced).
     this.loaded = true
+    // Development only: a handle for browser checks (e.g. counting overlapping walkers).
+    if (import.meta.env.DEV) Object.assign(window, { hearthvale: this })
     this.cityView.popIn = !this.settings.values.reduceMotion
     this.wildsView.animate = !this.settings.values.reduceMotion
     this.loadProblem = problem

@@ -8,6 +8,7 @@ import { construction, DUMP_TRUCK_TURN, modelCopy, modelFitted } from './models'
 import { easeShare, turnToward } from './motion'
 import { nextTile, pathToFarthest, Polyline } from './routes'
 import { lightFor, signalJunctions, type Light } from './signals'
+import { PRIORITY, type RoadSpace } from './roadSpace'
 
 // Everything that moves along roads and track: cars, buses, trains, and the
 // army's marching squad and patrol jeep. Purely for looks, like PeopleView:
@@ -16,7 +17,9 @@ import { lightFor, signalJunctions, type Light } from './signals'
 //
 // - Cars: about one for every five residents. They wander the roads, keeping
 //   to the right, and only turn back at a dead end. They stop at red lights
-//   (signals.ts) and keep their distance from the car in front.
+//   (signals.ts) and keep their distance from whatever's in front (roadSpace.ts):
+//   they never drive through another vehicle. Held up a long while (in a
+//   jam, or behind a fire engine at work), a car turns back the way it came.
 // - Buses: one per bus stop (up to two), looping from stop to stop and
 //   pausing at each; with a single stop, out to the far end and back.
 // - Trains: from the station to the far end of the line and back, pausing at
@@ -29,7 +32,8 @@ import { lightFor, signalJunctions, type Light } from './signals'
 const MAX_CARS = 16
 const MAX_SITE_TRUCKS = 3
 const STOP_LINE = 0.3 // how far toward a junction (0 to 1 between tile middles) cars wait at a red light
-const GAP = 0.5 // how close a car comes up behind the one in front
+const TURN_BACK = 6 // seconds held up behind a vehicle before a car turns back
+const HALF_LENGTH = { car: 0.2, bus: 0.42, truck: 0.3 }
 const LIGHT_COLORS: Record<Light, string> = { green: '#3fdc63', amber: '#ffb238', red: '#ff4b3a' }
 const LANE = 0.17 // how far right of the middle of the road vehicles drive
 const SPEED = { car: 1.8, bus: 1.3, train: 2.2, truck: 1.4 } // tiles per second (at Game's PACE)
@@ -193,7 +197,8 @@ interface Wanderer {
   to: Tile
   t: number
   speed: number
-  waited: number // seconds held up behind another car (after a while it squeezes by)
+  waited: number // seconds held up behind another vehicle (after a while it turns back)
+  turning?: number // seconds left swinging round after turning back
 }
 
 // Something going round a fixed route (bus, train, squad): distance along
@@ -227,6 +232,11 @@ export class TrafficView {
   // Traffic lights: the junctions that have them, the clock they run on, and
   // their lamps (one material per way, recolored as the lights change).
   private signals = new Set<string>()
+  // Junctions (road tiles with three or more roads beside them), and which
+  // car is in each right now: one car at a time, so cars turning through
+  // never cross paths.
+  private junctions = new Set<string>()
+  private inJunction = new Map<string, Wanderer>()
   private signalTime = 0
   private signalMeshes: THREE.Mesh[] = []
   private lamps = {
@@ -234,9 +244,12 @@ export class TrafficView {
     z: new THREE.MeshStandardMaterial({ color: LIGHT_COLORS.red, emissive: LIGHT_COLORS.red, emissiveIntensity: 0.8 }),
   }
 
-  constructor(scene: THREE.Scene, city: City) {
+  private space: RoadSpace
+
+  constructor(scene: THREE.Scene, city: City, space: RoadSpace) {
     this.scene = scene
     this.city = city
+    this.space = space
     city.onChange((e) => {
       if (['added', 'removed', 'moved', 'finished', 'stored', 'restored'].includes(e.kind)) this.dirty = true
     })
@@ -263,6 +276,11 @@ export class TrafficView {
       this.spawnTimer = 0.7
       this.spawnCar(this.wantJeep && !this.cars.some((c) => c.object.userData.jeep))
     }
+    this.inJunction.clear()
+    for (const car of this.cars) {
+      const inside = this.junctionOf(car)
+      if (inside) this.inJunction.set(inside, car)
+    }
     for (const car of [...this.cars]) this.driveCar(car, dt)
     for (const s of this.shuttles) this.runShuttle(s, dt)
   }
@@ -284,12 +302,27 @@ export class TrafficView {
     if (!this.wantJeep) for (const car of [...this.cars]) if (car.object.userData.jeep) this.removeCar(car)
 
     // Buses, trains and the squad follow routes, so they start over on new ones.
-    for (const s of this.shuttles) for (const o of s.objects) this.scene.remove(o)
-    this.shuttles = []
+    this.dropShuttles()
     this.planBuses(all)
     this.planTrain(all)
     this.planSiteTrucks(all)
+    // Buses and trucks share the road with the cars.
+    for (const s of this.shuttles) if (s.kind !== 'train') this.space.add(s.objects[0], HALF_LENGTH[s.kind], PRIORITY.heavy)
     this.planSignals()
+    this.junctions = new Set(
+      all
+        .filter((b) => b.type.category === 'road' && [[1, 0], [-1, 0], [0, 1], [0, -1]].filter(([dx, dz]) => this.city.isRoad({ x: b.tile.x + dx, z: b.tile.z + dz })).length >= 3)
+        .map((b) => `${b.tile.x},${b.tile.z}`),
+    )
+  }
+
+  // The junction a car is in (or has pulled into, past the stop line), if any.
+  private junctionOf(car: Wanderer): string | null {
+    const to = `${car.to.x},${car.to.z}`
+    if (car.t > STOP_LINE && this.junctions.has(to)) return to
+    const at = `${car.at.x},${car.at.z}`
+    if (car.t < 0.5 && this.junctions.has(at)) return at
+    return null
   }
 
   // A post on two opposite corners of each junction, each with a lamp facing
@@ -330,30 +363,38 @@ export class TrafficView {
   }
 
   // Should this car wait where it is? At a red (or amber) light ahead, or
-  // close behind another car going the same way.
-  private held(car: Wanderer): boolean {
+  // with a vehicle in the way.
+  private held(car: Wanderer): 'light' | 'traffic' | null {
     if (car.placed && this.signals.has(`${car.to.x},${car.to.z}`) && car.t <= STOP_LINE) {
       const light = lightFor(car.to.x !== car.at.x ? 'x' : 'z', this.signalTime)
-      if (light === 'red' || (light === 'amber' && car.t < STOP_LINE - 0.08)) return true
+      if (light === 'red' || (light === 'amber' && car.t < STOP_LINE - 0.08)) return 'light'
     }
-    if (car.waited > 4) return false // stuck too long: squeeze on
-    const heading = car.object.rotation.y
-    const fx = Math.cos(heading)
-    const fz = -Math.sin(heading)
-    const p = car.object.position
-    for (const other of this.cars) {
-      if (other === car || !other.placed) continue
-      const dx = other.object.position.x - p.x
-      const dz = other.object.position.z - p.z
-      const ahead = dx * fx + dz * fz
-      if (ahead > 0.05 && ahead < GAP && Math.abs(dx * fz - dz * fx) < 0.13) return true
+    if (!car.placed) return null
+    // A junction ahead with another car in it: wait at the stop line.
+    const to = `${car.to.x},${car.to.z}`
+    if (car.t <= STOP_LINE && this.junctions.has(to)) {
+      const inside = this.inJunction.get(to)
+      if (inside && inside !== car) return 'traffic'
     }
-    return false
+    // Turning round, it looks the way it's turning to.
+    const a = center(car.at)
+    const b = center(car.to)
+    const heading = car.turning ? Math.atan2(-(b.z - a.z), b.x - a.x) : car.object.rotation.y
+    return this.space.blocked(car.object, 0, heading) ? 'traffic' : null
   }
 
   private clearAll() {
     for (const car of [...this.cars]) this.removeCar(car)
-    for (const s of this.shuttles) for (const o of s.objects) this.scene.remove(o)
+    this.dropShuttles()
+  }
+
+  private dropShuttles() {
+    for (const s of this.shuttles) {
+      for (const o of s.objects) {
+        this.scene.remove(o)
+        this.space.remove(o)
+      }
+    }
     this.shuttles = []
   }
 
@@ -365,22 +406,40 @@ export class TrafficView {
     const at = pick(roads).tile
     const to = nextTile(null, at, this.city.isRoad)
     if (!to) return
+    // Not on top of anything already there.
+    const c = center(at)
+    if (this.space.occupied(c.x, c.z, 0.6)) return
     const object = jeep ? makeJeep() : makeKitCar(pick(this.carModels))
     object.userData.jeep = jeep
     this.scene.add(object)
+    this.space.add(object, HALF_LENGTH.car)
     this.cars.push({ object, from: null, at, to, t: 0, speed: SPEED.car * (0.85 + Math.random() * 0.3), waited: 0 })
   }
 
   private removeCar(car: Wanderer) {
     this.scene.remove(car.object)
+    this.space.remove(car.object)
     this.cars.splice(this.cars.indexOf(car), 1)
   }
 
   private driveCar(car: Wanderer, dt: number) {
-    if (this.held(car)) car.waited += dt
+    car.turning = Math.max(0, (car.turning ?? 0) - dt)
+    let held = this.held(car)
+    if (held === 'traffic' && car.waited > TURN_BACK) {
+      // Stuck: turn back the way it came (it swings across into the other lane).
+      ;[car.at, car.to] = [car.to, car.at]
+      car.from = null
+      car.t = 1 - car.t
+      car.waited = 0
+      car.turning = 1
+      held = null
+    } else if (held) car.waited += dt
     else {
       car.waited = 0
       car.t += car.speed * dt
+      // Pulling into a junction: it's this car's until it's through.
+      const junction = this.junctionOf(car)
+      if (junction) this.inJunction.set(junction, car)
     }
     while (car.t >= 1) {
       car.t -= 1
@@ -406,6 +465,9 @@ export class TrafficView {
       car.placed = true
       return
     }
+    // Held up, it stops where it is: easing on toward its spot would carry it
+    // into whatever it's waiting for.
+    if (held) return
     const share = easeShare(CORNERING, dt)
     car.object.position.x += (x - car.object.position.x) * share
     car.object.position.z += (z - car.object.position.z) * share
@@ -515,6 +577,8 @@ export class TrafficView {
   private runShuttle(s: Shuttle, dt: number) {
     if (s.pause > 0) {
       s.pause -= dt
+    } else if (s.kind !== 'train' && this.space.blocked(s.objects[0])) {
+      // Something in the way: wait for it.
     } else {
       s.s += s.speed * dt
       s.phase += dt * 9

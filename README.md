@@ -140,5 +140,10 @@ the right on a wide screen) so the town stays in view.
 - **A daily gift:** a 7-day calendar that grows to a big gift on day 7. Missing a day never loses your place.
 - **A river through the Highlands**, from the mountains to the sea. Roads cross it as bridges, and construction trucks bring loads to every building site.
 - **Emergencies:** now and then a fire breaks out. Your fire station sends an engine to hose it down, with the police and an ambulance, lights flashing; with no engine coming, tap the 🔥 yourself. Between fires, ambulances and police cars go out on calls.
-- **Traffic lights** at every paved junction; cars stop on red and queue behind each other. A yellow submarine dives and surfaces out at sea.
+- **Traffic lights** at every paved junction; cars stop on red and queue behind each other.
+- **People and traffic that make room:** residents are animated characters (Kenney's Mini Characters) who walk, stand about, and step aside or slow down rather than walk through each other. Cars, buses, trucks, emergency vehicles and the tractor wait for whatever's in front, take turns through junctions (one car at a time), and a car stuck too long turns back. A yellow submarine dives and surfaces out at sea.
 - **Turn the view** to look from any side; mountains in the way turn see-through.
+
+## Credits
+
+3D models by [Kenney](https://kenney.nl) (CC0): City Kits, Car Kit, Nature Kit, Mini Forest, Mini Characters and more. Each pack's license is in its folder under `public/models/`.

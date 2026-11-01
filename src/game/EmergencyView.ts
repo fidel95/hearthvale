@@ -8,6 +8,7 @@ import type { Disasters } from './Disasters'
 import { footprintCenter, tileToWorld, type Tile } from './grid'
 import { findPath } from './pathfinding'
 import { Polyline } from './routes'
+import { PRIORITY, type RoadSpace } from './roadSpace'
 import { makeKitCar } from './TrafficView'
 
 // Fires, and the emergency services that answer them.
@@ -82,8 +83,11 @@ export class EmergencyView {
   private spray: THREE.Mesh[] = []
 
   // fireSoon: the first fire in a few seconds (for browser checks in development).
-  constructor(scene: THREE.Scene, city: City, cityView: CityView, disasters: Disasters, fireSoon = false) {
+  private space: RoadSpace
+
+  constructor(scene: THREE.Scene, city: City, cityView: CityView, disasters: Disasters, space: RoadSpace, fireSoon = false) {
     this.scene = scene
+    this.space = space
     this.city = city
     this.cityView = cityView
     this.disasters = disasters
@@ -231,6 +235,11 @@ export class EmergencyView {
     })
     this.scene.add(object)
     const line = new Polyline((best.length > 1 ? best : [best[0], best[0]]).map(center))
+    const start = line.at(0, LANE)
+    object.position.set(start.x, 0, start.z)
+    object.rotation.y = start.angle
+    // It shares the road (and waits for what's in front), but has right of way.
+    this.space.add(object, 0.28, PRIORITY.emergency)
     const r: Responder = { service, object, beacons, line, s: 0, state: 'going', wait: AT_SCENE, forFire }
     this.responders.push(r)
     return r
@@ -265,11 +274,12 @@ export class EmergencyView {
     if (r.state === 'there') {
       if (r.service === 'firetruck' && this.fire) this.hose(r, this.fire, dt)
       else if (!r.forFire && (r.wait -= dt) <= 0) this.leave(r)
-    } else {
+    } else if (!this.space.blocked(r.object)) {
       r.s += SPEED * dt
       if (r.s >= r.line.length) {
         if (r.state === 'returning') {
           r.object.removeFromParent()
+          this.space.remove(r.object)
           this.responders.splice(this.responders.indexOf(r), 1)
           return
         }

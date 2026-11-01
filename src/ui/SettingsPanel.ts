@@ -111,7 +111,7 @@ export class SettingsPanel {
       ),
       tools,
       ...(backup ? [button('Download the unreadable save that was set aside', () => downloadText('hearthvale-unreadable.json', backup), 'panel-button secondary')] : []),
-      el('p', 'muted', 'Models: City Kit (Suburban) and Mini Forest by Kenney, CC0. Sounds are made by the game. Built with three.js.'),
+      el('p', 'muted', 'Models by Kenney (kenney.nl), CC0: the City Kits, Car Kit, Nature Kit, Mini Forest and Mini Characters, among others. Sounds are made by the game. Built with three.js.'),
     )
     sheet.setButtons(button('Start a new town', () => this.newTown(), 'panel-button danger'))
     return sheet
