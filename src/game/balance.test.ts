@@ -74,6 +74,7 @@ describe('4. bigger buildings are meaningful goals', () => {
     ['home', (r) => r.category === 'home'],
     ['business', (r) => r.category === 'business' && !specialty.has(r.id)],
     ['specialty shop', (r) => specialty.has(r.id)],
+    ['attraction', (r) => r.category === 'attraction'],
   ]
   for (const [category, isKind] of kinds) {
     it(`${category}s unlocked later cost more and pay more per collection`, () => {

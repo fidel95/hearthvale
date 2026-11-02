@@ -212,6 +212,7 @@ export function mechanicsOf(type: BuildingType): Mechanic[] {
     rail: 'railways',
     air: 'flights',
     industry: 'factories',
+    attraction: 'community',
   }
   const own = type.nearMountain ? 'mountains' : byCategory[type.category]
   return type.build ? [own, 'construction'] : [own]

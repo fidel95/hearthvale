@@ -214,7 +214,7 @@ export class IncomeView {
       return [b.type.name, `Ship's in! Tap to unload 📦 ${state.shipment.units}`]
     }
     const { amenity, supplies, upkeep } = b.type
-    if (amenity) return [b.type.name, `+${Math.round(amenity.bonus * 100)}% for homes & shops within ${amenity.radius} tiles · 🪙 ${upkeep}/month`]
+    if (amenity && !b.type.income) return [b.type.name, `+${Math.round(amenity.bonus * 100)}% for homes & shops within ${amenity.radius} tiles · 🪙 ${upkeep}/month`]
     if (supplies) return [b.type.name, `Supplies ${UTILITY_INFO[supplies.utility].icon} ${supplies.amount} · 🪙 ${upkeep}/month`]
     const f = b.type.factory
     if (f) {

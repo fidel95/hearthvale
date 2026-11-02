@@ -6,6 +6,17 @@ import type { CropState, CropType } from './crops'
 import { buildCoalMine, buildLandfill, buildOilRefinery } from './quarryModels'
 import { buildCableCar, buildLodge, buildSpaceport, buildTunnelWorks } from './frontierModels'
 import { buildBakery, buildDairy, buildMarket, buildOrchard, buildTractorShed, buildWinery } from './farmModels'
+import {
+  buildDrivingRange,
+  buildFerrisWheel,
+  buildGoKarts,
+  buildMagicCastle,
+  buildPirateShipRide,
+  buildReverseBungee,
+  buildRollerCoaster,
+  buildSkyRide,
+  buildWavePool,
+} from './attractionModels'
 
 // Tallest a model may be, in world units per tile of its footprint's longer side.
 const MAX_HEIGHT_PER_TILE = 1.2
@@ -405,6 +416,33 @@ function createPlaceholder(type: BuildingType): THREE.Group {
       break
     case 'tractorshed':
       buildTractorShed(add, w, d, color, accent)
+      break
+    case 'gokarts':
+      buildGoKarts(group, add, w, d)
+      break
+    case 'pirateship':
+      buildPirateShipRide(group, add, w, d)
+      break
+    case 'drivingrange':
+      buildDrivingRange(group, add, w, d)
+      break
+    case 'ferriswheel':
+      buildFerrisWheel(group, add, w, d)
+      break
+    case 'bungee':
+      buildReverseBungee(group, add, w, d)
+      break
+    case 'wavepool':
+      buildWavePool(group, add, w, d)
+      break
+    case 'skyride':
+      buildSkyRide(group, add, w, d)
+      break
+    case 'coaster':
+      buildRollerCoaster(group, add, w, d)
+      break
+    case 'magiccastle':
+      buildMagicCastle(group, add, w, d)
       break
     case 'house': {
       add(new THREE.BoxGeometry(w * 0.8, height, d * 0.8), color, 0, 0, 0)

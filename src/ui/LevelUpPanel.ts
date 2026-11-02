@@ -4,7 +4,7 @@ import { Modal, button } from './Sheet'
 
 type LevelUp = Extract<PlayerEvent, { kind: 'levelUp' }>
 
-const CATEGORY_ICON = { home: '🏠', business: '🏪', farm: '🌱', decoration: '🌳', utility: '🏭', community: '🏫', road: '🛣️', storage: '📦', port: '⚓', landmark: '🏛️', rail: '🚆', air: '✈️', industry: '🏭' }
+const CATEGORY_ICON = { home: '🏠', business: '🏪', attraction: '🎡', farm: '🌱', decoration: '🌳', utility: '🏭', community: '🏫', road: '🛣️', storage: '📦', port: '⚓', landmark: '🏛️', rail: '🚆', air: '✈️', industry: '🏭' }
 
 const CONFETTI = ['#ffd84d', '#ff6b8a', '#5cc07c', '#5aa9ff', '#b46cf0', '#ff9f43']
 

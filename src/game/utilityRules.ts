@@ -83,6 +83,7 @@ export function incomeMultiplier(report: ServiceReport, category: Category): num
   switch (category) {
     case 'home':
     case 'business':
+    case 'attraction':
       return water.level * power.level * (0.75 + 0.25 * trash.level)
     case 'farm':
       return water.level

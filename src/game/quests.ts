@@ -139,7 +139,7 @@ export class Quests {
       switch (e.kind) {
         case 'collected':
           if (e.building.type.category === 'home') this.bump('rent')
-          if (e.building.type.category === 'business') this.bump('sales')
+          if (e.building.type.category === 'business' || e.building.type.category === 'attraction') this.bump('sales')
           this.bump('earned', e.amount)
           break
         case 'harvested':

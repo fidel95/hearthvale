@@ -119,6 +119,7 @@ export const RECOVERY_YEARS: Record<Category, number | null> = {
   rail: 7, // railroad track is 7-year property, IRC §168(e)(3)(C)(i) (the station overrides it)
   air: 15, // runways, taxiways and aprons are land improvements (asset class 00.3)
   industry: 39, // a factory building is nonresidential real property
+  attraction: 7, // amusement and theme park assets are 7-year property, IRC §168(e)(3)(C)(ii)
 }
 
 // Depreciation for one full month. In the month a building is placed you get

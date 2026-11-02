@@ -129,4 +129,33 @@ describe('Placement', () => {
     })
     expect(animatedCount).toBeGreaterThanOrEqual(7)
   })
+
+  it('builds and animates all nine theme-park attractions', async () => {
+    const ids = [
+      'go-karts',
+      'pirate-ship-ride',
+      'driving-range',
+      'ferris-wheel',
+      'reverse-bungee',
+      'wave-pool',
+      'sky-ride',
+      'roller-coaster',
+      'magic-castle',
+    ]
+    for (const id of ids) {
+      const type = b(id)
+      expect(type.category).toBe('attraction')
+      expect(type.visitors).toBeGreaterThan(0)
+      const obj = await createBuildingObject(type)
+      let animated = 0
+      obj.traverse((part: THREE.Object3D) => {
+        if (typeof part.userData.animate === 'function') {
+          animated++
+          part.userData.animate(0)
+          part.userData.animate(3.7)
+        }
+      })
+      expect(animated, id).toBeGreaterThanOrEqual(1)
+    }
+  })
 })

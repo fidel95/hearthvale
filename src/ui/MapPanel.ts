@@ -16,6 +16,7 @@ const COLORS: Record<string, string> = {
   sale: '#f1e4b0',
   home: '#e07a4f',
   business: '#e0b23a',
+  attraction: '#e8579a',
   farm: '#8a5a36',
   community: '#6c8fe0',
   utility: '#7d8b99',

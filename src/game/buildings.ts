@@ -22,6 +22,7 @@ export type Category =
   | 'rail' // railway track and the train station
   | 'air' // the airport
   | 'industry' // factories (products.ts)
+  | 'attraction' // theme-park rides and leisure attractions
 
 export type PlaceholderShape =
   | 'house'
@@ -85,6 +86,15 @@ export type PlaceholderShape =
   | 'market'
   | 'tractorshed'
   | 'refinery'
+  | 'gokarts'
+  | 'pirateship'
+  | 'drivingrange'
+  | 'ferriswheel'
+  | 'bungee'
+  | 'wavepool'
+  | 'skyride'
+  | 'coaster'
+  | 'magiccastle'
 
 export interface BuildingType {
   id: string
@@ -1519,6 +1529,153 @@ export const BUILDING_TYPES: BuildingType[] = [
     unique: true,
     build: { seconds: 90, materials: { lumber: 4, steel: 2 } },
     placeholder: { shape: 'tractorshed', color: '#b5432f', accent: '#f2ead8', height: 0.9 },
+  },
+  // ---- Attractions: theme-park rides and leisure venues that earn ticket sales and boost tourism (no goods needed).
+  {
+    id: 'go-karts',
+    name: 'Go Karts',
+    category: 'attraction',
+    size: { x: 3, z: 2 },
+    cost: 700,
+    unlockLevel: 8,
+    requiresRoad: true,
+    build: { seconds: 90, materials: { steel: 2, lumber: 2 } },
+    needs: { power: 2, trash: 1 },
+    income: { coins: 75, seconds: 120 },
+    amenity: { bonus: 0.06, radius: 4 },
+    attractsVisitors: { lingerSeconds: 10 },
+    visitors: 12,
+    placeholder: { shape: 'gokarts', color: '#434850', accent: '#e04238', height: 0.6 },
+  },
+  {
+    id: 'pirate-ship-ride',
+    name: 'Pirate Ship Ride',
+    category: 'attraction',
+    size: { x: 3, z: 2 },
+    cost: 950,
+    unlockLevel: 9,
+    requiresRoad: true,
+    build: { seconds: 120, materials: { lumber: 5, steel: 3 } },
+    needs: { power: 2, trash: 1 },
+    income: { coins: 95, seconds: 150 },
+    amenity: { bonus: 0.07, radius: 4 },
+    attractsVisitors: { lingerSeconds: 10 },
+    visitors: 15,
+    placeholder: { shape: 'pirateship', color: '#7a4928', accent: '#ffd23f', height: 2.1 },
+  },
+  {
+    id: 'driving-range',
+    name: 'Driving Range',
+    category: 'attraction',
+    size: { x: 3, z: 3 },
+    cost: 1250,
+    unlockLevel: 10,
+    requiresRoad: true,
+    build: { seconds: 150, materials: { lumber: 4, steel: 4, glass: 2 } },
+    needs: { water: 2, power: 2, trash: 1 },
+    income: { coins: 120, seconds: 180 },
+    amenity: { bonus: 0.08, radius: 5 },
+    attractsVisitors: { lingerSeconds: 12 },
+    visitors: 18,
+    placeholder: { shape: 'drivingrange', color: '#52b848', accent: '#f0ebe1', height: 1.4 },
+  },
+  {
+    id: 'ferris-wheel',
+    name: 'Ferris Wheel',
+    category: 'attraction',
+    size: { x: 3, z: 3 },
+    cost: 1600,
+    unlockLevel: 11,
+    requiresRoad: true,
+    build: { seconds: 180, materials: { steel: 6, glass: 3 } },
+    needs: { power: 3, trash: 1 },
+    income: { coins: 150, seconds: 200 },
+    amenity: { bonus: 0.09, radius: 5 },
+    attractsVisitors: { lingerSeconds: 12 },
+    visitors: 24,
+    placeholder: { shape: 'ferriswheel', color: '#ff5c8a', accent: '#ffd23f', height: 3.2 },
+  },
+  {
+    id: 'reverse-bungee',
+    name: 'Reverse Bungee',
+    category: 'attraction',
+    size: { x: 2, z: 2 },
+    cost: 2000,
+    unlockLevel: 12,
+    requiresRoad: true,
+    build: { seconds: 200, materials: { steel: 8, bricks: 2 } },
+    needs: { power: 3, trash: 1 },
+    income: { coins: 180, seconds: 220 },
+    amenity: { bonus: 0.08, radius: 5 },
+    attractsVisitors: { lingerSeconds: 10 },
+    visitors: 20,
+    placeholder: { shape: 'bungee', color: '#e04238', accent: '#ffd23f', height: 2.8 },
+  },
+  {
+    id: 'wave-pool',
+    name: 'Wave Pool',
+    category: 'attraction',
+    size: { x: 4, z: 3 },
+    cost: 2500,
+    unlockLevel: 13,
+    requiresRoad: true,
+    build: { seconds: 240, materials: { bricks: 6, glass: 4, steel: 4 } },
+    needs: { water: 5, power: 3, trash: 2 },
+    income: { coins: 220, seconds: 240 },
+    amenity: { bonus: 0.1, radius: 6 },
+    attractsVisitors: { lingerSeconds: 14 },
+    visitors: 30,
+    placeholder: { shape: 'wavepool', color: '#26b6d4', accent: '#f3e3b2', height: 0.7 },
+  },
+  {
+    id: 'sky-ride',
+    name: 'Sky Ride',
+    category: 'attraction',
+    size: { x: 4, z: 2 },
+    cost: 3100,
+    unlockLevel: 14,
+    requiresRoad: true,
+    build: { seconds: 260, materials: { steel: 8, glass: 4, lumber: 3 } },
+    needs: { power: 4, trash: 1 },
+    income: { coins: 260, seconds: 270 },
+    amenity: { bonus: 0.1, radius: 6 },
+    attractsVisitors: { lingerSeconds: 12 },
+    visitors: 32,
+    placeholder: { shape: 'skyride', color: '#2f7fe0', accent: '#ffd23f', height: 1.9 },
+  },
+  {
+    id: 'roller-coaster',
+    name: 'Roller Coaster',
+    category: 'attraction',
+    size: { x: 4, z: 4 },
+    cost: 4200,
+    unlockLevel: 15,
+    requiresRoad: true,
+    build: { seconds: 320, materials: { steel: 10, lumber: 8 } },
+    needs: { power: 5, trash: 2 },
+    income: { coins: 350, seconds: 300 },
+    amenity: { bonus: 0.12, radius: 7 },
+    attractsVisitors: { lingerSeconds: 15 },
+    visitors: 45,
+    placeholder: { shape: 'coaster', color: '#e63946', accent: '#ffd23f', height: 2.3 },
+  },
+  {
+    id: 'magic-castle',
+    name: 'Magic Castle',
+    category: 'attraction',
+    size: { x: 4, z: 4 },
+    cost: 5500,
+    unlockLevel: 17,
+    unique: true,
+    requiresRoad: true,
+    build: { seconds: 380, materials: { bricks: 12, glass: 8, steel: 6 } },
+    needs: { water: 3, power: 5, trash: 2 },
+    income: { coins: 460, seconds: 360 },
+    amenity: { bonus: 0.15, radius: 8 },
+    townBonus: 0.04,
+    attractsVisitors: { lingerSeconds: 18 },
+    visitors: 60,
+    placeholder: { shape: 'magiccastle', color: '#fbf8f1', accent: '#2f5fc4', height: 4.1 },
   },
 ]
 

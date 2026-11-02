@@ -21,6 +21,7 @@ import { thumbnail } from './thumbnails'
 const TABS: { label: string; categories: Category[] }[] = [
   { label: '🏠 Homes', categories: ['home'] },
   { label: '🏪 Businesses', categories: ['business', 'port'] },
+  { label: '🎡 Attractions', categories: ['attraction'] },
   { label: '🏫 Community', categories: ['community', 'utility'] },
   { label: '🌾 Farms', categories: ['farm', 'storage'] },
   { label: '🏭 Industry', categories: ['industry'] },
@@ -81,6 +82,15 @@ function details(type: BuildingType): string[] {
   if (type.id === 'oil-refinery') lines.push('🛢️ An offshore platform with a blazing flare stack, pumping derrick, crane, helicopter and oil tanker; refines crude oil at sea')
   if (type.nearMountain) lines.push('⛰️ Must be built at the foot of a mountain, in the Highlands (buy land to the east)')
   if (type.id === 'spaceport') lines.push('🚀 A rocket lifts off every few minutes')
+  if (type.id === 'go-karts') lines.push('🏎️ Three go-karts race around the oval asphalt circuit under the checkered gantry')
+  if (type.id === 'pirate-ship-ride') lines.push('🏴‍☠️ A wooden galleon swings back and forth like a giant pendulum')
+  if (type.id === 'driving-range') lines.push('⛳ Golfers tee off from a two-tier pavilion, launching balls onto target greens')
+  if (type.id === 'ferris-wheel') lines.push('🎡 A giant spoked wheel turns with eight upright passenger gondolas')
+  if (type.id === 'reverse-bungee') lines.push('🪂 Twin towers catapult a passenger sphere up and down on elastic bungee cords')
+  if (type.id === 'wave-pool') lines.push('🌊 Rolling waves sweep across a tropical lagoon while swimmers bob on inner tubes')
+  if (type.id === 'sky-ride') lines.push('🚡 Colorful aerial cabins glide between terminal bullwheels along overhead cables')
+  if (type.id === 'roller-coaster') lines.push('🎢 A three-car coaster train climbs the lift hill and races through a vertical loop')
+  if (type.id === 'magic-castle') lines.push('🏰 A storybook theme-park castle with a moat, soaring spires and bursting fireworks')
   if (type.id === 'tunnel-works') lines.push('🛠️ A tunnel boring machine drills into the mountain, and a conveyor brings out the rock')
   if (type.id === 'cable-car') lines.push('🚡 Cabins ride up and down the mountainside')
   if (type.requiresRoad) lines.push('🛣️ Needs a road touching one of its sides to open')
