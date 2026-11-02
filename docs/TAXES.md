@@ -123,6 +123,8 @@ placed in service you get half a month (the **mid-month convention**).
 | Power Plant | Electric utility steam production plant | 20 | 500 ÷ 20 = 25 per year |
 | Recycling Center | Waste reduction and resource recovery plant | 7 | 300 ÷ 7 = 42.86 per year |
 | Solar Farm | Solar energy property | 5 | 1,200 ÷ 5 = 240 per year |
+| Attractions | Amusement and theme park assets | 7 | Go Karts: 700 ÷ 7 = 100 per year |
+| Oil Refinery | Petroleum refining | 10 | 2,600 ÷ 10 = 260 per year |
 | Roads, Park, Dock | Land improvements (docks and wharves) | 15 | Dock: 800 ÷ 15 = 53.33 per year |
 | Barn | Farm buildings | 20 | 150 ÷ 20 = 7.50 per year |
 | Warehouse | Nonresidential real property | 39 | 500 ÷ 39 = 12.82 per year |

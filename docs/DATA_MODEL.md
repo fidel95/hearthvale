@@ -20,7 +20,7 @@ individual building.
 |---|---|---|
 | `id` | Unique key, used by saves and quests | `'bakery'` |
 | `name` | Shown to the player | `'Bakery'` |
-| `category` | `home`, `business`, `farm`, `decoration`, `utility`, `community`, `road`, `storage`, `port`: decides the tab, the rules that apply, and how it's taxed | `'business'` |
+| `category` | `home`, `business`, `farm`, `decoration`, `utility`, `community`, `road`, `storage`, `port`, `landmark`, `rail`, `air`, `industry`, `attraction`: decides the tab, the rules that apply, and how it's taxed | `'business'` |
 | `size` | Footprint in tiles, `{ x, z }` (width × depth) | `{ x: 2, z: 2 }` |
 | `cost` | Purchase cost in coins | `300` |
 | `unlockLevel` | Player level that unlocks it | `2` |
@@ -39,6 +39,7 @@ individual building.
 | `factory` | A batch: goods (`input`) or a farm workshop's `recipe` of products in, `output` of a `product` out, every `seconds` | — |
 | `produce` | Pens and orchards: farm products each collection puts in storage, `{ product, units }` | — |
 | `onShore` | Must be built by the sea | — |
+| `onWater` | Must be built out at sea, in the ocean | — |
 | `recoveryYears` | Depreciation period, if not its category's | — |
 | `model`, `placeholder` | How to draw it | — |
 

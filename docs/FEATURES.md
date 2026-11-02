@@ -49,6 +49,8 @@ Every item in the design spec, with its status and where it lives.
 | Civic: construction and materials | ✅ | `build` data |
 | Decorations: appearance, small bonus | ✅ | 9 decorations, +1–8% nearby (capped at +10%) |
 | Landmarks | ✅ | Clock Tower, Lighthouse, Botanical Garden: one each, a minimum rating, town-wide bonus |
+| Attractions: ticket sales, nearby bonus, visitor room | ✅ | 9 animated rides and venues (L8–17) in their own tab: no goods needed, `requiresRoad`, `amenity`, `visitors`; the Magic Castle is one of a kind with a town-wide bonus (`buildings.ts`, `attractionModels.ts`) |
+| Offshore industry | ✅ | Oil Refinery (L15): `onWater` keeps its whole footprint and edge in the ocean; no road, and floods, tsunamis and fires pass it by (`City.ts`, `quarryModels.ts`) |
 
 ## 4.3 Construction and placement
 
