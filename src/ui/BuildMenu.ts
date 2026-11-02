@@ -77,6 +77,8 @@ function details(type: BuildingType): string[] {
   if (type.populationCapacity) lines.push(`Room for 👥 ${type.populationCapacity} more residents in town`)
   if (type.category === 'road') lines.push(`Drag to draw. Homes and shops beside it earn +${Math.round(roadBonus(type) * 100)}% (the best road beside them counts). Every kind of road joins up with the others`)
   if (type.onShore) lines.push('Must be built on the shore. Order shipments of goods here')
+  if (type.onWater) lines.push('🌊 Must be built out at sea, in the ocean')
+  if (type.id === 'oil-refinery') lines.push('🛢️ An offshore platform with a blazing flare stack, pumping derrick, crane, helicopter and oil tanker; refines crude oil at sea')
   if (type.nearMountain) lines.push('⛰️ Must be built at the foot of a mountain, in the Highlands (buy land to the east)')
   if (type.id === 'spaceport') lines.push('🚀 A rocket lifts off every few minutes')
   if (type.id === 'tunnel-works') lines.push('🛠️ A tunnel boring machine drills into the mountain, and a conveyor brings out the rock')

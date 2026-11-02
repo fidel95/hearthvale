@@ -125,7 +125,7 @@ export class EmergencyView {
 
   private startFire() {
     const choices = [...this.city.all()].filter(
-      (b) => ['home', 'business', 'industry', 'community'].includes(b.type.category) && this.city.isBuilt(b) && !b.damaged,
+      (b) => ['home', 'business', 'industry', 'community'].includes(b.type.category) && !b.type.onWater && this.city.isBuilt(b) && !b.damaged,
     )
     if (choices.length === 0) return
     const building = choices[Math.floor(Math.random() * choices.length)]

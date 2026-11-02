@@ -84,6 +84,7 @@ export class Disasters {
   lowLand(reach: number): Tile[] {
     const tiles: Tile[] = []
     for (const b of this.city.all()) {
+      if (b.type.onWater) continue
       for (const t of footprintTiles(b.tile, footprint(b.type, b.rotation))) {
         if (t.z >= coastZ(t.x) - reach) tiles.push(t)
       }

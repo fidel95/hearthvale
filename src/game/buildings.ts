@@ -84,6 +84,7 @@ export type PlaceholderShape =
   | 'winery'
   | 'market'
   | 'tractorshed'
+  | 'refinery'
 
 export interface BuildingType {
   id: string
@@ -151,6 +152,8 @@ export interface BuildingType {
   requiresRail?: boolean
   // Must be built on the shore, next to the sea (docks).
   onShore?: boolean
+  // Must be built out at sea, in the ocean (the Oil Refinery).
+  onWater?: boolean
   // Must be built at the foot of a Highlands mountain (terrain.ts).
   nearMountain?: boolean
   // Depreciation period in years, when it differs from its category's (taxRules.ts).
@@ -191,6 +194,20 @@ export const BUILDING_TYPES: BuildingType[] = [
     income: { coins: 150, seconds: 300 },
     needs: { power: 3, water: 2 },
     placeholder: { shape: 'mine', color: '#a4825c', accent: '#262322', height: 0.35 },
+  },
+  {
+    id: 'oil-refinery',
+    name: 'Oil Refinery',
+    category: 'industry',
+    size: { x: 4, z: 4 },
+    cost: 2600,
+    unlockLevel: 15,
+    onWater: true,
+    build: { seconds: 240, materials: { steel: 10, bricks: 4 } },
+    income: { coins: 250, seconds: 300 },
+    needs: { power: 5, water: 2, trash: 2 },
+    recoveryYears: 10, // petroleum refining (MACRS asset class 13.3)
+    placeholder: { shape: 'refinery', color: '#cfd6de', accent: '#e0533f', height: 2.2 },
   },
   {
     id: 'cannery',

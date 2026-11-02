@@ -3,7 +3,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
 import type { BuildingType } from './buildings'
 import type { CropState, CropType } from './crops'
-import { buildCoalMine, buildLandfill } from './quarryModels'
+import { buildCoalMine, buildLandfill, buildOilRefinery } from './quarryModels'
 import { buildCableCar, buildLodge, buildSpaceport, buildTunnelWorks } from './frontierModels'
 import { buildBakery, buildDairy, buildMarket, buildOrchard, buildTractorShed, buildWinery } from './farmModels'
 
@@ -369,6 +369,9 @@ function createPlaceholder(type: BuildingType): THREE.Group {
   switch (shape) {
     case 'mine':
       buildCoalMine(group, add, w, d)
+      break
+    case 'refinery':
+      buildOilRefinery(group, add, w, d)
       break
     case 'landfill':
       buildLandfill(group, add, w, d, modelCopy)
@@ -1017,14 +1020,23 @@ export function createConstructionSite(type: BuildingType): THREE.Group {
     mesh.receiveShadow = true
     group.add(mesh)
   }
-  add(new THREE.BoxGeometry(w * 0.95, 0.04, d * 0.95), '#9b7a52', 0, 0, 0)
-  add(new THREE.BoxGeometry(w * 0.6, 0.35, d * 0.6), '#b8b2a7', 0, 0.04, 0)
+  const base = type.onWater ? 0.24 : 0.04
+  if (type.onWater) {
+    for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
+      add(new THREE.CylinderGeometry(0.16, 0.19, 0.44, 10), '#3d4854', sx * w * 0.36, -0.22, sz * d * 0.36)
+      add(new THREE.CylinderGeometry(0.21, 0.21, 0.09, 10), '#e8b630', sx * w * 0.36, 0.02, sz * d * 0.36)
+    }
+    add(new THREE.BoxGeometry(w * 0.92, 0.08, d * 0.92), '#4e5968', 0, 0.16, 0)
+  } else {
+    add(new THREE.BoxGeometry(w * 0.95, 0.04, d * 0.95), '#9b7a52', 0, 0, 0)
+  }
+  add(new THREE.BoxGeometry(w * 0.6, 0.35, d * 0.6), '#b8b2a7', 0, base, 0)
   const h = 0.9
   for (const [x, z] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
-    add(new THREE.BoxGeometry(0.06, h, 0.06), '#d9a85e', (x * w * 0.38), 0.04, (z * d * 0.38))
+    add(new THREE.BoxGeometry(0.06, h, 0.06), '#d9a85e', (x * w * 0.38), base, (z * d * 0.38))
   }
-  add(new THREE.BoxGeometry(w * 0.8, 0.05, 0.06), '#d9a85e', 0, h, -d * 0.38)
-  add(new THREE.BoxGeometry(w * 0.8, 0.05, 0.06), '#d9a85e', 0, h, d * 0.38)
+  add(new THREE.BoxGeometry(w * 0.8, 0.05, 0.06), '#d9a85e', 0, base + h - 0.04, -d * 0.38)
+  add(new THREE.BoxGeometry(w * 0.8, 0.05, 0.06), '#d9a85e', 0, base + h - 0.04, d * 0.38)
   // Traffic cones at the front corners (Kenney's Car Kit).
   const carKit = (name: string) => `${import.meta.env.BASE_URL}models/cars/${name}.glb`
   const coneShape = () => {
@@ -1034,7 +1046,7 @@ export function createConstructionSite(type: BuildingType): THREE.Group {
   }
   for (const side of [-1, 1]) {
     const cone = modelCopy(carKit('cone'), 0.3, coneShape)
-    cone.position.set(side * w * 0.42, 0.04, d * 0.45)
+    cone.position.set(side * w * 0.42, base, d * 0.45)
     group.add(cone)
   }
   // The site office and a portable toilet down the right side; planks,
@@ -1042,7 +1054,7 @@ export function createConstructionSite(type: BuildingType): THREE.Group {
   const size = Math.min(w, d)
   const put = (name: string, length: number, x: number, z: number, turn = 0) => {
     const thing = modelFitted(construction(name), length, { turn })
-    thing.position.set(x, 0.04, z)
+    thing.position.set(x, base, z)
     group.add(thing)
   }
   put('office', size * 0.22, w * 0.4, d * 0.02)
@@ -1056,14 +1068,14 @@ export function createConstructionSite(type: BuildingType): THREE.Group {
   const dozer = new THREE.Group()
   dozer.name = 'site-dozer'
   dozer.userData.range = w * 0.28
-  dozer.position.set(0, 0.04, d * 0.39)
+  dozer.position.set(0, base, d * 0.39)
   dozer.add(modelFitted(construction('bulldozer'), size * 0.22, { turn: BULLDOZER_TURN }))
   group.add(dozer)
   // A tower crane at the back corner, turning slowly about its mast (named,
   // so CityView can turn it), a load hanging from its jib.
   const jib = new THREE.Group()
   jib.name = 'crane-jib'
-  jib.position.set(-w * 0.4, 0.04, -d * 0.4)
+  jib.position.set(-w * 0.4, base, -d * 0.4)
   jib.add(modelFitted(construction('crane'), Math.max(w, d) * 0.6 + 0.9, { onBase: true }))
   group.add(jib)
   return group

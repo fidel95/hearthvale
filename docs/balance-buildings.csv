@@ -1,5 +1,6 @@
 id,name,category,role,unlockLevel,quests,footprint,tiles,cost,materials,materialsValue,totalCost,buildSeconds,cycleSeconds,coinsPerCycle,goodsPerCycle,netPerCycle,xpPerCycle,buildXp,residents,needs,upkeepPerMonth,effect,paybackCycles,paybackMinutes,coinsPerMinute,coinsPerEnergy,roads,upgrades
 coal-mine,Coal Mine,industry,late,12,,4×4,16,1200,🪵 2 🔩 3,99,1299,150,300,150,0,150,10,84,0,💧2 🔌3,0,,8.66,45.8,30,150,—,—
+oil-refinery,Oil Refinery,industry,late,15,,4×4,16,2600,🧱 4 🔩 10,310,2910,240,300,250,0,250,17,182,0,💧2 🔌5 🗑️2,0,,11.64,62.2,50,250,—,—
 cannery,Cannery,industry,late,12,Made in Hearthvale,3×2,6,600,🧱 4 🔩 1,85,685,90,,,0,,,42,0,💧4 🔌4 🗑️3,0,,,,,,—,—
 textile-mill,Textile Mill,industry,late,13,,3×3,9,900,🧱 6 🪟 2 🔩 2,180,1080,150,,,0,,,63,0,💧5 🔌6 🗑️3,0,,,,,,—,—
 furniture-workshop,Furniture Workshop,industry,late,16,,3×2,6,1100,🪵 8 🔩 2,146,1246,180,,,0,,,77,0,💧2 🔌6 🗑️4,0,,,,,,—,—

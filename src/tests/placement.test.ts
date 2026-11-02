@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
+import * as THREE from 'three'
 import { GameState } from '../game/GameState'
+import { createBuildingObject } from '../game/models'
 import { finishConstruction, buyLand } from '../game/projects'
 import { at, b, reload, richGame, snapshot } from './helpers'
 
@@ -99,5 +101,32 @@ describe('Placement', () => {
     expect(state.placement.check(b('manor'), { tile: at(0, 0), rotation: 0 }).ok).toBe(true)
     state.placement.freeBuild = false
     expect(state.placement.check(b('manor'), { tile: at(0, 0), rotation: 0 }).ok).toBe(false)
+  })
+
+  it('places the offshore oil refinery only out in the ocean and animates its rig', async () => {
+    const state = richGame()
+    const refinery = b('oil-refinery')
+    expect(state.city.canPlace(refinery, at(4, 4))).toBe(false)
+    expect(state.placement.check(refinery, { tile: at(4, 4), rotation: 0 }).problems).toContain('It must stand out at sea, in the ocean')
+    // Right at the shoreline where edge tiles touch the beach is also rejected.
+    expect(state.city.canPlace(refinery, { x: 30, z: 45 })).toBe(false)
+    // Out in the open ocean, surrounded by water, it places and operates without a road.
+    const oceanTile = { x: 30, z: 58 }
+    expect(state.placement.check(refinery, { tile: oceanTile, rotation: 0 }).ok).toBe(true)
+    const placed = state.city.place(refinery, oceanTile, { free: true })!
+    expect(placed).not.toBeNull()
+    expect(state.city.isOperating(placed)).toBe(true)
+
+    const obj = await createBuildingObject(refinery)
+    let animatedCount = 0
+    obj.traverse((part: THREE.Object3D) => {
+      if (typeof part.userData.animate === 'function') {
+        animatedCount++
+        part.userData.animate(0)
+        part.userData.animate(5.5)
+        part.userData.animate(14.2)
+      }
+    })
+    expect(animatedCount).toBeGreaterThanOrEqual(7)
   })
 })

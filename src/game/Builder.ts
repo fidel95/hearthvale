@@ -279,7 +279,11 @@ export class Builder {
     this.rotation = mode.kind === 'move' ? mode.carrying.rotation : 0
     if (mode.kind === 'move') this.cityView.setVisible(mode.carrying.id, false)
     // A new building appears at once, on the nearest empty spot to the middle of the screen.
-    if (type && mode.kind !== 'move' && !isDrawn(type)) this.draft = this.nearestFit(type, worldToTile(this.controls.target) ?? { x: 0, z: 0 })
+    if (type && mode.kind !== 'move' && !isDrawn(type)) {
+      const around = worldToTile(this.controls.target) ?? { x: 30, z: 30 }
+      this.draft = this.nearestFit(type, type.onWater ? { x: around.x, z: Math.max(around.z, 54) } : around)
+      if (type.onWater && around.z < 46) this.controls.centerOn(footprintCenter(this.draft, footprint(type, this.rotation)))
+    }
     // Roads (and paths, hedges and flower beds) are drawn by dragging, and
     // roads picked for removal by dragging; everything else drags the camera.
     this.controls.paint =
@@ -745,16 +749,17 @@ export class Builder {
   startBuildAt(type: BuildingType, tile: Tile) {
     this.setMode({ kind: 'build', type })
     if (isDrawn(type)) this.buildAt(type, tile)
-    else this.draft = this.nearestFit(type, tile)
+    else this.draft = this.nearestFit(type, type.onWater ? { x: tile.x, z: Math.max(tile.z, 54) } : tile)
     this.refresh()
   }
 
   // The nearest spot to a tile where this building fits (as turned now), for
   // its corner; just centered on the tile if there's none near.
   private nearestFit(type: BuildingType, around: Tile, ignoreId?: number): Tile {
+    const radius = type.onWater ? 25 : SEARCH_RADIUS
     const tries: Tile[] = []
-    for (let dx = -SEARCH_RADIUS; dx <= SEARCH_RADIUS; dx++) {
-      for (let dz = -SEARCH_RADIUS; dz <= SEARCH_RADIUS; dz++) tries.push({ x: around.x + dx, z: around.z + dz })
+    for (let dx = -radius; dx <= radius; dx++) {
+      for (let dz = -radius; dz <= radius; dz++) tries.push({ x: around.x + dx, z: around.z + dz })
     }
     const away = (t: Tile) => Math.hypot(t.x - around.x, t.z - around.z)
     tries.sort((a, b) => away(a) - away(b))

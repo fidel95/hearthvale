@@ -64,9 +64,11 @@ export class PlacementSystem {
             ? 'Only roads can cross the river (as bridges)'
             : type.onShore
               ? 'It must stand on the shore, next to the sea'
-              : type.nearMountain
-                ? 'It must stand at the foot of a mountain, in the Highlands'
-                : "It doesn't fit there",
+              : type.onWater
+                ? 'It must stand out at sea, in the ocean'
+                : type.nearMountain
+                  ? 'It must stand at the foot of a mountain, in the Highlands'
+                  : "It doesn't fit there",
         )
       } else if (type.requiresRoad && !edgeTiles({ type, tile: spot.tile, rotation: spot.rotation }).some(this.city.isRoad)) {
         warnings.push('Needs a road beside it to open')

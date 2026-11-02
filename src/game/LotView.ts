@@ -13,10 +13,10 @@ const LAWN = new THREE.Color('#5aa94a')
 const PAVING = new THREE.Color('#d9d2c2')
 
 // Green places (parks, gardens, playing fields, the beach) keep their own ground.
-const OPEN_AIR = new Set(['park', 'bigpark', 'garden', 'beach', 'playground', 'sportsfield', 'skiresort', 'mine', 'landfill'])
+const OPEN_AIR = new Set(['park', 'bigpark', 'garden', 'beach', 'playground', 'sportsfield', 'skiresort', 'mine', 'landfill', 'refinery'])
 
 function padFor(type: BuildingType): THREE.Color | null {
-  if (OPEN_AIR.has(type.placeholder.shape)) return null
+  if (OPEN_AIR.has(type.placeholder.shape) || type.onWater) return null
   switch (type.category) {
     case 'home':
       return LAWN
@@ -33,7 +33,7 @@ function padFor(type: BuildingType): THREE.Color | null {
 
 // Things too flat or too small for a shadow of their own.
 function castsGroundShadow(type: BuildingType): boolean {
-  return !isTrack(type) && !isPlot(type) && type.category !== 'road' && !(type.category === 'decoration' && type.size.x * type.size.z < 2)
+  return !type.onWater && !isTrack(type) && !isPlot(type) && type.category !== 'road' && !(type.category === 'decoration' && type.size.x * type.size.z < 2)
 }
 
 // A white rounded square on a transparent background, soft-edged if `blur`.
