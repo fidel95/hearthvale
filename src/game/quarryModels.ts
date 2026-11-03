@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import { ownPart } from './modelLoading'
 import { BULLDOZER_TURN, construction, DUMP_TRUCK_TURN, modelFitted } from './models'
 
 // The Coal Mine and the Landfill: earthworks with machines at work. Built in
@@ -9,7 +10,7 @@ import { BULLDOZER_TURN, construction, DUMP_TRUCK_TURN, modelFitted } from './mo
 // dump truck and a bulldozer) and Kenney's Car Kit garbage truck; they're
 // marked liveOnly, so the see-through placement ghost leaves them out.
 
-type Add = (geometry: THREE.BufferGeometry, color: string, x: number, y: number, z: number) => THREE.Mesh
+type Add = ((geometry: THREE.BufferGeometry, color: string, x: number, y: number, z: number) => THREE.Mesh) & { solid?: boolean }
 type Animate = (seconds: number) => void
 
 const BANK = '#72b956' // grass, near the town's own
@@ -562,16 +563,18 @@ export function buildOilRefinery(group: THREE.Group, add: Add, w: number, d: num
   const chopper = new THREE.Group()
   chopper.userData.liveOnly = true
   chopper.userData.flies = true
+  const fuselage = new THREE.Group()
   for (const side of [-1, 1]) {
-    chopper.add(part(new THREE.BoxGeometry(0.02, 0.015, 0.32), '#3a3f47', side * 0.09, 0, 0))
-    chopper.add(part(new THREE.BoxGeometry(0.015, 0.05, 0.015), '#3a3f47', side * 0.09, 0.015, 0.07))
-    chopper.add(part(new THREE.BoxGeometry(0.015, 0.05, 0.015), '#3a3f47', side * 0.09, 0.015, -0.07))
+    fuselage.add(part(new THREE.BoxGeometry(0.02, 0.015, 0.32), '#3a3f47', side * 0.09, 0, 0))
+    fuselage.add(part(new THREE.BoxGeometry(0.015, 0.05, 0.015), '#3a3f47', side * 0.09, 0.015, 0.07))
+    fuselage.add(part(new THREE.BoxGeometry(0.015, 0.05, 0.015), '#3a3f47', side * 0.09, 0.015, -0.07))
   }
-  chopper.add(part(new THREE.BoxGeometry(0.2, 0.15, 0.3), '#f2b632', 0, 0.06, 0.02))
-  chopper.add(part(new THREE.BoxGeometry(0.205, 0.04, 0.305), '#c8463a', 0, 0.09, 0.02))
-  chopper.add(part(new THREE.BoxGeometry(0.17, 0.09, 0.08), '#9fd3f0', 0, 0.1, 0.15))
-  chopper.add(part(new THREE.BoxGeometry(0.05, 0.05, 0.28), '#f2b632', 0, 0.12, -0.26))
-  chopper.add(part(new THREE.BoxGeometry(0.02, 0.11, 0.06), '#c8463a', 0, 0.13, -0.39))
+  fuselage.add(part(new THREE.BoxGeometry(0.2, 0.15, 0.3), '#f2b632', 0, 0.06, 0.02))
+  fuselage.add(part(new THREE.BoxGeometry(0.205, 0.04, 0.305), '#c8463a', 0, 0.09, 0.02))
+  fuselage.add(part(new THREE.BoxGeometry(0.17, 0.09, 0.08), '#9fd3f0', 0, 0.1, 0.15))
+  fuselage.add(part(new THREE.BoxGeometry(0.05, 0.05, 0.28), '#f2b632', 0, 0.12, -0.26))
+  fuselage.add(part(new THREE.BoxGeometry(0.02, 0.11, 0.06), '#c8463a', 0, 0.13, -0.39))
+  chopper.add(ownPart('oil-refinery.helicopter', () => fuselage))
   const mainRotor = new THREE.Group()
   mainRotor.position.set(0, 0.23, 0.02)
   mainRotor.add(part(new THREE.BoxGeometry(0.62, 0.01, 0.04), '#2b2d33', 0, 0, 0))
@@ -621,18 +624,20 @@ export function buildOilRefinery(group: THREE.Group, add: Add, w: number, d: num
   const tanker = new THREE.Group()
   tanker.userData.liveOnly = true
   tanker.userData.flies = true
-  tanker.add(part(new THREE.BoxGeometry(0.44, 0.14, 1.35), '#b83b2f', 0, 0, 0))
-  tanker.add(part(new THREE.ConeGeometry(0.22, 0.36, 4).rotateX(Math.PI / 2).rotateZ(Math.PI / 4).scale(1, 0.55, 1), '#b83b2f', 0, 0.07, 0.84))
-  tanker.add(part(new THREE.BoxGeometry(0.4, 0.04, 1.28), '#3a3f47', 0, 0.14, 0))
+  const hull = new THREE.Group()
+  hull.add(part(new THREE.BoxGeometry(0.44, 0.14, 1.35), '#b83b2f', 0, 0, 0))
+  hull.add(part(new THREE.ConeGeometry(0.22, 0.36, 4).rotateX(Math.PI / 2).rotateZ(Math.PI / 4).scale(1, 0.55, 1), '#b83b2f', 0, 0.07, 0.84))
+  hull.add(part(new THREE.BoxGeometry(0.4, 0.04, 1.28), '#3a3f47', 0, 0.14, 0))
   // Cylindrical oil cargo domes and central deck pipeline along the tanker.
   for (const tz of [-0.15, 0.18, 0.5]) {
-    tanker.add(part(new THREE.CylinderGeometry(0.13, 0.13, 0.07, 10), '#e0a030', 0, 0.18, tz))
+    hull.add(part(new THREE.CylinderGeometry(0.13, 0.13, 0.07, 10), '#e0a030', 0, 0.18, tz))
   }
-  tanker.add(part(new THREE.CylinderGeometry(0.018, 0.018, 0.95, 6).rotateX(Math.PI / 2), '#cfd6de', 0, 0.21, 0.18))
+  hull.add(part(new THREE.CylinderGeometry(0.018, 0.018, 0.95, 6).rotateX(Math.PI / 2), '#cfd6de', 0, 0.21, 0.18))
   // White bridge superstructure at the stern (-z) with a funnel.
-  tanker.add(part(new THREE.BoxGeometry(0.34, 0.24, 0.32), '#f4f6f8', 0, 0.18, -0.46))
-  tanker.add(part(new THREE.BoxGeometry(0.35, 0.05, 0.02), '#2b3a4a', 0, 0.32, -0.29))
-  tanker.add(part(new THREE.CylinderGeometry(0.05, 0.06, 0.16, 8), '#f2b632', 0, 0.42, -0.52))
+  hull.add(part(new THREE.BoxGeometry(0.34, 0.24, 0.32), '#f4f6f8', 0, 0.18, -0.46))
+  hull.add(part(new THREE.BoxGeometry(0.35, 0.05, 0.02), '#2b3a4a', 0, 0.32, -0.29))
+  hull.add(part(new THREE.CylinderGeometry(0.05, 0.06, 0.16, 8), '#f2b632', 0, 0.42, -0.52))
+  tanker.add(ownPart('oil-refinery.tanker', () => hull))
   // A closed loop starting at the berth, clear of the platform's legs, out no
   // farther than the open water to the south-east the old route used.
   const tankerRoute = new THREE.CatmullRomCurve3(

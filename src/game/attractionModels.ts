@@ -1,12 +1,26 @@
 import * as THREE from 'three'
+import { ownPart } from './modelLoading'
 
 // Theme-park and leisure attractions inspired by CityVille's Attractions:
 // Go Karts, Pirate Ship Ride, Driving Range, Ferris Wheel, Reverse Bungee,
 // Wave Pool, Sky Ride, Roller Coaster, and Magic Castle. Each is built in the
 // building's own coordinates (center at origin, front toward +z) and registers
 // userData.animate(seconds) on its moving parts so CityView drives them every frame.
+//
+// Their fixed bodies and main moving parts are Blender models
+// (assets-src/blender/models); the shapes here are what's drawn if those
+// can't load. With a body model, `add` leaves the fixed parts out (solid: false).
 
-type Add = (geometry: THREE.BufferGeometry, color: string, x: number, y: number, z: number) => THREE.Mesh
+type Add = ((geometry: THREE.BufferGeometry, color: string, x: number, y: number, z: number) => THREE.Mesh) & { solid?: boolean }
+
+// A group of simple shapes, the fallback for a moving part's model.
+function shapes(...parts: THREE.Object3D[]): () => THREE.Group {
+  return () => {
+    const g = new THREE.Group()
+    g.add(...parts)
+    return g
+  }
+}
 type Animate = (seconds: number) => void
 
 function part(geometry: THREE.BufferGeometry, color: string, x = 0, y = 0, z = 0, material?: THREE.Material): THREE.Mesh {
@@ -59,15 +73,21 @@ export function buildGoKarts(group: THREE.Group, add: Add, w: number, d: number)
   const karts: THREE.Group[] = []
   for (let i = 0; i < 3; i++) {
     const kart = new THREE.Group()
-    kart.add(
-      part(new THREE.BoxGeometry(0.24, 0.05, 0.15), kartColors[i], 0, 0.02, 0),
-      part(new THREE.BoxGeometry(0.08, 0.06, 0.16), kartColors[i], -0.09, 0.07, 0),
-      part(new THREE.BoxGeometry(0.06, 0.04, 0.13), '#2b2e33', -0.02, 0.07, 0),
-      part(new THREE.SphereGeometry(0.045, 8, 6), helmetColors[i], -0.01, 0.11, 0),
+    const wheels = [[-0.08, -0.08], [0.08, -0.08], [-0.08, 0.08], [0.08, 0.08]].map(([wx, wz]) =>
+      part(new THREE.CylinderGeometry(0.032, 0.032, 0.03, 8).rotateX(Math.PI / 2), '#1f2226', wx, 0, wz),
     )
-    for (const [wx, wz] of [[-0.08, -0.08], [0.08, -0.08], [-0.08, 0.08], [0.08, 0.08]]) {
-      kart.add(part(new THREE.CylinderGeometry(0.032, 0.032, 0.03, 8).rotateX(Math.PI / 2), '#1f2226', wx, 0, wz))
-    }
+    kart.add(
+      ownPart(
+        `go-karts.kart-${i}`,
+        shapes(
+          part(new THREE.BoxGeometry(0.24, 0.05, 0.15), kartColors[i], 0, 0.02, 0),
+          part(new THREE.BoxGeometry(0.08, 0.06, 0.16), kartColors[i], -0.09, 0.07, 0),
+          part(new THREE.BoxGeometry(0.06, 0.04, 0.13), '#2b2e33', -0.02, 0.07, 0),
+          part(new THREE.SphereGeometry(0.045, 8, 6), helmetColors[i], -0.01, 0.11, 0),
+          ...wheels,
+        ),
+      ),
+    )
     karts.push(kart)
     group.add(kart)
   }
@@ -117,12 +137,12 @@ export function buildPirateShipRide(group: THREE.Group, add: Add, w: number, d: 
   const swing = new THREE.Group()
   swing.position.set(0, apexY, 0)
 
-  // Hanger arms down to the ship hull
-  for (const sz of [-0.24, 0.24]) {
-    swing.add(part(new THREE.BoxGeometry(0.05, 1.38, 0.05), '#ffd23f', 0, -1.38, sz))
-  }
-  // Wooden galleon hull
+  // Hanger arms down to the ship hull, and the wooden galleon.
   swing.add(
+    ownPart(
+      'pirate-ship.swing',
+      shapes(
+        ...[-0.24, 0.24].map((sz) => part(new THREE.BoxGeometry(0.05, 1.38, 0.05), '#ffd23f', 0, -1.38, sz)),
     part(new THREE.BoxGeometry(1.35, 0.24, 0.52), '#7a4928', 0, -1.58, 0),
     part(new THREE.BoxGeometry(1.58, 0.16, 0.56), '#9b6037', 0, -1.36, 0),
     part(new THREE.BoxGeometry(1.64, 0.06, 0.58), '#e8b630', 0, -1.21, 0),
@@ -134,6 +154,8 @@ export function buildPirateShipRide(group: THREE.Group, add: Add, w: number, d: 
     part(new THREE.CylinderGeometry(0.035, 0.045, 0.95, 8), '#5c381e', 0, -1.2, 0),
     part(new THREE.BoxGeometry(0.08, 0.42, 0.52), '#f8f4e8', 0.05, -0.82, 0),
     part(new THREE.BoxGeometry(0.09, 0.12, 0.54), '#d93829', 0.05, -0.64, 0),
+      ),
+    ),
   )
 
   swing.userData.animate = ((seconds: number) => {
@@ -231,13 +253,13 @@ export function buildFerrisWheel(group: THREE.Group, add: Add, w: number, d: num
   const wheel = new THREE.Group()
   wheel.position.set(0, hubY, 0)
 
-  // Twin outer rims & spokes
+  // Twin outer rims, spokes and the hub: one model, or these shapes.
+  const frame: THREE.Object3D[] = []
   for (const sz of [-0.22, 0.22]) {
-    wheel.add(part(new THREE.TorusGeometry(radius, 0.04, 8, 28), '#ff5c8a', 0, -radius, sz))
-    wheel.add(part(new THREE.TorusGeometry(radius * 0.62, 0.025, 6, 24), '#ffd23f', 0, -radius * 0.62, sz))
+    frame.push(part(new THREE.TorusGeometry(radius, 0.04, 8, 28), '#ff5c8a', 0, -radius, sz))
+    frame.push(part(new THREE.TorusGeometry(radius * 0.62, 0.025, 6, 24), '#ffd23f', 0, -radius * 0.62, sz))
   }
-  // Glowing star hub
-  wheel.add(part(new THREE.CylinderGeometry(0.22, 0.22, 0.52, 12).rotateX(Math.PI / 2), '#ffd23f', 0, -0.22, 0))
+  frame.push(part(new THREE.CylinderGeometry(0.22, 0.22, 0.52, 12).rotateX(Math.PI / 2), '#ffd23f', 0, -0.22, 0))
 
   const gondolaColors = ['#ff5c8a', '#2f7fe0', '#ffd23f', '#3fae6b', '#ff7043', '#b46cf0', '#2bb3b1', '#e63946']
   const gondolas: THREE.Group[] = []
@@ -253,19 +275,26 @@ export function buildFerrisWheel(group: THREE.Group, add: Add, w: number, d: num
     for (const sz of [-0.22, 0.22]) {
       const sMesh = new THREE.Mesh(spoke, new THREE.MeshStandardMaterial({ color: '#f4f7fa', flatShading: true }))
       sMesh.position.z = sz
-      wheel.add(sMesh)
+      frame.push(sMesh)
     }
 
     const cabin = new THREE.Group()
     cabin.position.set(gx, gy, 0)
     cabin.add(
-      part(new THREE.CylinderGeometry(0.02, 0.02, 0.46, 6).rotateX(Math.PI / 2), '#cfd6de', 0, -0.02, 0),
-      part(new THREE.BoxGeometry(0.24, 0.18, 0.28), gondolaColors[i], 0, -0.26, 0),
-      part(new THREE.BoxGeometry(0.26, 0.05, 0.3), '#ffffff', 0, -0.08, 0),
+      ownPart(
+        `ferris-wheel.gondola-${i % 4}`,
+        shapes(
+          part(new THREE.CylinderGeometry(0.02, 0.02, 0.46, 6).rotateX(Math.PI / 2), '#cfd6de', 0, -0.02, 0),
+          part(new THREE.BoxGeometry(0.24, 0.18, 0.28), gondolaColors[i], 0, -0.26, 0),
+          part(new THREE.BoxGeometry(0.26, 0.05, 0.3), '#ffffff', 0, -0.08, 0),
+        ),
+      ),
     )
     gondolas.push(cabin)
     wheel.add(cabin)
   }
+
+  wheel.add(ownPart('ferris-wheel.wheel', shapes(...frame)))
 
   wheel.userData.animate = ((seconds: number) => {
     const rot = seconds * 0.48
@@ -294,9 +323,14 @@ export function buildReverseBungee(group: THREE.Group, add: Add, w: number, d: n
   const pod = new THREE.Group()
   pod.position.set(0, 0.42, 0)
   pod.add(
-    part(new THREE.IcosahedronGeometry(0.24, 1), '#2f7fe0', 0, -0.24, 0),
-    part(new THREE.TorusGeometry(0.25, 0.035, 8, 18), '#ffd23f', 0, -0.25, 0),
-    part(new THREE.TorusGeometry(0.25, 0.035, 8, 18).rotateY(Math.PI / 2), '#ffffff', 0, -0.25, 0),
+    ownPart(
+      'reverse-bungee.pod',
+      shapes(
+        part(new THREE.IcosahedronGeometry(0.24, 1), '#2f7fe0', 0, -0.24, 0),
+        part(new THREE.TorusGeometry(0.25, 0.035, 8, 18), '#ffd23f', 0, -0.25, 0),
+        part(new THREE.TorusGeometry(0.25, 0.035, 8, 18).rotateY(Math.PI / 2), '#ffffff', 0, -0.25, 0),
+      ),
+    ),
   )
   group.add(pod)
 
@@ -441,9 +475,14 @@ export function buildSkyRide(group: THREE.Group, add: Add, w: number, d: number)
   for (let i = 0; i < 4; i++) {
     const cabin = new THREE.Group()
     cabin.add(
-      part(new THREE.BoxGeometry(0.03, 0.28, 0.03), '#3b424c', 0, -0.28, 0),
-      part(new THREE.BoxGeometry(0.28, 0.24, 0.22), cabinColors[i], 0, -0.52, 0),
-      part(new THREE.BoxGeometry(0.29, 0.08, 0.23), '#d8f0ff', 0, -0.4, 0),
+      ownPart(
+        `sky-ride.cabin-${i}`,
+        shapes(
+          part(new THREE.BoxGeometry(0.03, 0.28, 0.03), '#3b424c', 0, -0.28, 0),
+          part(new THREE.BoxGeometry(0.28, 0.24, 0.22), cabinColors[i], 0, -0.52, 0),
+          part(new THREE.BoxGeometry(0.29, 0.08, 0.23), '#d8f0ff', 0, -0.4, 0),
+        ),
+      ),
     )
     cabins.push(cabin)
     group.add(cabin)
@@ -475,13 +514,15 @@ export function buildRollerCoaster(group: THREE.Group, add: Add, w: number, d: n
   add(new THREE.BoxGeometry(1.35, 0.12, 0.76), '#e63946', -0.95, 0.48, 1.18)
 
   // Central vertical loop in the middle of the coaster
-  const loopGroup = new THREE.Group()
-  loopGroup.position.set(0.15, 1.18, -0.1)
-  loopGroup.add(
-    part(new THREE.TorusGeometry(0.88, 0.055, 10, 28), '#e63946', 0, -0.88, 0),
-    part(new THREE.TorusGeometry(0.78, 0.03, 8, 24), '#ffd23f', 0, -0.78, 0),
-  )
-  group.add(loopGroup)
+  if (add.solid !== false) {
+    const loopGroup = new THREE.Group()
+    loopGroup.position.set(0.15, 1.18, -0.1)
+    loopGroup.add(
+      part(new THREE.TorusGeometry(0.88, 0.055, 10, 28), '#e63946', 0, -0.88, 0),
+      part(new THREE.TorusGeometry(0.78, 0.03, 8, 24), '#ffd23f', 0, -0.78, 0),
+    )
+    group.add(loopGroup)
+  }
   for (const sx of [-0.55, 0.85]) {
     add(new THREE.CylinderGeometry(0.05, 0.065, 1.25, 8), '#cfd6de', sx, 0.06, -0.1)
   }
@@ -509,14 +550,16 @@ export function buildRollerCoaster(group: THREE.Group, add: Add, w: number, d: n
     trackPoint((i + 1) / steps, p1)
     const mid = p0.clone().add(p1).multiplyScalar(0.5)
     const len = p0.distanceTo(p1) * 1.08
-    const seg = new THREE.Mesh(
-      new THREE.BoxGeometry(0.18, 0.06, len),
-      new THREE.MeshStandardMaterial({ color: i % 2 === 0 ? '#e63946' : '#ff6b4a', flatShading: true }),
-    )
-    seg.position.copy(mid)
-    seg.lookAt(p1)
-    seg.castShadow = true
-    group.add(seg)
+    if (add.solid !== false) {
+      const seg = new THREE.Mesh(
+        new THREE.BoxGeometry(0.18, 0.06, len),
+        new THREE.MeshStandardMaterial({ color: i % 2 === 0 ? '#e63946' : '#ff6b4a', flatShading: true }),
+      )
+      seg.position.copy(mid)
+      seg.lookAt(p1)
+      seg.castShadow = true
+      group.add(seg)
+    }
 
     if (i % 2 === 0) {
       add(new THREE.CylinderGeometry(0.035, 0.045, mid.y, 6), '#d9c79a', mid.x, 0.06, mid.z)
@@ -529,8 +572,13 @@ export function buildRollerCoaster(group: THREE.Group, add: Add, w: number, d: n
   for (let i = 0; i < 3; i++) {
     const car = new THREE.Group()
     car.add(
-      part(new THREE.BoxGeometry(0.24, 0.12, 0.32), carColors[i], 0, 0.03, 0),
-      part(new THREE.SphereGeometry(0.065, 8, 6), '#f5d0a9', 0, 0.14, 0),
+      ownPart(
+        `roller-coaster.car-${i}`,
+        shapes(
+          part(new THREE.BoxGeometry(0.24, 0.12, 0.32), carColors[i], 0, 0.03, 0),
+          part(new THREE.SphereGeometry(0.065, 8, 6), '#f5d0a9', 0, 0.14, 0),
+        ),
+      ),
     )
     cars.push(car)
     group.add(car)

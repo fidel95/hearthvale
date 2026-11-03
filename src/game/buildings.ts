@@ -178,6 +178,10 @@ export interface BuildingType {
   road?: { bonus: number; style: RoadStyle }
   // URL of a .glb model, e.g. suburban('building-type-a'). Optional: without it we draw the placeholder.
   model?: string
+  // The model is the fixed body of a building with moving parts (rides, the
+  // refinery): drawn at its true size, not fitted to the footprint, with the
+  // moving parts still added by the building's code (models.ts).
+  modelLive?: boolean
 }
 
 // Models live in public/models/. BASE_URL is '/' in dev but may be a
@@ -220,6 +224,8 @@ export const BUILDING_TYPES: BuildingType[] = [
     income: { coins: 250, seconds: 300 },
     needs: { power: 5, water: 2, trash: 2 },
     recoveryYears: 10, // petroleum refining (MACRS asset class 13.3)
+    model: hearthvale('oil-refinery'),
+    modelLive: true,
     placeholder: { shape: 'refinery', color: '#cfd6de', accent: '#e0533f', height: 2.2 },
   },
   {
@@ -1570,6 +1576,8 @@ export const BUILDING_TYPES: BuildingType[] = [
     amenity: { bonus: 0.06, radius: 4 },
     attractsVisitors: { lingerSeconds: 10 },
     visitors: 12,
+    model: hearthvale('go-karts'),
+    modelLive: true,
     placeholder: { shape: 'gokarts', color: '#434850', accent: '#e04238', height: 0.6 },
   },
   {
@@ -1586,6 +1594,8 @@ export const BUILDING_TYPES: BuildingType[] = [
     amenity: { bonus: 0.07, radius: 4 },
     attractsVisitors: { lingerSeconds: 10 },
     visitors: 15,
+    model: hearthvale('pirate-ship'),
+    modelLive: true,
     placeholder: { shape: 'pirateship', color: '#7a4928', accent: '#ffd23f', height: 2.1 },
   },
   {
@@ -1602,6 +1612,8 @@ export const BUILDING_TYPES: BuildingType[] = [
     amenity: { bonus: 0.08, radius: 5 },
     attractsVisitors: { lingerSeconds: 12 },
     visitors: 18,
+    model: hearthvale('driving-range'),
+    modelLive: true,
     placeholder: { shape: 'drivingrange', color: '#52b848', accent: '#f0ebe1', height: 1.4 },
   },
   {
@@ -1618,6 +1630,8 @@ export const BUILDING_TYPES: BuildingType[] = [
     amenity: { bonus: 0.09, radius: 5 },
     attractsVisitors: { lingerSeconds: 12 },
     visitors: 24,
+    model: hearthvale('ferris-wheel'),
+    modelLive: true,
     placeholder: { shape: 'ferriswheel', color: '#ff5c8a', accent: '#ffd23f', height: 3.2 },
   },
   {
@@ -1634,6 +1648,8 @@ export const BUILDING_TYPES: BuildingType[] = [
     amenity: { bonus: 0.08, radius: 5 },
     attractsVisitors: { lingerSeconds: 10 },
     visitors: 20,
+    model: hearthvale('reverse-bungee'),
+    modelLive: true,
     placeholder: { shape: 'bungee', color: '#e04238', accent: '#ffd23f', height: 2.8 },
   },
   {
@@ -1650,6 +1666,8 @@ export const BUILDING_TYPES: BuildingType[] = [
     amenity: { bonus: 0.1, radius: 6 },
     attractsVisitors: { lingerSeconds: 14 },
     visitors: 30,
+    model: hearthvale('wave-pool'),
+    modelLive: true,
     placeholder: { shape: 'wavepool', color: '#26b6d4', accent: '#f3e3b2', height: 0.7 },
   },
   {
@@ -1666,6 +1684,8 @@ export const BUILDING_TYPES: BuildingType[] = [
     amenity: { bonus: 0.1, radius: 6 },
     attractsVisitors: { lingerSeconds: 12 },
     visitors: 32,
+    model: hearthvale('sky-ride'),
+    modelLive: true,
     placeholder: { shape: 'skyride', color: '#2f7fe0', accent: '#ffd23f', height: 1.9 },
   },
   {
@@ -1682,6 +1702,8 @@ export const BUILDING_TYPES: BuildingType[] = [
     amenity: { bonus: 0.12, radius: 7 },
     attractsVisitors: { lingerSeconds: 15 },
     visitors: 45,
+    model: hearthvale('roller-coaster'),
+    modelLive: true,
     placeholder: { shape: 'coaster', color: '#e63946', accent: '#ffd23f', height: 2.3 },
   },
   {
@@ -1700,6 +1722,8 @@ export const BUILDING_TYPES: BuildingType[] = [
     townBonus: 0.04,
     attractsVisitors: { lingerSeconds: 18 },
     visitors: 60,
+    model: hearthvale('magic-castle'),
+    modelLive: true,
     placeholder: { shape: 'magiccastle', color: '#fbf8f1', accent: '#2f5fc4', height: 4.1 },
   },
 ]

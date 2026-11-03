@@ -117,7 +117,8 @@ describe('Placement', () => {
     expect(placed).not.toBeNull()
     expect(state.city.isOperating(placed)).toBe(true)
 
-    const obj = await createBuildingObject(refinery)
+    const obj = createBuildingObject(refinery)
+    await obj.userData.ready // models load first (in tests they can't, so the code's shapes come in)
     let animatedCount = 0
     obj.traverse((part: THREE.Object3D) => {
       if (typeof part.userData.animate === 'function') {
@@ -146,7 +147,8 @@ describe('Placement', () => {
       const type = b(id)
       expect(type.category).toBe('attraction')
       expect(type.visitors).toBeGreaterThan(0)
-      const obj = await createBuildingObject(type)
+      const obj = createBuildingObject(type)
+      await obj.userData.ready // models load first (in tests they can't, so the code's shapes come in)
       let animated = 0
       obj.traverse((part: THREE.Object3D) => {
         if (typeof part.userData.animate === 'function') {

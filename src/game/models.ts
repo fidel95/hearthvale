@@ -1,7 +1,7 @@
 import * as THREE from 'three'
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
 import type { BuildingType } from './buildings'
+import { isSharedGeometry, loadModel, markShared, modelCopy } from './modelLoading'
 import type { CropState, CropType } from './crops'
 import { buildCoalMine, buildLandfill, buildOilRefinery } from './quarryModels'
 import { buildCableCar, buildLodge, buildSpaceport, buildTunnelWorks } from './frontierModels'
@@ -21,33 +21,7 @@ import {
 // Tallest a model may be, in world units per tile of its footprint's longer side.
 const MAX_HEIGHT_PER_TILE = 1.2
 
-const loader = new GLTFLoader()
-// One load per file, however many buildings use it. We store the promise
-// (not the result) so two buildings asking at once share a single download.
-const modelCache = new Map<string, Promise<THREE.Object3D>>()
-
-// Geometry belonging to a cached model. Every building made from that model
-// shares it (clone() copies objects, not geometry), so it must never be
-// disposed while the game runs.
-const sharedGeometries = new WeakSet<THREE.BufferGeometry>()
-
-export function isSharedGeometry(geometry: THREE.BufferGeometry): boolean {
-  return sharedGeometries.has(geometry)
-}
-
-function loadModel(url: string): Promise<THREE.Object3D> {
-  let model = modelCache.get(url)
-  if (!model) {
-    model = loader.loadAsync(url).then((gltf) => {
-      gltf.scene.traverse((o) => {
-        if (o instanceof THREE.Mesh) sharedGeometries.add(o.geometry)
-      })
-      return gltf.scene
-    })
-    modelCache.set(url, model)
-  }
-  return model
-}
+export { isSharedGeometry, modelCopy } from './modelLoading'
 
 // ---- Colorful homes
 //
@@ -188,36 +162,10 @@ export async function loadMeshParts(url: string, name?: string): Promise<{ geome
   node.traverse((o) => {
     if (!(o instanceof THREE.Mesh)) return
     const geometry = o.geometry.clone().applyMatrix4(toNode.clone().multiply(o.matrixWorld))
-    sharedGeometries.add(geometry)
+    markShared(geometry)
     parts.push({ geometry, material: o.material as THREE.Material })
   })
   return parts
-}
-
-// A copy of a model at a given scale, standing where it was modelled (for
-// boats and containers, whose packs model them centered at the waterline or
-// ground). Returns a group right away and fills it in once the model has
-// loaded, with `fallback` instead if it can't load. The copy shares the
-// model's shapes and materials, so they must not be freed (isSharedGeometry).
-export function modelCopy(url: string, scale: number, fallback: () => THREE.Object3D): THREE.Group {
-  const group = new THREE.Group()
-  const fill = (content: THREE.Object3D) => {
-    content.traverse((o) => {
-      if (o instanceof THREE.Mesh) o.castShadow = o.receiveShadow = true
-    })
-    group.add(content)
-  }
-  loadModel(url)
-    .then((model) => {
-      const copy = model.clone()
-      copy.scale.setScalar(scale)
-      fill(copy)
-    })
-    .catch((err) => {
-      console.warn(`Couldn't load ${url}, using a simple shape`, err)
-      fill(fallback())
-    })
-  return group
 }
 
 // A copy of a model sized so its longest side is `size`, turned by `turn` (to
@@ -306,14 +254,22 @@ export function createBuildingObject(type: BuildingType, overrideMaterial?: THRE
   // finished object (the build menu's thumbnails).
   if (type.model) {
     group.userData.ready = loadModel(type.model)
-      .then((model) => fill(fitToFootprint(model.clone(), type)))
+      .then((model) => {
+        if (!type.modelLive) return fill(fitToFootprint(model.clone(), type))
+        // The fixed body at its true size, and the moving parts from the code.
+        fill(model.clone())
+        const moving = createPlaceholder(type, false)
+        fill(moving)
+        return partsReady(moving)
+      })
       .catch((err) => {
         console.warn(`Couldn't load ${type.model}, using placeholder`, err)
         fill(createPlaceholder(type))
       })
   } else {
-    fill(createPlaceholder(type))
-    group.userData.ready = Promise.resolve()
+    const content = createPlaceholder(type)
+    fill(content)
+    group.userData.ready = partsReady(content)
   }
   return group
 }
@@ -362,20 +318,37 @@ export function slopeHeight(x: number, z: number): number {
 // Simple shapes so the game is playable before any art exists. Each
 // building's shapes and materials are its own (ownsResources), so
 // disposeBuildingObject frees them when it's demolished.
-function createPlaceholder(type: BuildingType): THREE.Group {
+// Moving parts that load models of their own (ownPart) finish later; this
+// resolves once they're all in, so the build menu's pictures show them.
+function partsReady(content: THREE.Object3D): Promise<void> {
+  const pending: Promise<unknown>[] = []
+  content.traverse((o) => o.userData.ready instanceof Promise && pending.push(o.userData.ready))
+  return Promise.all(pending).then(() => undefined)
+}
+
+// solid: false builds only the moving parts, for a building whose fixed body
+// is a model (modelLive): `add` still makes each fixed part (the builders use
+// them), but leaves it out of the building.
+function createPlaceholder(type: BuildingType, solid = true): THREE.Group {
   const { shape, color, accent, height } = type.placeholder
   const w = type.size.x
   const d = type.size.z
   const group = new THREE.Group()
 
+  // Fixed parts left out (solid: false), freed once the builder is done with them.
+  const detached: THREE.Mesh[] = []
   // Adds a mesh whose bottom (not center) sits at y.
-  const add = (geometry: THREE.BufferGeometry, c: string, x: number, y: number, z: number) => {
-    geometry.computeBoundingBox()
-    const mesh = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({ color: c, flatShading: true }))
-    mesh.position.set(x, y - geometry.boundingBox!.min.y, z)
-    group.add(mesh)
-    return mesh
-  }
+  const add = Object.assign(
+    (geometry: THREE.BufferGeometry, c: string, x: number, y: number, z: number) => {
+      geometry.computeBoundingBox()
+      const mesh = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({ color: c, flatShading: true }))
+      mesh.position.set(x, y - geometry.boundingBox!.min.y, z)
+      if (solid) group.add(mesh)
+      else detached.push(mesh)
+      return mesh
+    },
+    { solid },
+  )
 
   switch (shape) {
     case 'mine':
@@ -1026,6 +999,10 @@ function createPlaceholder(type: BuildingType): THREE.Group {
       add(new THREE.IcosahedronGeometry(0.38, 0), accent, 0, height * 0.35, 0)
       break
     }
+  }
+  for (const mesh of detached) {
+    mesh.geometry.dispose()
+    ;(mesh.material as THREE.Material).dispose()
   }
   group.userData.ownsResources = true
   return mergeByLook(group)

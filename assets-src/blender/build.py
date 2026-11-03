@@ -89,10 +89,18 @@ def main():
     names = args or sorted(f[:-3] for f in os.listdir(MODELS) if f.endswith('.py'))
     os.makedirs(OUT, exist_ok=True)
     for name in [] if only_preview else names:
+        module = load(name)
         hv.reset()
-        load(name).build(hv)
+        module.build(hv)
         hv.export(os.path.join(OUT, name + '.glb'))
         print(f'built {name}')
+        # Moving parts, each its own file (name.part.glb), modelled about the
+        # point the game moves it around.
+        for part, make in getattr(module, 'PARTS', {}).items():
+            hv.reset()
+            make(hv)
+            hv.export(os.path.join(OUT, f'{name}.{part}.glb'))
+            print(f'built {name}.{part}')
     if shot:
         preview(names, shot)
         print(f'preview {shot}')

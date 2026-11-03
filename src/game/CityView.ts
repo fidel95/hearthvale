@@ -153,9 +153,17 @@ export class CityView {
     if (jib) this.cranes.set(b.id, jib)
     const dozer = obj.getObjectByName('site-dozer')
     if (dozer) this.dozers.set(b.id, dozer)
-    const parts: ((seconds: number) => void)[] = []
-    obj.traverse((o) => o.userData.animate && parts.push(o.userData.animate))
-    if (parts.length) this.animated.set(b.id, parts)
+    // Its moving parts; again once a model has loaded (a ride's wheel or
+    // train arrives with its body), unless it's been replaced by then.
+    const collect = () => {
+      if (this.objects.get(b.id) !== obj) return
+      const parts: ((seconds: number) => void)[] = []
+      obj.traverse((o) => o.userData.animate && parts.push(o.userData.animate))
+      if (parts.length) this.animated.set(b.id, parts)
+      else this.animated.delete(b.id)
+    }
+    collect()
+    if (obj.userData.ready instanceof Promise) obj.userData.ready.then(collect)
     this.scene.add(obj)
     this.position(b)
   }

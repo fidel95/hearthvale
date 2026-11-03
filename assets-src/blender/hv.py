@@ -36,9 +36,15 @@ COLORS = {
     'navy': '#2f4f8a', 'mint': '#cdeee0', 'butter': '#ffe9b0', 'snow': '#f6f7fb',
     'lilac': '#e3d8ff', 'lightwood': '#d8a86a', 'grass': '#5cb85c', 'hedge': '#3f9a4f',
     'sand': '#ecd9a8', 'rust': '#b8642e', 'light': '#fff6c8', 'teal': '#2fae8f',
+    # Theme-park and offshore colors
+    'water': '#26b6d4', 'turf': '#5eb84d', 'sail': '#f8f4e8', 'hull': '#7a4928',
+    'rose': '#ff5c8a', 'sunny': '#ffd23f', 'kartblue': '#2f7fe0', 'coral': '#ff6b4a',
+    'castle': '#f8f4ea', 'deck': '#5b626b', 'hazard': '#f2b632', 'skin': '#f1c9a5',
+    'darkwood': '#5c381e', 'lime': '#7be068', 'violet': '#b46cf0', 'aqua': '#2bb3b1',
+    'tyre': '#2b2e33', 'pipe': '#c8d0d8', 'lamp': '#4ade80', 'paleblue': '#9fd3f0',
 }
 NAMES = list(COLORS)
-COLS, ROWS = 16, 4
+COLS, ROWS = 16, 8
 SIZE = 512
 
 
@@ -172,6 +178,21 @@ def cyl(r, h, x=0, y=0, z=0, color='white', seg=12, r_top=None, bevel=0.01, axis
     obj.location = (x, y, z)
     _apply(obj)
     return _finish_part(obj, color, bevel if (r_top is None or r_top > 0) else 0, gradient)
+
+
+def _torus(R, r, seg=24, ring=8):
+    bm = bmesh.new()
+    rings = []
+    for i in range(seg):
+        a = 2 * math.pi * i / seg
+        ca, sa = math.cos(a), math.sin(a)
+        rings.append([bm.verts.new(((R + r * math.cos(b)) * ca, (R + r * math.cos(b)) * sa, r * math.sin(b)))
+                      for b in (2 * math.pi * j / ring for j in range(ring))])
+    for i in range(seg):
+        for j in range(ring):
+            bm.faces.new([rings[i][j], rings[(i + 1) % seg][j], rings[(i + 1) % seg][(j + 1) % ring], rings[i][(j + 1) % ring]])
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    return bm
 
 
 def prism(points, depth, x=0, y=0, z=0, color='white', axis='X', bevel=0.01):
@@ -340,3 +361,87 @@ def export(path):
         export_materials='EXPORT',
         export_image_format='AUTO',
     )
+
+
+# ---- The game's own coordinates: (x, y up, z toward the front), the way the
+# builders in src/game/*Models.ts place things, so a model can mirror them
+# part for part. Blender's are (x, −z, y). Sizes: w across x, h up, d along z.
+# Like the game's add(), y is where the part's bottom sits.
+
+def cbox(w, h, d, x=0, y=0, z=0, color='white', bevel=0.012, ry=0):
+    """A box; ry turns it about the vertical, like the game's rotation.y."""
+    return box(w, d, h, x, -z, y, color, bevel, rz=ry)
+
+
+def ccyl(r, h, x=0, y=0, z=0, color='white', seg=12, r_top=None, bevel=0.008, sx=1, sz=1):
+    """An upright cylinder (or cone, with r_top), squashed by sx/sz into an oval."""
+    o = cyl(r, h, x, -z, y, color, seg, r_top, bevel=0)
+    if sx != 1 or sz != 1:
+        for v in o.data.vertices:
+            v.co.x = x + (v.co.x - x) * sx
+            v.co.y = -z + (v.co.y + z) * sz
+        # Recolor after reshaping (UVs don't depend on x/y), nothing else to do.
+    return o
+
+
+def cstrut(a, b, r, color='steel', r_end=None, seg=8):
+    """A rod from point a to point b (game coordinates)."""
+    from mathutils import Vector
+    pa, pb = Vector((a[0], -a[2], a[1])), Vector((b[0], -b[2], b[1]))
+    d = pb - pa
+    bm = bmesh.new()
+    bmesh.ops.create_cone(bm, cap_ends=True, segments=seg, radius1=r, radius2=r if r_end is None else r_end, depth=d.length)
+    obj = _object_from_bmesh(bm, 'strut')
+    obj.rotation_mode = 'QUATERNION'
+    obj.rotation_quaternion = Vector((0, 0, 1)).rotation_difference(d.normalized())
+    obj.location = (pa + pb) / 2
+    _apply(obj)
+    return _finish_part(obj, color, 0, False)
+
+
+def csphere(r, x=0, y=0, z=0, color='white', seg=12, rings=8, sy=1):
+    """A ball centered at (x, y, z); sy squashes it upright."""
+    bm = bmesh.new()
+    bmesh.ops.create_uvsphere(bm, u_segments=seg, v_segments=rings, radius=r)
+    if sy != 1:
+        bmesh.ops.scale(bm, vec=(1, 1, sy), verts=bm.verts)
+    obj = _object_from_bmesh(bm, 'sphere')
+    obj.location = (x, -z, y)
+    _apply(obj)
+    return _finish_part(obj, color, 0, False)
+
+
+def ctorus(R, r, x=0, y=0, z=0, color='white', axis='z', seg=24, ring=8):
+    """A ring centered at (x, y, z), around the given game axis ('y' lies flat)."""
+    obj = _object_from_bmesh(_torus(R, r, seg, ring), 'torus')
+    if axis == 'z':
+        obj.rotation_euler.x = math.pi / 2  # its plane faces the front
+    elif axis == 'x':
+        obj.rotation_euler.y = math.pi / 2
+    obj.location = (x, -z, y)
+    _apply(obj)
+    return _finish_part(obj, color, 0, False)
+
+
+def chull(profile, depth, z=0, color='hull', bevel=0.01):
+    """A shape drawn side-on in the game's x–y plane (profile: [(x, y), ...]),
+    `depth` thick along z, centered on z."""
+    pts = [(-x, y) for x, y in profile]  # prism's 'across' runs along −x once turned
+    return prism(pts, depth, 0, -z, 0, color, axis='Y', bevel=bevel)
+
+
+
+def cslab(outline, y, h, color='white', bevel=0.01):
+    """A flat shape drawn from above in the game's x–z plane (outline:
+    [(x, z), ...]), standing h tall from height y."""
+    bm = bmesh.new()
+    bottom = [bm.verts.new((x, -z, y)) for x, z in outline]
+    top = [bm.verts.new((x, -z, y + h)) for x, z in outline]
+    n = len(outline)
+    bm.faces.new(bottom)
+    bm.faces.new(list(reversed(top)))
+    for i in range(n):
+        bm.faces.new([bottom[i], bottom[(i + 1) % n], top[(i + 1) % n], top[i]])
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    obj = _object_from_bmesh(bm, 'slab')
+    return _finish_part(obj, color, bevel, False)
