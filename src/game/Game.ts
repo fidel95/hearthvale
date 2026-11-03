@@ -734,7 +734,7 @@ export class Game {
       { icon: '🔧', label: 'Repair', run: (b) => this.repair(b), when: (b) => b.damaged },
       { icon: '🎖️', label: 'Parade', run: () => this.holdParade(), when: (b) => b.type.id === 'army-base' && this.city.isBuilt(b) },
       { icon: '⟳', label: 'Turn', run: (b) => builder.turnPlaced(b), when: (b) => !isTrack(b.type) },
-      { icon: '🎒', label: 'Store', run: store, when: (b) => canStore(b, this.city, this.docks) },
+      { icon: '🎒', label: 'Store', run: store, when: (b) => canStore(b, this.city, this.docks, this.cargo) },
       { icon: '🗑️', label: 'Remove', run: remove },
     ])
     builder.onSelect = (b) => {

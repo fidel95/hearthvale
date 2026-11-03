@@ -33,9 +33,16 @@ export interface BuildingActions {
   buyCivic: (id: CivicId) => void
 }
 
-// Can this building go into storage right now?
-export function canStore(b: PlacedBuilding, city: City, docks: Docks): boolean {
-  return city.isBuilt(b) && !isTrack(b.type) && !(b.type.category === 'port' && docks.state(b, Date.now()).stage !== 'idle')
+// Can this building go into storage right now? Not with a ship or a cargo
+// plane on its way: the trip belongs to the building on the map.
+export function canStore(b: PlacedBuilding, city: City, docks: Docks, cargo: Cargo): boolean {
+  const now = Date.now()
+  return (
+    city.isBuilt(b) &&
+    !isTrack(b.type) &&
+    !(b.type.category === 'port' && docks.state(b, now).stage !== 'idle') &&
+    !(b.type.category === 'air' && cargo.state(b, now).stage !== 'idle')
+  )
 }
 
 export class BuildingPanel {
@@ -291,7 +298,7 @@ export class BuildingPanel {
       }
     }
     buttons.push(button('✋ Move', () => a.move(b), 'panel-button secondary'))
-    if (canStore(b, this.city, this.docks)) buttons.push(button('🎒 Store', () => a.store(b), 'panel-button secondary'))
+    if (canStore(b, this.city, this.docks, this.cargo)) buttons.push(button('🎒 Store', () => a.store(b), 'panel-button secondary'))
     buttons.push(button('🗑️ Remove', () => a.remove(b), 'panel-button danger'))
     this.sheet.setButtons(...buttons)
   }
