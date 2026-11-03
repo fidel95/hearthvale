@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
+import { sizeOf, type City } from './City'
 import { GRID_SIZE } from './grid'
 import { seededRandom } from './neighborData'
 import { PEAKS } from './terrain'
@@ -10,6 +11,10 @@ import { PEAKS } from './terrain'
 // under it all. Built once; never changes, except that a peak standing between
 // the camera and what you're looking at turns see-through (the view can be
 // turned to look from any side).
+//
+// The grassy foothills round a peak's foot lie over land you can build on, so
+// they give way: a foothill that a building, a construction site or a road
+// stands on is levelled (and comes back if it's torn down).
 
 const HALF = GRID_SIZE / 2
 
@@ -22,7 +27,21 @@ const COLORS = ['#7e8c84', '#f7fbff', '#5f9c55']
 const SNOWED = [0.35, 0, 0.75]
 const SEE_THROUGH = 0.28 // opacity of a peak in the way
 
+// A grassy foothill: a cone in the peak's mesh, where it stands (in tiles),
+// which of the mesh's vertices are its own, and whether it's levelled now.
+interface Foothill {
+  x: number
+  z: number
+  r: number // radius at the foot
+  h: number
+  start: number
+  count: number
+  levelled: boolean
+}
+
 interface Peak {
+  foothills: Foothill[]
+  groundY: Float32Array // each vertex's height as built, to bring a foothill back
   mesh: THREE.Mesh<THREE.BufferGeometry, THREE.MeshStandardMaterial>
   kinds: Uint8Array // per vertex: ROCK, SNOW or GREEN
   base: THREE.Vector3
@@ -35,7 +54,7 @@ export class MountainView {
   private land: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshStandardMaterial>
   private peaks: Peak[] = []
 
-  constructor(scene: THREE.Scene) {
+  constructor(scene: THREE.Scene, city?: City) {
     // Land all around, under the world (the sea covers it to the south).
     this.land = new THREE.Mesh(new THREE.PlaneGeometry(260, 260).rotateX(-Math.PI / 2).translate(0, -0.02, 0), new THREE.MeshStandardMaterial({ color: '#a2d488' }))
     this.land.receiveShadow = true
@@ -46,6 +65,7 @@ export class MountainView {
     // over its rock tiles, a lower shoulder or two, and snow on the tall ones.
     for (const p of PEAKS) {
       const parts: [THREE.BufferGeometry, number][] = []
+      const hills: { part: number; x: number; z: number; r: number; h: number }[] = []
       const x = p.x - HALF
       const z = p.z - HALF
       const turn = rand() * Math.PI
@@ -73,9 +93,10 @@ export class MountainView {
         const h = 0.9 + rand() * 0.6
         const r = 1.3 + rand() * 0.5
         const d = p.radius - 0.6
+        hills.push({ part: parts.length, x: p.x + Math.cos(a) * d, z: p.z + Math.sin(a) * d, r, h })
         parts.push([new THREE.ConeGeometry(r, h, 7).translate(x + Math.cos(a) * d, h / 2 - 0.15, z + Math.sin(a) * d), GREEN])
       }
-      this.add(scene, parts, new THREE.Vector3(x, 0, z), p.height, base)
+      this.add(scene, parts, new THREE.Vector3(x, 0, z), p.height, base, hills)
     }
 
     // Close behind the edge of the world, so they rise just past the far lots.
@@ -96,12 +117,39 @@ export class MountainView {
     for (let x = -HALF - 10; x < HALF + 30; x += 6 + rand() * 4) peak(x, -HALF - 8 - rand() * 6)
     for (let z = -HALF; z < HALF - 4; z += 6 + rand() * 4) peak(-HALF - 8 - rand() * 6, z)
     this.setSnow(0)
+    if (city) {
+      // Whenever the town's buildings change (once a frame at most), and now.
+      let stale = true
+      city.onChange((e) => {
+        if (['added', 'removed', 'moved', 'stored', 'restored'].includes(e.kind)) stale = true
+      })
+      this.refresh = () => {
+        if (!stale) return
+        stale = false
+        this.clearFoothills(city)
+      }
+      this.refresh()
+    }
   }
 
+  private refresh: () => void = () => {}
+
   // One mesh per peak, colored by its vertices, so each can turn see-through on its own.
-  private add(scene: THREE.Scene, parts: [THREE.BufferGeometry, number][], base: THREE.Vector3, height: number, radius: number) {
+  private add(
+    scene: THREE.Scene,
+    parts: [THREE.BufferGeometry, number][],
+    base: THREE.Vector3,
+    height: number,
+    radius: number,
+    hills: { part: number; x: number; z: number; r: number; h: number }[] = [],
+  ) {
     const kinds: number[] = []
-    for (const [g, kind] of parts) for (let i = 0; i < g.attributes.position.count; i++) kinds.push(kind)
+    const starts: number[] = [] // where each part's vertices begin in the merged mesh
+    for (const [g, kind] of parts) {
+      starts.push(kinds.length)
+      for (let i = 0; i < g.attributes.position.count; i++) kinds.push(kind)
+    }
+    const foothills = hills.map((f) => ({ x: f.x, z: f.z, r: f.r, h: f.h, start: starts[f.part], count: parts[f.part][0].attributes.position.count, levelled: false }))
     const geometry = mergeGeometries(parts.map(([g]) => g))
     for (const [g] of parts) g.dispose()
     geometry.setAttribute('color', new THREE.BufferAttribute(new Float32Array(kinds.length * 3), 3))
@@ -109,7 +157,37 @@ export class MountainView {
     mesh.receiveShadow = true
     mesh.castShadow = true
     scene.add(mesh)
-    this.peaks.push({ mesh, kinds: Uint8Array.from(kinds), base, top: base.clone().setY(height), radius, opacity: 1 })
+    const positions = geometry.attributes.position
+    const groundY = new Float32Array(positions.count)
+    for (let i = 0; i < positions.count; i++) groundY[i] = positions.getY(i)
+    this.peaks.push({ mesh, kinds: Uint8Array.from(kinds), base, top: base.clone().setY(height), radius, opacity: 1, foothills, groundY })
+  }
+
+  // Level the foothills that anything stands on, and bring back the ones
+  // that are clear again. A foothill's grass is only in the way where it
+  // rises above about a hand's width, so that's the part that counts.
+  private clearFoothills(city: City) {
+    const spots = [...city.all()].map((b) => {
+      const size = sizeOf(b)
+      return { x: b.tile.x, z: b.tile.z, w: size.x, d: size.z }
+    })
+    for (const peak of this.peaks) {
+      let changed = false
+      for (const f of peak.foothills) {
+        const reach = f.r * (1 - 0.08 / f.h)
+        const covered = spots.some((s) => {
+          const dx = Math.max(s.x - f.x, 0, f.x - (s.x + s.w))
+          const dz = Math.max(s.z - f.z, 0, f.z - (s.z + s.d))
+          return Math.hypot(dx, dz) < reach
+        })
+        if (covered === f.levelled) continue
+        f.levelled = covered
+        changed = true
+        const positions = peak.mesh.geometry.attributes.position
+        for (let i = f.start; i < f.start + f.count; i++) positions.setY(i, covered ? -2 : peak.groundY[i])
+      }
+      if (changed) peak.mesh.geometry.attributes.position.needsUpdate = true
+    }
   }
 
   // How snowy the countryside is (0 to 1), for snow mode.
@@ -126,6 +204,7 @@ export class MountainView {
 
   // Every frame: fade the peaks that stand in front of the middle of the view.
   update(camera: THREE.OrthographicCamera, target: THREE.Vector3, dt: number) {
+    this.refresh()
     const view = camera.matrixWorldInverse
     const middle = target.clone().applyMatrix4(view)
     // Around the middle of the screen: a third of the way out to each side.

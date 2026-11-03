@@ -234,7 +234,7 @@ export class Game {
     this.effects = new EffectsView(this.scene)
     this.roadNetworks = new RoadNetworkView(this.scene, this.city)
     this.ambientView = new AmbientView(this.scene, this.city, this.cityView, this.effects, () => this.controls.target)
-    this.mountains = new MountainView(this.scene)
+    this.mountains = new MountainView(this.scene, this.city)
     this.weather = new WeatherView(this.scene, () => this.controls.target, [this.sun, this.ambient])
     this.disasterView = new DisasterView(this.scene, this.city, this.state.disasters, {
       notice: (message, warn) => this.hud.toast(message, warn ? 'warn' : 'info'),
