@@ -9,6 +9,7 @@ import { City } from './City'
 import { Collections } from './collections'
 import { STARTING_MATERIALS } from './construction'
 import { CROPS_BY_ID } from './crops'
+import { Cargo } from './Cargo'
 import { Docks } from './Docks'
 import { GameClock } from './GameClock'
 import { Inventory } from './Inventory'
@@ -45,6 +46,7 @@ export class GameState {
   readonly placement = new PlacementSystem(this.city, this.services, this.unlocks)
   readonly docks = new Docks(this.city)
   readonly inventory = new Inventory(this.city)
+  readonly cargo = new Cargo(this.city, this.inventory)
   readonly collections = new Collections(this.city, this.inventory, this.player)
   readonly neighbors = new Neighbors(this.city, this.player, this.inventory)
   readonly taxes: Taxes

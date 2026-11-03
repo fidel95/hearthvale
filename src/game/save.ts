@@ -1,5 +1,6 @@
 import type { CitySave } from './City'
 import { STARTING_MATERIALS } from './construction'
+import type { CargoSave } from './Cargo'
 import type { Shipment } from './Docks'
 import { LOT_SIZE } from './grid'
 import type { Stack } from './Inventory'
@@ -44,6 +45,7 @@ export interface SaveData {
   quests: QuestsSave | null // completed quests, active quest progress, achievements
   inventory: { items: [string, Stack][]; collections: [string, number][] } // materials, collectibles, sets completed
   shipments: Shipment[]
+  cargo?: CargoSave // cargo plane flights and route mastery (added with cargo planes)
   taxes: TaxesSave
   calendar: { playedMs: number }
   settings: Partial<Settings>

@@ -6,6 +6,7 @@ import { duration, outOfEnergyMessage } from '../ui/dom'
 import { sizeOf, type City, type PlacedBuilding } from './City'
 import type { CityView } from './CityView'
 import { cropState } from './crops'
+import { UNLOAD_ENERGY, rewardText, type Cargo } from './Cargo'
 import type { Docks } from './Docks'
 import { footprintCenter, footprintTiles, lotOf, tileToWorld, worldToTile, type Lot, type Tile } from './grid'
 import { createBuildingObject } from './models'
@@ -63,6 +64,9 @@ export class Builder {
   onPlantRequest?: (plot: PlacedBuilding) => void
   // An idle dock was tapped: show the shipments to order.
   onDockRequest?: (dock: PlacedBuilding) => void
+  // An idle airport was tapped: show the destinations to send a cargo plane to.
+  onAirportRequest?: (airport: PlacedBuilding) => void
+  cargo?: Cargo
   onMarketRequest?: () => void
   // Is a tree, rock or bush growing on this tile (wilds.ts)? Tapping one clears it.
   wildAt?: (tile: Tile) => boolean
@@ -327,6 +331,7 @@ export class Builder {
     if (b.type.goodsPerSale && this.city.production.isReady(b, now) && !this.city.production.hasStock(b)) return this.city.production.supplyFor(b) > 0
     if (isPlot(b.type)) return cropState(b.crop, now).stage !== 'growing'
     if (b.type.category === 'port') return this.docks.state(b, now).stage !== 'sailing'
+    if (b.type.category === 'air' && this.cargo) return this.cargo.state(b, now).stage !== 'flying'
     if (b.type.id === MARKET_ID) return true
     return this.city.production.isReady(b, now) && this.city.production.hasStock(b)
   }
@@ -365,6 +370,21 @@ export class Builder {
       if (state.stage === 'idle') this.onDockRequest?.(building)
       else if (state.stage === 'sailing') this.onNotice?.(`🚢 Ship arriving in ${duration(state.shipment.arrivesAt - now)}`)
       else if (!outOfEnergy() && this.docks.unload(building, now) === 0) this.onNotice?.('Storage is full. Sell goods at your shops, or build a Barn or Warehouse.')
+      return
+    }
+    if (building.type.category === 'air' && this.cargo) {
+      const state = this.cargo.state(building, now)
+      if (state.stage === 'idle') this.onAirportRequest?.(building)
+      else if (state.stage === 'flying') this.onNotice?.(`✈️ Cargo plane back in ${duration(state.flight.returnsAt - now)}`)
+      else if (this.player.energy(now) < UNLOAD_ENERGY) this.onNotice?.(outOfEnergyMessage(this.player, now))
+      else {
+        const done = this.cargo.unload(building, now)
+        if (done.taken === 0) this.onNotice?.('Storage is full. Sell goods at your shops, or build a Barn or Warehouse.')
+        else {
+          if (done.star) this.onNotice?.(`⭐ Route mastery: ${done.star} ${done.star === 1 ? 'star' : 'stars'}!`)
+          if (done.reward) this.onNotice?.(`🎁 Three stars! Reward: ${rewardText(done.reward)}`)
+        }
+      }
       return
     }
     const f = building.type.factory

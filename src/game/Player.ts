@@ -88,8 +88,8 @@ export class Player {
           this.spendEnergy(now)
           this.addXp(event.xp, now)
           break
-        case 'goodsIn': // unloading a ship
-          this.spendEnergy(now)
+        case 'goodsIn': // unloading a ship or a cargo plane
+          for (let i = 0; i < (event.energy ?? 1); i++) this.spendEnergy(now)
           this.addXp(Math.max(1, Math.floor(event.units / 20)), now)
           break
       }

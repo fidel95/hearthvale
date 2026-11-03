@@ -104,7 +104,7 @@ function details(type: BuildingType): string[] {
   }
   if (type.id === 'coal-mine') lines.push('⛏️ An excavator digs coal from the pit and loads a haul truck that drives it up to the stockpile; the coal sells as income')
   if (type.id === 'landfill') lines.push('🚛 Garbage trucks tip here and a bulldozer spreads it: cheaper to run than a Recycling Center, but it takes more room')
-  if (type.id === 'airport') lines.push('✈️ Planes take off, fly a lap round the whole map and land')
+  if (type.id === 'airport') lines.push('✈️ Passenger jets and cargo planes take off in turn, fly a lap round the whole map and land')
   if (type.arrivals) lines.push(`🧳 Brings ${type.arrivals} visitors a month`)
   if (type.visitors) lines.push(`🎡 Room for ${type.visitors} visitors a month (each spends 🪙 2)`)
   if (type.animals) lines.push(`🐾 ${type.animals.count} ${type.animals.kind === 'sheep' ? 'sheep' : type.animals.kind + 's'} live here; what they give sells as farm income`)

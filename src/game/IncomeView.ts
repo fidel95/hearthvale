@@ -3,6 +3,7 @@ import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
 import { duration } from '../ui/dom'
 import { sizeOf, type City, type PlacedBuilding } from './City'
 import type { CityView } from './CityView'
+import { CARGO_ROUTES_BY_ID, type Cargo } from './Cargo'
 import type { Docks } from './Docks'
 import { cropState } from './crops'
 import { BLOCKED_TEXT } from './production'
@@ -38,6 +39,7 @@ export class IncomeView {
   private cityView: CityView
   private services: Services
   private docks: Docks
+  cargo?: Cargo // the airport's cargo planes (set by Game)
   private onTap: (building: PlacedBuilding) => void
   // Can an order at the Farmers' Market be delivered now? (Game wires it to the market.)
   marketReady: () => boolean = () => false
@@ -146,6 +148,7 @@ export class IncomeView {
     if (b.type.factory) return this.city.production.factoryState(b, now) === 'done' ? { kind: 'cargo', icon: PRODUCTS[b.type.factory.product].icon } : null
     if (this.city.production.isReady(b, now)) return this.city.production.hasStock(b) ? { kind: 'coins', icon: '🪙' } : { kind: 'stock', icon: soldBy(b.type).icon }
     if (b.type.category === 'port') return this.docks.state(b, now).stage === 'arrived' ? { kind: 'cargo', icon: '🚢' } : null
+    if (b.type.category === 'air' && this.cargo) return this.cargo.state(b, now).stage === 'landed' ? { kind: 'cargo', icon: '✈️' } : null
     if (!isPlot(b.type)) return null
     const state = cropState(b.crop, now)
     switch (state.stage) {
@@ -212,6 +215,13 @@ export class IncomeView {
       if (state.stage === 'idle') return [b.type.name, 'Tap to order goods by sea']
       if (state.stage === 'sailing') return [b.type.name, `🚢 arriving in ${duration(state.shipment.arrivesAt - now)} with 📦 ${state.shipment.units}`]
       return [b.type.name, `Ship's in! Tap to unload 📦 ${state.shipment.units}`]
+    }
+    if (b.type.category === 'air' && this.cargo) {
+      const state = this.cargo.state(b, now)
+      if (state.stage === 'idle') return [b.type.name, 'Tap to send a cargo plane']
+      const route = CARGO_ROUTES_BY_ID.get(state.flight.routeId)?.name ?? 'Cargo plane'
+      if (state.stage === 'flying') return [b.type.name, `✈️ ${route}: back in ${duration(state.flight.returnsAt - now)} with 📦 ${state.flight.units}`]
+      return [b.type.name, `Plane's in! Tap to unload 📦 ${Math.round(state.flight.units)}`]
     }
     const { amenity, supplies, upkeep } = b.type
     if (amenity && !b.type.income) return [b.type.name, `+${Math.round(amenity.bonus * 100)}% for homes & shops within ${amenity.radius} tiles · 🪙 ${upkeep}/month`]

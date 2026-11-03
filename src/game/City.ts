@@ -109,7 +109,7 @@ export type CityEvent =
   // Farm products sold at the Farmers' Market (market.ts), loose or for an order.
   | { kind: 'sold'; items: Recipe; amount: number; order: boolean }
   // Goods bought and delivered (a shipment), and what they cost.
-  | { kind: 'goodsIn'; units: number; cost: number }
+  | { kind: 'goodsIn'; units: number; cost: number; energy?: number }
   | { kind: 'goods'; goods: number }
   | { kind: 'products'; products: Record<ProductId, number> }
   // A factory started a batch (its goods went in), or one was collected (products out).

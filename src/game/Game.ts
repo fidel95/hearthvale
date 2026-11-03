@@ -16,6 +16,7 @@ import { Sound } from '../ui/sound'
 import { QuestsPanel } from '../ui/QuestsPanel'
 import { el, outOfEnergyMessage } from '../ui/dom'
 import { Modal, Sheet, button } from '../ui/Sheet'
+import { CargoPanel } from '../ui/CargoPanel'
 import { DockPanel } from '../ui/DockPanel'
 import { MarketPanel } from '../ui/MarketPanel'
 import { Hud } from '../ui/Hud'
@@ -122,6 +123,7 @@ export class Game {
   private player = this.state.player
   private services = this.state.services
   private docks = this.state.docks
+  private cargo = this.state.cargo
   private inventory = this.state.inventory
   private collections = this.state.collections
   private quests = this.state.quests
@@ -413,6 +415,10 @@ export class Game {
     this.showQuestEvents()
     const dockPanel = new DockPanel(container, this.city, this.docks, (message) => this.hud.toast(message))
     builder.onDockRequest = (dock) => dockPanel.open(dock)
+    const cargoPanel = new CargoPanel(container, this.city, this.cargo, (message) => this.hud.toast(message))
+    builder.cargo = this.cargo
+    this.incomeView.cargo = this.cargo
+    builder.onAirportRequest = (airport) => cargoPanel.open(airport)
     const marketPanel = new MarketPanel(container, this.city, this.state.market, (message) => this.hud.toast(message))
     builder.onMarketRequest = () => marketPanel.open()
     // Trees, rocks and bushes on your land: a tap clears one.
@@ -679,6 +685,7 @@ export class Game {
     builder.onFinishRequest = finish
     builder.placement = this.placement
     this.docks.speedBonus = () => this.services.shipSpeedBonus()
+    this.cargo.speedBonus = () => this.services.shipSpeedBonus()
     this.buildingPanel = new BuildingPanel(
       container,
       {
@@ -686,6 +693,7 @@ export class Game {
         services: this.services,
         taxes: this.taxes,
         docks: this.docks,
+        cargo: this.cargo,
         inventory: this.inventory,
         player: this.player,
         describe: (b, now) => this.incomeView.describe(b, now),
@@ -958,6 +966,7 @@ export class Game {
       if (b.crop && crop && b.crop.plantedAt > now - crop.growSeconds * 1000) (b.crop.plantedAt = now - crop.growSeconds * 1000), (changed = true)
     }
     for (const s of this.docks.all()) if (s.arrivesAt > now) (s.arrivesAt = now), (changed = true)
+    if (this.cargo.landAll(now)) changed = true
     if (changed) this.saver.requestSave()
   }
 

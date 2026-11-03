@@ -113,10 +113,11 @@ export class Economy {
 
   // Goods bought and delivered. Only what fits in storage is taken (and its
   // cost recorded proportionally). Returns the units taken.
-  addGoods(units: number, cost: number): number {
+  // energy: how many energy points the unloading takes (a ship's one, a cargo plane's two).
+  addGoods(units: number, cost: number, energy?: number): number {
     const taken = Math.min(units, this.room())
     if (taken <= 0) return 0
-    this.emit({ kind: 'goodsIn', units: taken, cost: (cost * taken) / units })
+    this.emit({ kind: 'goodsIn', units: taken, cost: (cost * taken) / units, ...(energy ? { energy } : {}) })
     this.changeGoods(taken)
     return taken
   }

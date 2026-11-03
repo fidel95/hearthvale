@@ -58,7 +58,42 @@ function makePlane(stripe: string): THREE.Group {
   jet.rotation.y = Math.PI / 2 // the model's nose points along +z
   jet.position.y = 0.07 * JET_SCALE
   plane.add(jet)
+  // The freighter shares this plane's flight: the airport sends the jet and
+  // the freighter out on alternate laps, and only one shows at a time.
+  const cargo = makeCargoPlane()
+  cargo.visible = false
+  plane.add(cargo)
+  plane.userData = { jet, cargo }
   plane.rotation.order = 'YZX' // turn (yaw), then nose up/down (pitch), then bank (roll)
+  return plane
+}
+
+// A freighter, made of simple shapes: a fat fuselage with a raised cargo
+// nose, a high wing with four engines, and a T-tail. Along +x, wheels at y = 0.
+function makeCargoPlane(): THREE.Group {
+  const hull = material('#e9e4d6')
+  const accent = material('#d9822b')
+  const dark = material('#4a4f57')
+  const parts: [THREE.BufferGeometry, THREE.Material][] = [
+    [new THREE.CylinderGeometry(0.11, 0.1, 1.3, 12).rotateZ(Math.PI / 2).translate(0, 0.22, 0), hull],
+    [new THREE.SphereGeometry(0.11, 12, 8).scale(1.5, 1.05, 1).translate(0.65, 0.23, 0), hull],
+    [new THREE.CylinderGeometry(0.06, 0.1, 0.4, 12).rotateZ(Math.PI / 2).translate(-0.75, 0.27, 0), hull], // tail cone
+    [new THREE.BoxGeometry(1.1, 0.025, 0.17).translate(-0.05, 0.22, 0), accent], // stripe down the side
+    [new THREE.BoxGeometry(0.1, 0.12, 0.222).translate(0.38, 0.22, 0), dark], // cargo door
+    [new THREE.BoxGeometry(0.34, 0.025, 1.5).translate(0.02, 0.34, 0), hull], // high wing
+    [new THREE.BoxGeometry(0.2, 0.025, 0.55).translate(-0.86, 0.5, 0), hull], // tailplane, up on the fin
+    [new THREE.BoxGeometry(0.28, 0.34, 0.025).translate(-0.82, 0.4, 0), accent], // fin
+    [new THREE.BoxGeometry(0.04, 0.16, 0.2).translate(0.28, 0.08, 0), dark], // gear under the fuselage
+  ]
+  for (const z of [-0.5, -0.24, 0.24, 0.5]) {
+    parts.push([new THREE.CylinderGeometry(0.04, 0.04, 0.2, 8).rotateZ(Math.PI / 2).translate(0.12, 0.27, z), dark])
+  }
+  const plane = new THREE.Group()
+  for (const [geometry, mat] of parts) {
+    const mesh = new THREE.Mesh(geometry, mat)
+    mesh.castShadow = true
+    plane.add(mesh)
+  }
   return plane
 }
 
@@ -211,6 +246,10 @@ export class FlightView {
         heading = new THREE.Vector3(d * Math.cos(angle), 0, Math.sin(angle))
         if (t >= 1) {
           this.direction = d === 1 ? -1 : 1
+          // The next lap goes to the other kind of plane.
+          const { jet, cargo } = this.planes[0].userData as { jet: THREE.Object3D; cargo: THREE.Object3D }
+          cargo.visible = !cargo.visible
+          jet.visible = !cargo.visible
           // Stopped at the far end, it now waits there to go the other way.
           this.next('wait')
         }

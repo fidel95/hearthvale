@@ -44,6 +44,7 @@ export class SaveSystem {
       wilds: s.wilds.toSave(),
       inventory: { items: s.inventory.toSave(), collections: s.collections.toSave() },
       shipments: s.docks.toSave(),
+      cargo: s.cargo.toSave(),
       taxes: s.taxes.toSave(),
       calendar: { playedMs: s.clock.playedMs },
       settings: s.settings.values,
@@ -67,6 +68,7 @@ export class SaveSystem {
     s.taxes.load(save.taxes)
     s.player.load(save.player)
     s.docks.load(save.shipments)
+    if (save.cargo) s.cargo.load(save.cargo)
     s.collections.load(save.inventory.collections)
     if (save.quests) s.quests.load(save.quests)
     s.inventory.load(save.inventory.items)
@@ -111,6 +113,7 @@ export class SaveSystem {
     s.market.onChange(changed)
     s.wilds.onChange(changed)
     s.collections.onChange(changed)
+    s.cargo.onChange(changed)
     s.neighbors.onChange(changed)
     s.tutorial.onChange(changed)
     s.settings.onChange(changed)

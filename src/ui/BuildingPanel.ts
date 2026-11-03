@@ -1,6 +1,7 @@
 import type { City, PlacedBuilding } from '../game/City'
 import { MAX_LEVEL, canUpgrade, levelFactor } from '../game/construction'
 import { cropState } from '../game/crops'
+import { CARGO_ROUTES_BY_ID, type Cargo } from '../game/Cargo'
 import type { Docks } from '../game/Docks'
 import type { Inventory } from '../game/Inventory'
 import { MATERIALS, MATERIAL_IDS, materialsText, type Materials } from '../game/items'
@@ -43,6 +44,7 @@ export class BuildingPanel {
   private services: Services
   private taxes: Taxes
   private docks: Docks
+  private cargo: Cargo
   private inventory: Inventory
   private player: Player
   private describe: (b: PlacedBuilding, now: number) => [string, string]
@@ -55,6 +57,7 @@ export class BuildingPanel {
       services: Services
       taxes: Taxes
       docks: Docks
+      cargo: Cargo
       inventory: Inventory
       player: Player
       describe: (b: PlacedBuilding, now: number) => [string, string]
@@ -65,6 +68,7 @@ export class BuildingPanel {
     this.services = deps.services
     this.taxes = deps.taxes
     this.docks = deps.docks
+    this.cargo = deps.cargo
     this.inventory = deps.inventory
     this.player = deps.player
     this.describe = deps.describe
@@ -326,6 +330,18 @@ export class BuildingPanel {
         }
       }
     }
+    if (b.type.category === 'air') {
+      const air = this.cargo.state(b, now)
+      if (air.stage !== 'idle') {
+        const f = air.flight
+        const route = CARGO_ROUTES_BY_ID.get(f.routeId)
+        return {
+          title: `✈️ ${route?.name ?? 'Cargo plane'}`,
+          share: (now - f.sentAt) / (f.returnsAt - f.sentAt),
+          text: air.stage === 'flying' ? `📦 ${f.units} back in ${duration(f.returnsAt - now)}` : `📦 ${Math.round(f.units)} waiting to unload`,
+        }
+      }
+    }
     return null
   }
 
@@ -339,6 +355,10 @@ export class BuildingPanel {
     if (b.type.category === 'port') {
       const stage = this.docks.state(b, now).stage
       return stage === 'arrived' ? '🚢 Unload' : stage === 'idle' ? '⚓ Order goods' : null
+    }
+    if (b.type.category === 'air') {
+      const stage = this.cargo.state(b, now).stage
+      return stage === 'landed' ? '✈️ Unload' : stage === 'idle' ? '✈️ Send cargo plane' : null
     }
     return null
   }
