@@ -2,6 +2,7 @@ import type { City, PlacedBuilding } from '../game/City'
 import { MAX_LEVEL, canUpgrade, levelFactor } from '../game/construction'
 import { cropState } from '../game/crops'
 import { CARGO_ROUTES_BY_ID, type Cargo } from '../game/Cargo'
+import { CIVIC_UPGRADES, type Civic, type CivicId } from '../game/Civic'
 import type { Docks } from '../game/Docks'
 import type { Inventory } from '../game/Inventory'
 import { MATERIALS, MATERIAL_IDS, materialsText, type Materials } from '../game/items'
@@ -29,6 +30,7 @@ export interface BuildingActions {
   move: (b: PlacedBuilding) => void
   store: (b: PlacedBuilding) => void
   remove: (b: PlacedBuilding) => void
+  buyCivic: (id: CivicId) => void
 }
 
 // Can this building go into storage right now?
@@ -45,6 +47,7 @@ export class BuildingPanel {
   private taxes: Taxes
   private docks: Docks
   private cargo: Cargo
+  private civic: Civic
   private inventory: Inventory
   private player: Player
   private describe: (b: PlacedBuilding, now: number) => [string, string]
@@ -58,6 +61,7 @@ export class BuildingPanel {
       taxes: Taxes
       docks: Docks
       cargo: Cargo
+      civic: Civic
       inventory: Inventory
       player: Player
       describe: (b: PlacedBuilding, now: number) => [string, string]
@@ -69,6 +73,7 @@ export class BuildingPanel {
     this.taxes = deps.taxes
     this.docks = deps.docks
     this.cargo = deps.cargo
+    this.civic = deps.civic
     this.inventory = deps.inventory
     this.player = deps.player
     this.describe = deps.describe
@@ -88,6 +93,11 @@ export class BuildingPanel {
 
   close() {
     this.sheet.close()
+  }
+
+  // Redraw now (after an action changed what it shows).
+  refresh() {
+    if (this.building) this.render(Date.now())
   }
 
   // Called every frame; redraws twice a second while open, for the timers.
@@ -196,6 +206,9 @@ export class BuildingPanel {
         parts.push(section(`⬆️ Level ${'★'.repeat(b.level)}`, el('p', 'muted', `Fully upgraded (level ${MAX_LEVEL}).`)))
       }
     }
+
+    // ---- The Town Hall's civic upgrades: town-wide, three steps each.
+    if (b.type.id === 'town-hall' && this.city.isBuilt(b)) parts.push(this.civicSection())
 
     // ---- Happiness: what this home wants nearby.
     const wants = this.services.needsOf(b)
@@ -343,6 +356,30 @@ export class BuildingPanel {
       }
     }
     return null
+  }
+
+  private civicSection(): HTMLElement {
+    const rows = CIVIC_UPGRADES.map((u) => {
+      const level = this.civic.level(u.id)
+      const next = this.civic.next(u.id)
+      const row = el('div', 'civic-row')
+      const pips = '●'.repeat(level) + '○'.repeat(u.steps.length - level)
+      row.append(
+        el('strong', '', `${u.icon} ${u.name} ${pips}`),
+        el('p', 'muted', level ? `Now: ${u.describe(this.civic.effect(u.id))}` : 'Not started'),
+      )
+      if (next) {
+        const buy = button(`${u.describe(next.effect)} · ${coins(next.coins)} + ${materialsText(next.materials)}`, () => this.actions.buyCivic(u.id), 'panel-button secondary')
+        buy.disabled = !this.civic.canBuy(u.id)
+        row.append(buy)
+      } else row.append(el('p', '', '✓ Complete'))
+      return row
+    })
+    return section(
+      '🏛️ Civic upgrades',
+      el('p', 'muted', 'Improvements for the whole town, bought here and kept for good. Paid once: capital spending, not a running expense.'),
+      ...rows,
+    )
   }
 
   private collectLabel(b: PlacedBuilding, now: number): string | null {

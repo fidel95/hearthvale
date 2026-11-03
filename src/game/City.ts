@@ -111,6 +111,7 @@ export type CityEvent =
   // Goods bought and delivered (a shipment), and what they cost.
   | { kind: 'goodsIn'; units: number; cost: number; energy?: number }
   | { kind: 'goods'; goods: number }
+  | { kind: 'storage' } // storage room changed without a building (a civic upgrade)
   | { kind: 'products'; products: Record<ProductId, number> }
   // A factory started a batch (its goods went in), or one was collected (products out).
   | { kind: 'batchStarted'; building: PlacedBuilding }
@@ -426,8 +427,16 @@ export class City {
   // ---- Goods
 
   // How many goods town storage holds: the town square plus storage buildings.
+  // Extra storage from outside the buildings (the Town Hall's storehouse, Civic.ts).
+  storageBonus: () => number = () => 0
+
+  // Tell everyone storage room changed (when storageBonus's answer does).
+  storageChanged() {
+    this.events.emit({ kind: 'storage' })
+  }
+
   get storageCapacity(): number {
-    let capacity = BASE_STORAGE
+    let capacity = BASE_STORAGE + this.storageBonus()
     for (const b of this.buildings.values()) if (this.isBuilt(b)) capacity += b.type.storage ?? 0
     return capacity
   }

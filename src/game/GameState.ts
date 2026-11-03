@@ -10,6 +10,7 @@ import { Collections } from './collections'
 import { STARTING_MATERIALS } from './construction'
 import { CROPS_BY_ID } from './crops'
 import { Cargo } from './Cargo'
+import { Civic } from './Civic'
 import { Docks } from './Docks'
 import { GameClock } from './GameClock'
 import { Inventory } from './Inventory'
@@ -49,6 +50,7 @@ export class GameState {
   readonly cargo = new Cargo(this.city, this.inventory, () => this.player.level)
   readonly collections = new Collections(this.city, this.inventory, this.player)
   readonly neighbors = new Neighbors(this.city, this.player, this.inventory)
+  readonly civic = new Civic(this.city, this.inventory)
   readonly taxes: Taxes
   readonly quests: Quests
   readonly goals: Goals
@@ -70,6 +72,9 @@ export class GameState {
   constructor(speed = 1) {
     this.clock = new GameClock(speed)
     this.services.extraTownBonus = () => this.army.bonus(Date.now())
+    this.city.storageBonus = () => this.civic.effect('storehouse')
+    this.services.extraShipSpeed = () => this.civic.effect('port')
+    this.neighbors.takingsBonus = () => this.civic.effect('commerce')
     this.city.production.month = () => this.clock.month
     this.taxes = new Taxes(this.city, this.clock)
     this.quests = new Quests(

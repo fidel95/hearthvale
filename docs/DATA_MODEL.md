@@ -108,7 +108,14 @@ One JSON document in `localStorage` under `hearthvale.save`
   "settings": { "showGrid": true, "showPeople": true, "confirmPurchases": true, "reduceMotion": false },
   "tutorial": { "step": 6, "skipped": false },
   "safetyNet": { "lastGrantAt": null },
-  "neighbors": [["rosa", { "friendship": 6, "day": "2026-10-29", "helped": ["25,25"], "giftClaimed": true, "requestDone": false }]],
+  "neighbors": [["rosa", { "friendship": 12, "day": "2026-10-29", "helped": ["25,25"], "giftClaimed": true, "requestDone": false,
+    "franchise": { "typeId": "deli", "openedDay": "2026-10-28", "collectedDay": "2026-10-29" } }]], // franchise: optional, added with franchises
+  "cargo": {                                 // cargo planes (optional: added with them)
+    "flights": [{ "airportId": 1, "routeId": "coast", "units": 80, "cost": 400, "sentAt": 1793284000000, "returnsAt": 1793284090000 }],
+    "trips": [["coast", 4]],                 // finished trips per route, for the mastery stars
+    "rewarded": []                           // routes whose third-star reward was paid
+  },
+  "civic": [["storehouse", 2], ["port", 1]], // the Town Hall's civic upgrades: steps bought (optional: added with them)
   "market": {                                // the Farmers' Market (optional: added with the market)
     "orders": [{ "items": { "eggs": 8, "milk": 3 }, "coins": 144, "xp": 12 }, null, …],
     "nextAt": [0, 1793284700000, 0]          // when each empty slot gets a new order

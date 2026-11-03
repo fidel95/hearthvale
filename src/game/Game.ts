@@ -17,6 +17,7 @@ import { Sound } from '../ui/sound'
 import { QuestsPanel } from '../ui/QuestsPanel'
 import { el, outOfEnergyMessage } from '../ui/dom'
 import { Modal, Sheet, button } from '../ui/Sheet'
+import { CIVIC_UPGRADES } from './Civic'
 import { CargoPanel } from '../ui/CargoPanel'
 import { DockPanel } from '../ui/DockPanel'
 import { MarketPanel } from '../ui/MarketPanel'
@@ -701,6 +702,7 @@ export class Game {
         taxes: this.taxes,
         docks: this.docks,
         cargo: this.cargo,
+        civic: this.state.civic,
         inventory: this.inventory,
         player: this.player,
         describe: (b, now) => this.incomeView.describe(b, now),
@@ -709,6 +711,13 @@ export class Game {
         collect: (b) => builder.tap(b),
         restock: (b) => {
           if (this.city.production.restock(b.id) === 0) this.hud.toast('Nothing to restock: storage is empty or the shelves are full')
+        },
+        buyCivic: (id) => {
+          if (!this.state.civic.buy(id)) return
+          const u = CIVIC_UPGRADES.find((x) => x.id === id)!
+          this.sound.play('levelup')
+          this.hud.toast(`🏛️ ${u.name}: ${u.describe(this.state.civic.effect(id))}`)
+          this.buildingPanel.refresh()
         },
         upgrade: (b) => explain(upgradeBuilding(this.city, this.inventory, this.player, b, (n) => this.services.roomFor(n)), 'Upgrade'),
         buyMaterials: (m) => {

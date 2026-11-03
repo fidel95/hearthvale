@@ -54,6 +54,8 @@ export class Neighbors {
   private player: Player
   private inventory: Inventory
   private events = new Emitter<NeighborsEvent>()
+  // Franchise takings raised by this share (the Chamber of Commerce, Civic.ts).
+  takingsBonus: () => number = () => 0
 
   constructor(city: City, player: Player, inventory: Inventory) {
     this.city = city
@@ -198,7 +200,7 @@ export class Neighbors {
 
   franchiseTakings(n: Neighbor): number {
     const type = this.franchise(n)
-    return type ? franchiseTakings(type, this.friendship(n)) : 0
+    return type ? Math.round(franchiseTakings(type, this.friendship(n)) * (1 + this.takingsBonus())) : 0
   }
 
   canCollectFranchise(n: Neighbor, now: number): boolean {

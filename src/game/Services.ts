@@ -54,8 +54,11 @@ export class Services {
   }
 
   // How much sooner ships arrive (the Lighthouse).
+  // Ships faster for reasons other than buildings (the port authority, Civic.ts).
+  extraShipSpeed: () => number = () => 0
+
   shipSpeedBonus(): number {
-    let bonus = 0
+    let bonus = this.extraShipSpeed()
     for (const b of this.city.all()) if (this.city.isBuilt(b)) bonus += b.type.shipSpeedBonus ?? 0
     return Math.min(0.5, bonus)
   }

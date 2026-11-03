@@ -337,6 +337,10 @@ basis: it depreciates like any decoration once it's on the map.
 | You pay the fee to open a franchise in a neighbor's town | Buying into a business: a capital cost, not a deductible expense |
 | Your franchise's daily takings | Business income: taxable ("other income") |
 
+The Town Hall's **civic upgrades** (a bigger storehouse, a port authority, a
+Chamber of Commerce) are paid once in coins and materials. Like any capital
+improvement, they aren't a deductible running expense.
+
 ## 7. Paying late
 
 **Real rule:** the IRS failure-to-pay penalty is 0.5% of the unpaid tax per

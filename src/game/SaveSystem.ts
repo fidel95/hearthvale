@@ -51,6 +51,7 @@ export class SaveSystem {
       tutorial: s.tutorial.toSave(),
       safetyNet: { lastGrantAt: s.safetyNet.lastGrantAt },
       neighbors: s.neighbors.toSave(),
+      civic: s.civic.toSave(),
       army: s.army.toSave(),
       events: s.townEvents.toSave(),
       finances: s.finances.toSave(),
@@ -76,6 +77,7 @@ export class SaveSystem {
     s.tutorial.load(save.tutorial)
     s.safetyNet.lastGrantAt = save.safetyNet.lastGrantAt
     if (save.neighbors) s.neighbors.load(save.neighbors)
+    if (save.civic) s.civic.load(save.civic)
     s.army.load(save.army)
     s.townEvents.load(save.events)
     s.finances.load(save.finances)
@@ -115,6 +117,7 @@ export class SaveSystem {
     s.collections.onChange(changed)
     s.cargo.onChange(changed)
     s.neighbors.onChange(changed)
+    s.civic.onChange(changed)
     s.tutorial.onChange(changed)
     s.settings.onChange(changed)
     s.army.onChange(changed)

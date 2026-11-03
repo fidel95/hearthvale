@@ -236,7 +236,7 @@ export class Hud {
         void this.coins.button.offsetWidth // force the browser to notice, so the animation restarts
         this.coins.button.classList.add('bump')
       }
-      if (e.kind === 'goods' || e.kind === 'products' || e.kind === 'added' || e.kind === 'removed') showGoods()
+      if (e.kind === 'goods' || e.kind === 'products' || e.kind === 'storage' || e.kind === 'added' || e.kind === 'removed') showGoods()
     })
     services.onChange(showPeople)
     player.onChange(showLevel)

@@ -1,6 +1,7 @@
 import type { CitySave } from './City'
 import { STARTING_MATERIALS } from './construction'
 import type { CargoSave } from './Cargo'
+import type { CivicSave } from './Civic'
 import type { Shipment } from './Docks'
 import { LOT_SIZE } from './grid'
 import type { Stack } from './Inventory'
@@ -60,6 +61,7 @@ export interface SaveData {
   daily?: DailySave // the daily gift calendar (added with daily gifts)
   market?: MarketSave // the Farmers' Market's orders (added with the market)
   wilds?: WildsSave // trees and rocks growing on the town's land (added with them)
+  civic?: CivicSave // the Town Hall's civic upgrades bought (added with them)
 }
 
 // The City's part of the save, pieced back together from the file's sections.
