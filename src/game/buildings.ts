@@ -54,6 +54,7 @@ export type PlaceholderShape =
   | 'rail'
   | 'station'
   | 'airport'
+  | 'hangar'
   | 'beach'
   | 'playground'
   | 'sportsfield'
@@ -1267,6 +1268,22 @@ export const BUILDING_TYPES: BuildingType[] = [
     recoveryYears: 15, // mostly runway and aprons: land improvements
     arrivals: 80,
     placeholder: { shape: 'airport', color: '#4a4f57', accent: '#e8eef2', height: 0.9 },
+  },
+  {
+    // A second cargo plane, flying from the Airport's runway (Cargo.ts).
+    id: 'hangar',
+    name: 'Cargo Hangar',
+    category: 'air',
+    size: { x: 3, z: 3 },
+    cost: 5000,
+    unlockLevel: 16,
+    build: { seconds: 240, materials: { steel: 8, bricks: 6 } },
+    needs: { power: 2 },
+    upkeep: 30,
+    unique: true,
+    requiresRoad: true, // the goods leave by truck
+    recoveryYears: 20,
+    placeholder: { shape: 'hangar', color: '#c3c9cf', accent: '#e07a2e', height: 1.1 },
   },
   // ---- Parks, the beach and the slopes
   {

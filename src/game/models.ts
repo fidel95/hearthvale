@@ -593,6 +593,31 @@ function createPlaceholder(type: BuildingType): THREE.Group {
       add(new THREE.BoxGeometry(w * 0.95, 0.05, d * 0.32), accent, 0, 0.08 + height * 0.6, d * 0.32)
       break
     }
+    case 'hangar': {
+      // An arched, ribbed hangar on a concrete apron, its big orange doors
+      // facing front, with a small office to one side and a wind sock.
+      add(new THREE.BoxGeometry(w * 0.98, 0.04, d * 0.98), '#9aa0a6', 0, 0, 0)
+      const r = w * 0.38
+      const length = d * 0.62
+      const z = -d * 0.12
+      const squash = height / r
+      const barrel = new THREE.CylinderGeometry(r, r, length, 20, 1, false, -Math.PI / 2, Math.PI).rotateX(-Math.PI / 2)
+      barrel.scale(1, squash, 1)
+      add(barrel, color, -w * 0.08, 0.04, z)
+      for (let i = 0; i <= 4; i++) {
+        const rib = new THREE.TorusGeometry(r + 0.01, 0.018, 4, 20, Math.PI).scale(1, squash, 1)
+        add(rib, '#8d949b', -w * 0.08, 0.04, z - length / 2 + (i * length) / 4)
+      }
+      const front = z + length / 2
+      add(new THREE.BoxGeometry(r * 1.3, height * 0.72, 0.05), accent, -w * 0.08, 0.04, front + 0.02)
+      for (const x of [-r * 0.33, 0, r * 0.33]) add(new THREE.BoxGeometry(0.02, height * 0.72, 0.06), '#b85f1f', -w * 0.08 + x, 0.04, front + 0.02)
+      add(new THREE.BoxGeometry(w * 0.16, height * 0.45, d * 0.22), '#e8eef2', w * 0.39, 0.04, front - d * 0.08)
+      add(new THREE.BoxGeometry(w * 0.15, 0.06, d * 0.06), '#5aa9ff', w * 0.39, 0.04 + height * 0.28, front + d * 0.035)
+      add(new THREE.BoxGeometry(w * 0.6, 0.005, 0.04), '#f2d23c', -w * 0.08, 0.04, d * 0.4)
+      add(new THREE.CylinderGeometry(0.015, 0.015, height * 0.9, 6), '#dddddd', w * 0.42, 0.04, -d * 0.4)
+      add(new THREE.ConeGeometry(0.05, 0.22, 8).rotateZ(Math.PI / 2), accent, w * 0.42 - 0.11, 0.04 + height * 0.82, -d * 0.4)
+      break
+    }
     case 'airport': {
       // A runway along the south side (dashed center line, striped ends), and
       // to the north a terminal, a control tower and a hangar. The runway's

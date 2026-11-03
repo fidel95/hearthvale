@@ -78,6 +78,7 @@ army-base,Army Base,community,late,12,,3×3,9,2500,🧱 8 🔩 6,270,2770,240,,,
 rail,Railway Track,rail,late,14,,1×1,1,20,,0,20,0,,,0,,,0,0,,0,,,,,,—,—
 train-station,Train Station,rail,late,14,The Railway Comes to Town,3×2,6,3000,🧱 10 🪟 4 🔩 8,430,3430,300,,,0,,,210,0,💧2 🔌3 🗑️2,30,,,,,,—,—
 airport,Airport,air,late,15,Cleared for Takeoff,7×3,21,8000,🧱 10 🪟 6 🔩 12,570,8570,360,,,0,,,560,0,💧3 🔌5 🗑️3,60,,,,,,—,—
+hangar,Cargo Hangar,air,late,16,,3×3,9,5000,🧱 6 🔩 8,290,5290,240,,,0,,,350,0,🔌2,30,,,,,,—,—
 playground,Playground,community,middle,6,Fun in the Sun,2×2,4,250,,0,250,0,,,0,,,12,0,,4,+6% within 3 tiles,,,,,—,—
 sports-field,Sports Field,community,late,8,,3×2,6,650,🪵 4,48,698,90,,,0,,,45,0,💧2,10,+8% within 5 tiles,,,,,—,—
 public-beach,Public Beach,community,late,9,Fun in the Sun,3×2,6,400,,0,400,0,,,0,,,20,0,,8,+8% within 5 tiles,,,,,—,—

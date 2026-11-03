@@ -591,7 +591,7 @@ export class Game {
     })
     const welcome = (since: number) => {
       const now = Date.now()
-      if (now - since >= WELCOME_BACK_AFTER_MS) panel.show(awaySummary(this.city, this.player, this.docks, since, now))
+      if (now - since >= WELCOME_BACK_AFTER_MS) panel.show(awaySummary(this.city, this.player, this.docks, since, now, this.cargo))
     }
     if (leftAt !== null) welcome(leftAt)
     let hiddenAt: number | null = null

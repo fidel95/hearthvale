@@ -26,10 +26,17 @@ export class CargoPanel {
       const trips = this.cargo.tripsOn(route.id)
       const next = STAR_TRIPS[stars]
       const item = el('button', 'catalog-item')
+      if (!this.cargo.routeOpen(route)) {
+        item.disabled = true
+        item.classList.add('locked')
+        item.append(el('span', 'catalog-name', `${route.icon} ${route.name}`), el('span', 'catalog-meta', `🔒 Opens at level ${route.level}`))
+        list.append(item)
+        continue
+      }
       item.append(
         el('span', 'catalog-name', `${route.icon} ${route.name}`),
         el('span', 'catalog-meta', `📦 ${route.units} goods for ${coins(route.cost)}`),
-        el('span', 'catalog-meta', `${coins(route.cost / route.units)} per good · back in ${timeSpan(route.seconds)}`),
+        el('span', 'catalog-meta', `🪙 ${(route.cost / route.units).toFixed(1)} per good · back in ${timeSpan(route.seconds)}`),
         el(
           'span',
           'catalog-meta',
@@ -44,7 +51,11 @@ export class CargoPanel {
       })
       list.append(item)
     }
+    const runway = this.cargo.needsAirport(airport)
+      ? [el('p', 'warning', "✈️ The hangar's planes take off from the Airport's runway: build the Airport to fly cargo from here.")]
+      : []
     this.sheet.body.replaceChildren(
+      ...runway,
       el('p', '', `Storage: 📦 ${this.city.goods} of ${this.city.storageCapacity} (room for ${room}). Unloading a plane takes ⚡ ${UNLOAD_ENERGY} energy.`),
       list,
       el(

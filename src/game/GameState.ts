@@ -46,7 +46,7 @@ export class GameState {
   readonly placement = new PlacementSystem(this.city, this.services, this.unlocks)
   readonly docks = new Docks(this.city)
   readonly inventory = new Inventory(this.city)
-  readonly cargo = new Cargo(this.city, this.inventory)
+  readonly cargo = new Cargo(this.city, this.inventory, () => this.player.level)
   readonly collections = new Collections(this.city, this.inventory, this.player)
   readonly neighbors = new Neighbors(this.city, this.player, this.inventory)
   readonly taxes: Taxes

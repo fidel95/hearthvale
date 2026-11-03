@@ -243,6 +243,7 @@ Payback cycles = (coins + materials) ÷ net coins per cycle. Payback minutes add
 | Building | Role | Level | Size | Cost | Materials | Build | Effect | Uses | Runs per month | XP to build | Quests |
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | Airport | late | 15 | 7×3 | 8,000 | 🧱 10 🪟 6 🔩 12 (570) | 6 min | — | 💧3 🔌5 🗑️3 | 60 | 560 | Cleared for Takeoff |
+| Cargo Hangar | late | 16 | 3×3 | 5,000 | 🧱 6 🔩 8 (290) | 4 min | — | 🔌2 | 30 | 350 | — |
 | Park | middle | 6 | 2×2 | 200 | 🪵 3 (36) | 1 min | +10% within 4 tiles | 💧1 | 5 | 14 | Community Spirit |
 | Playground | middle | 6 | 2×2 | 250 | — | instant | +6% within 3 tiles | — | 4 | 12 | Fun in the Sun |
 | Library | middle | 7 | 2×2 | 500 | 🧱 6 🪵 4 (138) | 2 min | +5% within 8 tiles | 💧1 🔌2 🗑️1 | 10 | 35 | — |

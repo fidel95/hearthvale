@@ -1,3 +1,4 @@
+import type { Cargo } from './Cargo'
 import type { City } from './City'
 import { CROPS_BY_ID, cropState } from './crops'
 import type { Docks } from './Docks'
@@ -19,13 +20,14 @@ export interface AwaySummary {
   ripeValue: number
   witheredCrops: number // crops that withered while you were away
   shipsWaiting: number // shipments that arrived and wait to be unloaded
+  planesWaiting: number // cargo planes that landed and wait to be unloaded
   energyGained: number
 }
 
 // Shorter absences aren't worth a window.
 export const WELCOME_BACK_AFTER_MS = 5 * 60_000
 
-export function awaySummary(city: City, player: Player, docks: Docks, leftAt: number, now: number): AwaySummary {
+export function awaySummary(city: City, player: Player, docks: Docks, leftAt: number, now: number, cargo?: Cargo): AwaySummary {
   const summary: AwaySummary = {
     awayMs: now - leftAt,
     readyBuildings: 0,
@@ -34,6 +36,7 @@ export function awaySummary(city: City, player: Player, docks: Docks, leftAt: nu
     ripeValue: 0,
     witheredCrops: 0,
     shipsWaiting: 0,
+    planesWaiting: 0,
     energyGained: player.energy(now) - player.energy(leftAt),
   }
   for (const b of city.all()) {
@@ -42,6 +45,7 @@ export function awaySummary(city: City, player: Player, docks: Docks, leftAt: nu
       summary.readyCoins += city.production.payout(b)
     }
     if (b.type.category === 'port' && docks.state(b, now).stage === 'arrived') summary.shipsWaiting++
+    if (b.type.category === 'air' && cargo?.state(b, now).stage === 'landed') summary.planesWaiting++
     const state = cropState(b.crop, now)
     if (state.stage === 'ripe') {
       summary.ripeCrops++

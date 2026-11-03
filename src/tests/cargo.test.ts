@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { CARGO_ROUTES, STAR_TRIPS, UNLOAD_ENERGY, starsFor } from '../game/Cargo'
+import { CARGO_ROUTES, CARGO_ROUTES_BY_ID, STAR_TRIPS, UNLOAD_ENERGY, starsFor } from '../game/Cargo'
+import { awaySummary } from '../game/offline'
 import { GameState } from '../game/GameState'
 import { at, b, reload, richGame } from './helpers'
 
@@ -90,5 +91,40 @@ describe('cargo planes', () => {
     const old = JSON.parse(JSON.stringify({ ...fresh.cargo.toSave() }))
     expect(old.trips).toEqual([])
     expect(new GameState().cargo.toSave().flights).toEqual([])
+  })
+
+  it('opens the later routes at their level', () => {
+    const { state, airport } = airportGame()
+    const polar = CARGO_ROUTES_BY_ID.get('polar')!
+    state.player.setLevel(15)
+    expect(state.cargo.routeOpen(coast)).toBe(true)
+    expect(state.cargo.send(airport, polar, T)).toBe(false)
+    state.player.setLevel(polar.level)
+    expect(state.cargo.send(airport, polar, T)).toBe(true)
+  })
+
+  it("flies a second plane from the Cargo Hangar, which needs the Airport's runway", () => {
+    const state = richGame()
+    state.city.economy.changeGoods(-state.city.goods)
+    const hangar = state.city.place(b('hangar'), at(0, 4), { now: T, free: true })!
+    expect(state.cargo.needsAirport(hangar)).toBe(true)
+    expect(state.cargo.send(hangar, coast, T)).toBe(false)
+    const airport = state.city.place(b('airport'), at(0, 0), { now: T, free: true })!
+    expect(state.cargo.needsAirport(hangar)).toBe(false)
+    const mountain = CARGO_ROUTES_BY_ID.get('mountain')!
+    expect(state.cargo.send(airport, mountain, T)).toBe(true)
+    expect(state.cargo.send(hangar, coast, T)).toBe(true) // both in the air at once
+    expect([...state.cargo.all()]).toHaveLength(2)
+    const landed = T + coast.seconds * 1000
+    expect(state.cargo.unload(hangar, landed).taken).toBe(coast.units)
+    expect(state.cargo.state(airport, landed).stage).toBe('flying')
+  })
+
+  it('counts landed planes in the welcome-back summary', () => {
+    const { state, airport } = airportGame()
+    state.cargo.send(airport, coast, T)
+    const later = T + coast.seconds * 1000 + 60_000
+    expect(awaySummary(state.city, state.player, state.docks, T, later, state.cargo).planesWaiting).toBe(1)
+    expect(awaySummary(state.city, state.player, state.docks, T, T + 1000, state.cargo).planesWaiting).toBe(0)
   })
 })

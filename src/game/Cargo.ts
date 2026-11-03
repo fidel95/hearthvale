@@ -5,7 +5,8 @@ import { MATERIALS, type MaterialId } from './items'
 // Cargo planes. At the Airport you pick a destination; a freighter flies
 // there and back in real time (so it keeps flying while the game is closed,
 // like ships and crops), and you unload the goods into storage. One flight
-// per airport at a time.
+// per airport at a time; a Cargo Hangar flies a second plane from the
+// Airport's runway, so it needs the Airport built too.
 //
 // Like a shipment, the fare is paid up front and counts as inventory, not an
 // expense: it's deducted bit by bit as shops sell the goods. Flying the same
@@ -18,14 +19,18 @@ export interface CargoRoute {
   units: number // goods brought back
   cost: number // coins paid
   seconds: number
+  level: number // the player level that opens the route
   reward: { material: MaterialId; count: number } // for the third star
 }
 
 // Farther routes cost less per good, but take longer and need more room.
+// The first three open with the Airport (level 15); the rest come later.
 export const CARGO_ROUTES: CargoRoute[] = [
-  { id: 'coast', name: 'Coastal run', icon: '🏖️', units: 80, cost: 400, seconds: 90, reward: { material: 'lumber', count: 6 } },
-  { id: 'mountain', name: 'Mountain pass', icon: '🏔️', units: 220, cost: 990, seconds: 4 * 60, reward: { material: 'bricks', count: 8 } },
-  { id: 'overseas', name: 'Overseas haul', icon: '🌏', units: 600, cost: 2500, seconds: 12 * 60, reward: { material: 'steel', count: 10 } },
+  { id: 'coast', name: 'Coastal run', icon: '🏖️', units: 80, cost: 400, seconds: 90, level: 15, reward: { material: 'lumber', count: 6 } },
+  { id: 'mountain', name: 'Mountain pass', icon: '🏔️', units: 220, cost: 990, seconds: 4 * 60, level: 15, reward: { material: 'bricks', count: 8 } },
+  { id: 'island', name: 'Island hop', icon: '🏝️', units: 350, cost: 1500, seconds: 6 * 60, level: 17, reward: { material: 'glass', count: 8 } },
+  { id: 'overseas', name: 'Overseas haul', icon: '🌏', units: 600, cost: 2500, seconds: 12 * 60, level: 15, reward: { material: 'steel', count: 10 } },
+  { id: 'polar', name: 'Polar freight', icon: '🧊', units: 1200, cost: 4500, seconds: 30 * 60, level: 18, reward: { material: 'steel', count: 20 } },
 ]
 
 export const CARGO_ROUTES_BY_ID = new Map(CARGO_ROUTES.map((r) => [r.id, r]))
@@ -67,12 +72,14 @@ export class Cargo {
   private listeners: (() => void)[] = []
   private city: City
   private inventory: Inventory
+  private level: () => number
   // How much sooner planes return; Game can wire it to Services.
   speedBonus: () => number = () => 0
 
-  constructor(city: City, inventory: Inventory) {
+  constructor(city: City, inventory: Inventory, level: () => number) {
     this.city = city
     this.inventory = inventory
+    this.level = level
     city.onChange((event) => {
       // Demolishing an airport with a plane out: the order is cancelled and refunded.
       if (event.kind === 'removed') {
@@ -111,8 +118,23 @@ export class Cargo {
     return starsFor(this.tripsOn(routeId))
   }
 
+  routeOpen(route: CargoRoute): boolean {
+    return this.level() >= route.level
+  }
+
+  // A hangar's planes use the Airport's runway: no finished Airport, no flights.
+  needsAirport(from: PlacedBuilding): boolean {
+    return from.type.id !== 'airport' && ![...this.city.all()].some((b) => b.type.id === 'airport' && this.city.isBuilt(b))
+  }
+
   canSend(airport: PlacedBuilding, route: CargoRoute): boolean {
-    return this.city.isBuilt(airport) && !this.flights.has(airport.id) && this.city.coins >= route.cost
+    return (
+      this.city.isBuilt(airport) &&
+      !this.flights.has(airport.id) &&
+      this.city.coins >= route.cost &&
+      this.routeOpen(route) &&
+      !this.needsAirport(airport)
+    )
   }
 
   send(airport: PlacedBuilding, route: CargoRoute, now: number): boolean {
