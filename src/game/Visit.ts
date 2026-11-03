@@ -69,9 +69,19 @@ export class Visit {
   }
 
   private build(now: number) {
-    for (const p of planTown(this.neighbor, this.neighbors.townLevel(this.neighbor), dayKey(now))) {
+    const plan = planTown(this.neighbor, this.neighbors.townLevel(this.neighbor), dayKey(now))
+    // Your franchise takes the first shop lot on their Main Street (any lot, in a small town).
+    const shop = this.neighbors.franchise(this.neighbor)
+    const lot = shop ? (plan.find((p) => p.type.category === 'business') ?? plan.find((p) => p.type.category !== 'road')) : undefined
+    if (shop && lot) {
+      Object.assign(lot, { type: shop, readySecondsAgo: undefined, crop: undefined })
+      plan.splice(plan.indexOf(lot), 1)
+      plan.unshift(lot) // placed first, so it gets its lot even if it's a size bigger
+    }
+    for (const p of plan) {
       const b = this.city.place(p.type, p.tile, { free: true, now, rotation: p.rotation })
       if (!b) continue
+      if (p === lot) this.sign(b, `🏪 Your ${shop!.name}`)
       if (p.readySecondsAgo !== undefined) b.readyAt = now - p.readySecondsAgo * 1000
       if (p.crop) this.city.production.plant(b.id, CROPS_BY_ID.get(p.crop.cropId)!, { now: now - p.crop.secondsAgo * 1000, free: true })
     }
@@ -135,6 +145,17 @@ export class Visit {
     this.popup(b, `+${HELP_REWARD.coins} 🪙 +${HELP_REWARD.xp} ⭐`)
     this.refreshBubbles(now)
     this.onChange?.()
+  }
+
+  // A name board over your franchise.
+  private sign(b: PlacedBuilding, text: string) {
+    const el = document.createElement('div')
+    el.className = 'franchise-sign'
+    el.textContent = text
+    const sign = new CSS2DObject(el)
+    sign.center.set(0.5, 1)
+    sign.position.copy(footprintCenter(b.tile, sizeOf(b))).setY(1.9)
+    this.scene.add(sign)
   }
 
   private popup(b: PlacedBuilding, text: string) {

@@ -145,3 +145,26 @@ export function dailyRequest(n: Neighbor, day: string): { material: MaterialId; 
   const rand = seededRandom(n.seed * 17 + hash(day) + 1)
   return { material: MATERIAL_IDS[Math.floor(rand() * MATERIAL_IDS.length)], amount: 2 + Math.floor(rand() * 3) }
 }
+
+// ---- Franchises
+
+// A franchise is a branch of one of your shops in a neighbor's town. You need
+// to be friends first; it costs a one-time fee and pays takings once a day,
+// more the better friends you are (their town sends more customers your way).
+export const FRANCHISE_FRIENDSHIP = 10 // points: "Friend"
+export const FRANCHISE_FEE_FACTOR = 3 // the fee, as a multiple of the shop's price
+
+// Shops that can open a branch: ones that earn, aren't one of a kind, and fit
+// a lot in a neighbor's town.
+export function canFranchise(type: BuildingType): boolean {
+  return type.category === 'business' && !!type.income && !type.unique && type.size.x <= 3 && type.size.z <= 3
+}
+
+export function franchiseFee(type: BuildingType): number {
+  return type.cost * FRANCHISE_FEE_FACTOR
+}
+
+// A day's takings: a few of the shop's sales, plus one per friendship tier.
+export function franchiseTakings(type: BuildingType, friendship: number): number {
+  return Math.round((type.income?.coins ?? 0) * (2 + friendshipTier(friendship).gift))
+}

@@ -98,7 +98,7 @@ the right on a wide screen) so the town stays in view.
 - **Inventory:** stored buildings (place them again, free), construction materials (with a Buy button), goods and shop shelves, and collectibles.
 - **Collections:** five sets of five items. Items turn up while you collect rent, sell, harvest, unload ships and finish buildings. Hand in a full set for coins, XP and energy, as often as you complete it.
 - **Map:** the whole world at the game's angle. Tap to jump there; tap a lot for sale to buy it. Its **Neighbors** tab lists your neighbors.
-- **Neighbors** (from level 7): five simulated neighbors with towns of their own that grow with yours. Visit one, tap 🤝 bubbles to help (collect their rent, harvest or clear crops: 5 helps per neighbor a day, each paying coins and XP), claim their daily gift, and give them the materials they ask for. Helping builds friendship, and better friends send bigger gifts. Everything is local: no accounts, no network.
+- **Neighbors** (from level 7): five simulated neighbors with towns of their own that grow with yours. Visit one, tap 🤝 bubbles to help (collect their rent, harvest or clear crops: 5 helps per neighbor a day, each paying coins and XP), claim their daily gift, and give them the materials they ask for. Helping builds friendship, and better friends send bigger gifts. Once you're friends (10 ❤️), open a **franchise**: a branch of one of your shops in their town, for a one-time fee of 3× the shop's price. It stands on their Main Street with your name on it and pays takings once a day (taxable), more the better friends you are. Everything is local: no accounts, no network.
 - **Town services and Taxes:** tap 👥 or 🪙 in the top bar.
 
 ### The systems

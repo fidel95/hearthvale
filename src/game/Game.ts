@@ -9,6 +9,7 @@ import { CropPicker } from '../ui/CropPicker'
 import { InventoryPanel } from '../ui/InventoryPanel'
 import { MapPanel } from '../ui/MapPanel'
 import { neighborsList } from '../ui/NeighborsList'
+import { FranchisePanel } from '../ui/FranchisePanel'
 import { AdminPanel } from '../ui/AdminPanel'
 import { HelpPanel } from '../ui/HelpPanel'
 import { SettingsPanel } from '../ui/SettingsPanel'
@@ -294,6 +295,7 @@ export class Game {
     const collectionsPanel = new CollectionsPanel(container, this.collections, this.inventory)
     const questsPanel = new QuestsPanel(container, this.quests, this.player, this.state.townEvents, this.state.goals)
     const landPanelForMap = (lot: Lot) => this.landPanel?.open(lot)
+    const franchisePanel = new FranchisePanel(container, this.city, this.neighbors, (m) => this.hud.toast(m))
     const mapPanel: MapPanel = new MapPanel(
       container,
       this.city,
@@ -313,6 +315,11 @@ export class Game {
           fulfill: (n) => {
             const thanks = this.neighbors.fulfill(n, Date.now())
             if (thanks) this.hud.toast(`${n.avatar} ${n.name} thanks you with a gift of 🪙 ${thanks}!`)
+          },
+          openFranchise: (n) => franchisePanel.open(n),
+          collectFranchise: (n) => {
+            const takings = this.neighbors.collectFranchise(n, Date.now())
+            if (takings) this.hud.toast(`🏪 Your ${this.neighbors.franchise(n)!.name} in ${n.town} took 🪙 ${takings.toLocaleString()} today.`)
           },
         }),
     )

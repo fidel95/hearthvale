@@ -1,7 +1,7 @@
 import { MATERIALS } from '../game/items'
-import { FRIENDSHIP_TIERS, HELPS_PER_DAY, NEIGHBORS_UNLOCK_LEVEL, friendshipTier, type Neighbor } from '../game/neighborData'
+import { FRANCHISE_FRIENDSHIP, FRIENDSHIP_TIERS, HELPS_PER_DAY, NEIGHBORS_UNLOCK_LEVEL, friendshipTier, type Neighbor } from '../game/neighborData'
 import type { Neighbors } from '../game/Neighbors'
-import { el } from './dom'
+import { coins, el } from './dom'
 import { button } from './Sheet'
 
 // The neighbors list (in the Map sheet): who they are, how good friends you
@@ -11,6 +11,8 @@ export interface NeighborActions {
   visit: (n: Neighbor) => void
   claimGift: (n: Neighbor) => void
   fulfill: (n: Neighbor) => void
+  openFranchise: (n: Neighbor) => void
+  collectFranchise: (n: Neighbor) => void
 }
 
 export function neighborsList(neighbors: Neighbors, actions: NeighborActions, now = Date.now()): HTMLElement {
@@ -52,8 +54,35 @@ export function neighborsList(neighbors: Neighbors, actions: NeighborActions, no
     )
     give.disabled = !neighbors.canFulfill(n, now)
     buttons.append(giftButton, give)
-    card.append(head, buttons)
+    card.append(head, buttons, franchiseRow(neighbors, actions, n, now))
     wrap.append(card)
   }
   return wrap
+}
+
+// Your shop's branch in their town: collect today's takings, open one, or
+// what it takes to be allowed to.
+function franchiseRow(neighbors: Neighbors, actions: NeighborActions, n: Neighbor, now: number): HTMLElement {
+  const shop = neighbors.franchise(n)
+  if (shop) {
+    const ready = neighbors.canCollectFranchise(n, now)
+    const b = button(
+      ready
+        ? `🏪 ${shop.name}: collect ${coins(neighbors.franchiseTakings(n))}`
+        : neighbors.franchiseOpenedToday(n, now)
+          ? `🏪 ${shop.name} · opened today, first takings tomorrow`
+          : `🏪 ${shop.name} · takings collected today ✓`,
+      () => actions.collectFranchise(n),
+      ready ? 'panel-button' : 'panel-button secondary',
+    )
+    b.disabled = !ready
+    b.classList.add('neighbor-franchise')
+    return b
+  }
+  if (neighbors.friendship(n) < FRANCHISE_FRIENDSHIP) {
+    return el('p', 'muted', `🏪 Become friends (${FRANCHISE_FRIENDSHIP} ❤️) to open a franchise in ${n.town}.`)
+  }
+  const b = button(`🏪 Open a franchise in ${n.town}`, () => actions.openFranchise(n), 'panel-button secondary')
+  b.classList.add('neighbor-franchise')
+  return b
 }

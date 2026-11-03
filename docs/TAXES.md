@@ -334,6 +334,8 @@ basis: it depreciates like any decoration once it's on the map.
 | A neighbor pays you 10 coins for helping | Taxable income ("other income") |
 | A neighbor's daily gift of materials | Not income; the materials have no cost to you |
 | You give a neighbor what they asked for, and they thank you with coins | Gifts both ways: no income for the coins, no deduction for the materials |
+| You pay the fee to open a franchise in a neighbor's town | Buying into a business: a capital cost, not a deductible expense |
+| Your franchise's daily takings | Business income: taxable ("other income") |
 
 ## 7. Paying late
 

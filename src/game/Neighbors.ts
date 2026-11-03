@@ -2,14 +2,19 @@ import { Emitter } from './events'
 import type { City } from './City'
 import type { Inventory } from './Inventory'
 import { MATERIALS } from './items'
+import { BUILDINGS_BY_ID, type BuildingType } from './buildings'
 import {
+  FRANCHISE_FRIENDSHIP,
   HELPS_PER_DAY,
   HELP_REWARD,
   NEIGHBORS,
   NEIGHBORS_UNLOCK_LEVEL,
   dailyGift,
+  canFranchise,
   dailyRequest,
   dayKey,
+  franchiseFee,
+  franchiseTakings,
   type Neighbor,
 } from './neighborData'
 import type { Player } from './Player'
@@ -30,6 +35,13 @@ interface NeighborState {
   helped: string[] // the spots in their town you've helped with that day
   giftClaimed: boolean
   requestDone: boolean
+  franchise?: Franchise // your shop's branch in their town (added with franchises)
+}
+
+interface Franchise {
+  typeId: string
+  openedDay: string
+  collectedDay: string // the day its takings were last collected (or the day it opened)
 }
 
 export type NeighborsSave = [string, NeighborState][]
@@ -144,16 +156,77 @@ export class Neighbors {
     return thanks
   }
 
+  // ---- Franchises (neighborData.ts has the numbers)
+
+  // Your shop's branch in their town, if you've opened one.
+  franchise(n: Neighbor): BuildingType | null {
+    const f = this.states.get(n.id)?.franchise
+    return (f && BUILDINGS_BY_ID.get(f.typeId)) || null
+  }
+
+  // The shops you could open a branch of: ones you've built in your own town.
+  franchiseOptions(): BuildingType[] {
+    const types = new Map<string, BuildingType>()
+    for (const b of this.city.all()) if (canFranchise(b.type) && this.city.isBuilt(b)) types.set(b.type.id, b.type)
+    return [...types.values()].sort((a, b) => a.cost - b.cost)
+  }
+
+  canOpenFranchise(n: Neighbor, type: BuildingType): boolean {
+    return (
+      this.unlocked &&
+      this.friendship(n) >= FRANCHISE_FRIENDSHIP &&
+      !this.franchise(n) &&
+      this.franchiseOptions().includes(type) &&
+      this.city.coins >= franchiseFee(type)
+    )
+  }
+
+  // Pay the fee and open the branch. Buying into a business is a capital
+  // cost, not a running expense, so it's a plain coin change (no deduction).
+  // It opens today; its first takings are tomorrow's.
+  openFranchise(n: Neighbor, type: BuildingType, now: number): boolean {
+    if (!this.canOpenFranchise(n, type)) return false
+    this.city.economy.adjust(-franchiseFee(type))
+    this.today(n, now).franchise = { typeId: type.id, openedDay: dayKey(now), collectedDay: dayKey(now) }
+    this.emit()
+    return true
+  }
+
+  franchiseOpenedToday(n: Neighbor, now: number): boolean {
+    return this.states.get(n.id)?.franchise?.openedDay === dayKey(now)
+  }
+
+  franchiseTakings(n: Neighbor): number {
+    const type = this.franchise(n)
+    return type ? franchiseTakings(type, this.friendship(n)) : 0
+  }
+
+  canCollectFranchise(n: Neighbor, now: number): boolean {
+    const f = this.states.get(n.id)?.franchise
+    return !!f && !!this.franchise(n) && f.collectedDay !== dayKey(now)
+  }
+
+  // The day's takings: business income, so taxable. Returns the coins.
+  collectFranchise(n: Neighbor, now: number): number {
+    if (!this.canCollectFranchise(n, now)) return 0
+    const coins = this.franchiseTakings(n)
+    this.today(n, now).franchise!.collectedDay = dayKey(now)
+    this.city.economy.award(coins, `Franchise in ${n.town}`)
+    this.player.grantXp(5)
+    this.emit()
+    return coins
+  }
+
   all(): Neighbor[] {
     return NEIGHBORS
   }
 
   toSave(): NeighborsSave {
-    return [...this.states.entries()].map(([id, s]) => [id, { ...s, helped: [...s.helped] }])
+    return [...this.states.entries()].map(([id, s]) => [id, { ...s, helped: [...s.helped], ...(s.franchise && { franchise: { ...s.franchise } }) }])
   }
 
   load(saved: NeighborsSave) {
-    this.states = new Map(saved.map(([id, s]) => [id, { ...s, helped: [...s.helped] }]))
+    this.states = new Map(saved.map(([id, s]) => [id, { ...s, helped: [...s.helped], ...(s.franchise && { franchise: { ...s.franchise } }) }]))
     this.emit()
   }
 

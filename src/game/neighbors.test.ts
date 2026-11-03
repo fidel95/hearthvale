@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { City } from './City'
 import { GameClock } from './GameClock'
 import { Inventory } from './Inventory'
-import { HELPS_PER_DAY, HELP_REWARD, NEIGHBORS, dailyRequest, dayKey, planTown, seededRandom } from './neighborData'
+import { BUILDINGS_BY_ID } from './buildings'
+import { FRANCHISE_FRIENDSHIP, HELPS_PER_DAY, HELP_REWARD, NEIGHBORS, dailyRequest, dayKey, franchiseFee, planTown, seededRandom } from './neighborData'
 import { Neighbors } from './Neighbors'
 import { Player } from './Player'
 import { xpForLevel } from './progression'
@@ -97,5 +98,60 @@ describe('Neighbors', () => {
     other.load(JSON.parse(JSON.stringify(neighbors.toSave())))
     expect(other.friendship(rosa)).toBe(1)
     expect(other.helpsLeft(rosa, DAY)).toBe(HELPS_PER_DAY - 1)
+  })
+
+  describe('franchises', () => {
+    const deli = BUILDINGS_BY_ID.get('deli')!
+    const tomorrow = DAY + 24 * 3600_000
+
+    // Friends with Rosa (two days of helping), with a Deli built and coins to spare.
+    function friends() {
+      const t = town()
+      t.player.grantXp(xpForLevel(12))
+      t.city.economy.adjust(50_000)
+      for (let i = 0; i < FRANCHISE_FRIENDSHIP; i++) t.neighbors.help(rosa, `spot${i}`, i < HELPS_PER_DAY ? DAY - 24 * 3600_000 : DAY)
+      return t
+    }
+
+    it('need a friendship and a shop of yours to copy', () => {
+      const t = town()
+      t.player.grantXp(xpForLevel(12))
+      t.city.economy.adjust(50_000)
+      t.city.place(deli, { x: 25, z: 25 }, { free: true, now: DAY })
+      expect(t.neighbors.canOpenFranchise(rosa, deli)).toBe(false) // not friends yet
+      const f = friends()
+      expect(f.neighbors.franchiseOptions()).toEqual([])
+      expect(f.neighbors.canOpenFranchise(rosa, deli)).toBe(false) // no Deli in town
+      f.city.place(deli, { x: 25, z: 25 }, { free: true, now: DAY })
+      expect(f.neighbors.franchiseOptions()).toEqual([deli])
+      expect(f.neighbors.canOpenFranchise(rosa, deli)).toBe(true)
+    })
+
+    it('cost a fee once, then pay taxable takings once a day, from tomorrow', () => {
+      const { city, taxes, neighbors } = friends()
+      city.place(deli, { x: 25, z: 25 }, { free: true, now: DAY })
+      const coins = city.coins
+      expect(neighbors.openFranchise(rosa, deli, DAY)).toBe(true)
+      expect(city.coins).toBe(coins - franchiseFee(deli))
+      expect(neighbors.openFranchise(rosa, deli, DAY)).toBe(false) // one per neighbor
+      expect(neighbors.canCollectFranchise(rosa, DAY)).toBe(false) // opens today
+      expect(neighbors.franchiseOpenedToday(rosa, DAY)).toBe(true)
+      const income = taxes.estimate().otherIncome
+      const takings = neighbors.collectFranchise(rosa, tomorrow)
+      expect(takings).toBe(neighbors.franchiseTakings(rosa))
+      expect(takings).toBeGreaterThan(0)
+      expect(taxes.estimate().otherIncome).toBe(income + takings)
+      expect(neighbors.collectFranchise(rosa, tomorrow)).toBe(0) // once a day
+    })
+
+    it('are kept in the save', () => {
+      const { city, neighbors, player, inventory } = friends()
+      city.place(deli, { x: 25, z: 25 }, { free: true, now: DAY })
+      neighbors.openFranchise(rosa, deli, DAY)
+      const other = new Neighbors(city, player, inventory)
+      other.load(JSON.parse(JSON.stringify(neighbors.toSave())))
+      expect(other.franchise(rosa)).toBe(deli)
+      expect(other.canCollectFranchise(rosa, tomorrow)).toBe(true)
+    })
   })
 })
