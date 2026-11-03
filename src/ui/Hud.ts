@@ -96,7 +96,7 @@ export class Hud {
     this.energy = chip('⚡', 'Energy', () => {
       const next = player.nextEnergyAt(Date.now())
       this.toast(
-        `Energy: ${player.energy(Date.now())} of ${player.maxEnergy}. Collecting, harvesting, planting and unloading use 1. ${next ? `Next in ${duration(next - Date.now())}.` : 'Full!'}`,
+        `Energy: ${player.energy(Date.now())} of ${player.maxEnergy}. Collecting, harvesting, planting and unloading a ship use 1; unloading a cargo plane uses 2. ${next ? `Next in ${duration(next - Date.now())}.` : 'Full!'}`,
       )
     })
     this.level = chip('⭐', 'Level and quests', callbacks.onOpenQuests)

@@ -90,20 +90,37 @@ export class Modal {
     container.append(this.overlay)
   }
 
+  // Showing, or waiting its turn behind another modal.
   get isOpen() {
-    return !this.overlay.hidden
+    return !this.overlay.hidden || Modal.waiting.includes(this)
   }
 
+  // One modal at a time: if another is showing (say Welcome back and a new
+  // river notice when the game opens), this one waits and shows when it closes.
   show(title: string, ...buttons: HTMLElement[]) {
     this.titleEl.textContent = title
     this.footer.replaceChildren(...buttons)
     this.footer.hidden = buttons.length === 0
+    if (Modal.showing && Modal.showing !== this) {
+      if (!Modal.waiting.includes(this)) Modal.waiting.push(this)
+      return
+    }
+    Modal.showing = this
     this.overlay.hidden = false
   }
 
   close() {
+    Modal.waiting = Modal.waiting.filter((m) => m !== this)
+    if (this.overlay.hidden) return
     this.overlay.hidden = true
+    if (Modal.showing !== this) return
+    Modal.showing = null
+    const next = Modal.waiting.shift()
+    if (next) (Modal.showing = next), (next.overlay.hidden = false)
   }
+
+  private static showing: Modal | null = null
+  private static waiting: Modal[] = []
 }
 
 // A footer button, e.g. a modal's "Nice!".

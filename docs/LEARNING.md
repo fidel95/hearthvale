@@ -658,6 +658,10 @@ the `*.test.ts` files, and [TAXES.md](TAXES.md)
   (`index-DxwPZerQ.js`), so the list of files to cache must come from the
   build. A 30-line Vite plugin writes it, plus a version made from the files'
   contents: change any file and the browser sees a new service worker.
+- **Only download what changed.** The list carries a fingerprint (a hash) of
+  each file. On an update, a file whose fingerprint matches the old cache's
+  copy is copied across instead of downloaded, so changing one line of code
+  doesn't make phones fetch 18 MB of models again.
 - **Never update under the player's feet.** A new version installs and waits.
   The game saves, asks, and only then tells it to take over (`skipWaiting`)
   and reloads.

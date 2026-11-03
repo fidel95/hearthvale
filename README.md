@@ -48,8 +48,9 @@ The production build is a Progressive Web App. A small Vite plugin
 listing every file in the build. After the first visit the service worker
 keeps them all, so the game opens and plays with no connection, and it can be
 installed (Add to Home Screen on iPhone and iPad, Install on Android and
-desktop). A new version downloads in the background, fetching every file
-fresh (never the browser's own cache) and checking the page belongs to the
+desktop). A new version downloads in the background, fetching only the files that
+changed, fresh (never the browser's own cache), copying the rest from the
+version before, and checking the page belongs to the
 same version before it takes over; the open game then offers to reload. If
 the game ever fails to start, it shows what went wrong with Reload and
 "Refresh the game's files" (the saved town is never touched). The service worker only runs in the production build, never in

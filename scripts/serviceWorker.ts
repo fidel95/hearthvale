@@ -17,8 +17,14 @@ export function serviceWorker(): Plugin {
     },
     closeBundle() {
       const files = listFiles(outDir).filter((f) => f !== 'sw.js' && !f.endsWith('.txt') && !f.startsWith('.'))
+      // Each file's own fingerprint, so an update can tell which files really
+      // changed and download only those; and the version, from all of them.
       const hash = createHash('sha256')
-      for (const f of files) hash.update(f).update(readFileSync(join(outDir, f)))
+      const sums: [string, string][] = files.map((f) => {
+        const bytes = readFileSync(join(outDir, f))
+        hash.update(f).update(bytes)
+        return ['./' + f, createHash('sha256').update(bytes).digest('hex').slice(0, 16)]
+      })
       const version = hash.digest('hex').slice(0, 12)
       const template = readFileSync(new URL('./sw-template.js', import.meta.url), 'utf8')
       // The code and style files the page loads: the service worker checks the
@@ -26,7 +32,7 @@ export function serviceWorker(): Plugin {
       const entry = [...new Set(readFileSync(join(outDir, 'index.html'), 'utf8').match(/assets\/[^"']+\.(?:js|css)/g) ?? [])]
       const sw = template
         .replace('__VERSION__', version)
-        .replace('__FILES__', JSON.stringify(['./', ...files.map((f) => './' + f)], null, 2))
+        .replace('__FILES__', JSON.stringify([['./', ''], ...sums], null, 2))
         .replace('__ENTRY__', JSON.stringify(entry))
       writeFileSync(join(outDir, 'sw.js'), sw)
       console.log(`service worker: ${files.length} files, version ${version}`)
