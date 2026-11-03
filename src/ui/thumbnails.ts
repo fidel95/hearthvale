@@ -14,11 +14,6 @@ let renderer: THREE.WebGLRenderer | null = null
 let scene: THREE.Scene
 const cache = new Map<string, Promise<string>>()
 
-// Buildings that use a hand-made picture instead of a rendered one.
-const PICTURES: Record<string, string> = {
-  airport: `${import.meta.env.BASE_URL}images/airport-icon.png`,
-}
-
 function setUp() {
   renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true })
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
@@ -31,8 +26,6 @@ function setUp() {
 }
 
 export function thumbnail(type: BuildingType): Promise<string> {
-  const picture = PICTURES[type.id]
-  if (picture) return Promise.resolve(picture)
   let url = cache.get(type.id)
   if (!url) {
     url = draw(type)
