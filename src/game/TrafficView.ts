@@ -10,6 +10,7 @@ import { nextTile, pathToFarthest, Polyline, trainRoute } from './routes'
 import { lightFor, signalJunctions, type Light } from './signals'
 import { PRIORITY, type RoadSpace } from './roadSpace'
 import { liftVehicle } from './bridges'
+import { ownPart } from './modelLoading'
 
 // Everything that moves along roads and track: cars, buses, trains, and the
 // army's marching squad and patrol jeep. Purely for looks, like PeopleView:
@@ -32,17 +33,25 @@ import { liftVehicle } from './bridges'
 // - Construction trucks: while a building is going up, a truck comes in from
 //   the far end of the road to the site, waits while it unloads, drives off,
 //   and comes back with the next load (up to MAX_SITE_TRUCKS sites at once).
+// - Semis: with a highway, tractor-trailers come in from its far end to the
+//   town's factories, warehouses, barns and docks, stop to unload, and head
+//   back out (one per SEMI.perTiles highway tiles, up to SEMI.max). The
+//   trailer hangs off the tractor's fifth wheel and swings round behind it.
 
 const MAX_CARS = 16
 const MAX_SITE_TRUCKS = 3
 const STOP_LINE = 0.3 // how far toward a junction (0 to 1 between tile middles) cars wait at a red light
 const TURN_BACK = 6 // seconds held up behind a vehicle before a car turns back
-const HALF_LENGTH = { car: 0.2, bus: 0.42, truck: 0.3 }
+const HALF_LENGTH = { car: 0.2, bus: 0.42, truck: 0.3, semi: 0.2, trailer: 0.34 }
 const LIGHT_COLORS: Record<Light, string> = { green: '#3fdc63', amber: '#ffb238', red: '#ff4b3a' }
 const LANE = 0.17 // how far right of the middle of the road vehicles drive
-const SPEED = { car: 1.8, bus: 1.3, train: 2.2, truck: 1.4 } // tiles per second (at Game's PACE)
+const SPEED = { car: 1.8, bus: 1.3, train: 2.2, truck: 1.4, semi: 1.5 } // tiles per second (at Game's PACE)
 const CORNERING = 7 // how quickly cars settle into a new lane and heading
-const PAUSE = { bus: 2.5, train: 3, truck: 6 } // seconds stopped at each stop or end
+const PAUSE = { bus: 2.5, train: 3, truck: 6, semi: 4 } // seconds stopped at each stop or end
+// Semis: from the fifth wheel back to the trailer's rear axles (the models,
+// assets-src/blender/models/semi.py, are made to it); how many there can be.
+const SEMI = { kingpin: 0.5, max: 4, perTiles: 6 }
+const TRAILERS = ['container-red', 'container-blue', 'tanker', 'logs', 'pipes', 'box']
 const CAR_COLORS = ['#e0453a', '#2f7fe0', '#f2c230', '#f5f5f5', '#3fae6b', '#8a56d6', '#f08a24', '#2b2d33', '#e85d9b']
 const OLIVE = '#5f6b3a'
 
@@ -179,6 +188,18 @@ function makeSiteTruck(): THREE.Group {
   g.add(model)
   return g
 }
+// A semi's tractor and trailer: our Blender models, or simple boxes.
+const makeTractor = (i: number) => {
+  const g = new THREE.Group()
+  const color = ['#c8463a', '#2f7fe0', '#f4f6f8', '#ffd23f'][i % 4]
+  g.add(ownPart(`semi.tractor-${i % 4}`, () => build([[box(0.36, 0.17, 0.17, 0.06, 0.04), color]], [-0.08, 0.2])))
+  return g
+}
+const makeTrailer = (kind: string) => {
+  const g = new THREE.Group()
+  g.add(ownPart(`semi.trailer-${kind}`, () => build([[box(0.66, 0.17, 0.17, 0.23, 0.09), '#d8dce4']], [-0.04, 0.04])))
+  return g
+}
 const makeLoco = () => build([[GEOMETRY.locoBody, '#d23c32'], [GEOMETRY.locoCab, '#8f2a24'], [GEOMETRY.locoChimney, '#2b2d33']], [-0.22, 0.22])
 const makeCarriage = (color: string) => build([[GEOMETRY.carriage, color], [GEOMETRY.carriageWindows, '#fff4d6']], [-0.22, 0.22])
 
@@ -218,7 +239,7 @@ interface Shuttle {
   pauseFor: number
   speed: number
   spacing: number // distance between the train's carriages, or the squad's rows
-  kind: 'bus' | 'train' | 'truck'
+  kind: 'bus' | 'train' | 'truck' | 'semi'
   phase: number
   loop?: boolean // a train going round a loop: it carries on round, rather than starting the line over
 }
@@ -311,8 +332,13 @@ export class TrafficView {
     this.planBuses(all)
     this.planTrain(all)
     this.planSiteTrucks(all)
-    // Buses and trucks share the road with the cars.
-    for (const s of this.shuttles) if (s.kind !== 'train') this.space.add(s.objects[0], HALF_LENGTH[s.kind], PRIORITY.heavy)
+    this.planSemis(all)
+    // Buses and trucks share the road with the cars (a semi's trailer too).
+    for (const s of this.shuttles) {
+      if (s.kind === 'train') continue
+      this.space.add(s.objects[0], HALF_LENGTH[s.kind], PRIORITY.heavy)
+      if (s.kind === 'semi') this.space.add(s.objects[1], HALF_LENGTH.trailer, PRIORITY.heavy)
+    }
     this.planSignals()
     this.junctions = new Set(
       all
@@ -593,6 +619,67 @@ export class TrafficView {
     }
   }
 
+  // ---- Semis
+
+  private planSemis(all: PlacedBuilding[]) {
+    const highways = all.filter((b) => b.type.road?.style === 'highway')
+    if (highways.length < 3) return
+    const isRoad = this.city.isRoad
+    const roadsBeside = (t: Tile) => [[1, 0], [-1, 0], [0, 1], [0, -1]].filter(([dx, dz]) => isRoad({ x: t.x + dx, z: t.z + dz })).length
+    // They come in at the end of the highway (a tile with one road beside it);
+    // a highway with no loose end, at its tile farthest from the town.
+    let entries = highways.filter((h) => roadsBeside(h.tile) === 1).map((h) => h.tile)
+    if (entries.length === 0) {
+      const mid = all.reduce((m, b) => ({ x: m.x + b.tile.x / all.length, z: m.z + b.tile.z / all.length }), { x: 0, z: 0 })
+      entries = [highways.reduce((far, h) => (Math.hypot(h.tile.x - mid.x, h.tile.z - mid.z) > Math.hypot(far.tile.x - mid.x, far.tile.z - mid.z) ? h : far)).tile]
+    }
+    // Where they deliver: the kerb outside each factory, warehouse, barn or dock.
+    const deliveries = all
+      .filter((b) => ['industry', 'storage', 'port'].includes(b.type.category) && this.city.isOperating(b))
+      .map((b) => edgeTiles(b).find(isRoad))
+      .filter((t): t is Tile => t !== undefined)
+    const count = Math.min(SEMI.max, Math.ceil(highways.length / SEMI.perTiles))
+    for (let i = 0; i < count; i++) {
+      const from = entries[i % entries.length]
+      let path = deliveries.length ? findPath(from, deliveries[i % deliveries.length], isRoad) : null
+      if (!path || path.length < 4) path = pathToFarthest(from, isRoad)
+      if (path.length < 4) continue
+      const out = new Polyline(path.map(center))
+      const back = new Polyline([...path].reverse().map(center))
+      const objects = [makeTractor(i), makeTrailer(pick(TRAILERS))]
+      for (const o of objects) this.scene.add(o)
+      this.shuttles.push({
+        kind: 'semi', objects, lines: [out, back], line: 0, s: SEMI.kingpin + Math.random() * out.length * 0.5,
+        stops: [[out.length], [back.length]], nextStop: 0, pause: 0, pauseFor: PAUSE.semi,
+        speed: SPEED.semi, spacing: SEMI.kingpin, phase: 0,
+      })
+    }
+  }
+
+  // The tractor on the road, and its trailer hanging off the fifth wheel,
+  // pointing from its rear axles (back along the road) up to the tractor.
+  private placeSemi(s: Shuttle, line: Polyline) {
+    const [tractor, trailer] = s.objects
+    const front = line.at(s.s, LANE)
+    place(tractor, front)
+    const rear = line.at(Math.max(0, s.s - SEMI.kingpin), LANE)
+    let dx = front.x - rear.x
+    let dz = front.z - rear.z
+    const length = Math.hypot(dx, dz)
+    if (length < 0.05) {
+      // At the very start of the road: straight out behind the tractor.
+      dx = Math.cos(front.angle)
+      dz = -Math.sin(front.angle)
+    } else {
+      dx /= length
+      dz /= length
+    }
+    trailer.position.set(front.x - dx * SEMI.kingpin, 0, front.z - dz * SEMI.kingpin)
+    trailer.rotation.y = Math.atan2(-dz, dx)
+    liftVehicle(this.city, tractor)
+    liftVehicle(this.city, trailer)
+  }
+
   // ---- The army
 
   // ---- Moving along a route
@@ -621,7 +708,7 @@ export class TrafficView {
         } else {
           // End of the line: a bus loop starts over; out-and-back turns around.
           s.line = (s.line + 1) % s.lines.length
-          s.s = s.kind === 'train' ? s.spacing * (s.objects.length - 1) : 0
+          s.s = s.kind === 'train' || s.kind === 'semi' ? s.spacing * (s.objects.length - 1) : 0
           // Stops it's already past (the train's own length in) don't count.
           const ahead = s.stops[s.line].findIndex((d) => d > s.s)
           s.nextStop = ahead < 0 ? s.stops[s.line].length : ahead
@@ -629,6 +716,7 @@ export class TrafficView {
       }
     }
     const line = s.lines[s.line]
+    if (s.kind === 'semi') return this.placeSemi(s, line)
     if (s.kind === 'bus' || s.kind === 'truck') {
       place(s.objects[0], line.at(s.s, LANE))
       return liftVehicle(this.city, s.objects[0])

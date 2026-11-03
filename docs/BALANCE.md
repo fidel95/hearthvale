@@ -301,6 +301,7 @@ Payback cycles = (coins + materials) ÷ net coins per cycle. Payback minutes add
 | Dirt Road | early | 1 | 1×1 | 3 | — | instant | +2% for homes and shops beside it | — | — | 0 | — |
 | Cobblestone Street | middle | 5 | 1×1 | 20 | — | instant | +6% for homes and shops beside it | — | — | 1 | — |
 | Avenue | late | 8 | 1×1 | 40 | — | instant | +8% for homes and shops beside it | — | — | 2 | — |
+| Highway | late | 13 | 1×1 | 60 | — | instant | +3% for homes and shops beside it | — | — | 3 | — |
 | Barn | middle | 5 | 2×2 | 150 | 🪵 6 (72) | 1 min | stores 📦 150 | — | — | 10 | Room for the Harvest |
 | Warehouse | late | 10 | 3×2 | 500 | 🪵 4 🔩 6 (198) | 3 min | stores 📦 400 | 🔌1 | — | 35 | — |
 | Water Tower | middle | 4 | 2×2 | 250 | 🔩 4 (100) | 1.5 min | supplies 💧 20 | — | 15 | 17 | Keep the Taps Running |

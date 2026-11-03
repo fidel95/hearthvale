@@ -233,7 +233,8 @@ export class PeopleView {
   // People walk only on the sidewalks, which run along both sides of every
   // road, and on stone garden paths: never across grass, and never down the
   // middle of the road.
-  private passable = (tile: Tile) => inBounds(tile) && (this.city.isRoad(tile) || this.city.buildingAt(tile)?.type.id === 'stone-path')
+  private passable = (tile: Tile) =>
+    inBounds(tile) && ((this.city.isRoad(tile) && this.city.buildingAt(tile)?.type.road?.style !== 'highway') || this.city.buildingAt(tile)?.type.id === 'stone-path')
 
   // The road tiles right next to a building: where its people step out onto
   // the sidewalk (a building with no road beside it has nobody walking to it).

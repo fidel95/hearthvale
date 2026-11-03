@@ -6,7 +6,7 @@ import type { FactoryRecipe, ProductId } from './products'
 import type { Materials } from './items'
 import type { Utility } from './utilityRules'
 
-export type RoadStyle = 'dirt' | 'asphalt' | 'cobble' | 'avenue'
+export type RoadStyle = 'dirt' | 'asphalt' | 'cobble' | 'avenue' | 'highway'
 
 export type Category =
   | 'home'
@@ -1049,6 +1049,19 @@ export const BUILDING_TYPES: BuildingType[] = [
     unlockLevel: 8,
     road: { bonus: 0.08, style: 'avenue' },
     placeholder: { shape: 'road', color: '#6f7689', accent: '#c2c2cd', height: 0.03 },
+  },
+  {
+    // Four lanes and a median barrier, for freight: semis bring loads in along
+    // it to the town's factories, warehouses and docks (TrafficView). Noisy, so
+    // living or shopping beside one is only a little better than no road at all.
+    id: 'highway',
+    name: 'Highway',
+    category: 'road',
+    size: { x: 1, z: 1 },
+    cost: 60,
+    unlockLevel: 13,
+    road: { bonus: 0.03, style: 'highway' },
+    placeholder: { shape: 'road', color: '#4b4f57', accent: '#f2f2f2', height: 0.03 },
   },
   {
     id: 'park',

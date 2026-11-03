@@ -100,10 +100,11 @@ def main():
     os.makedirs(OUT, exist_ok=True)
     for name in [] if only_preview else names:
         module = load(name)
-        hv.reset()
-        module.build(hv)
-        hv.export(os.path.join(OUT, name + '.glb'))
-        print(f'built {name}')
+        if hasattr(module, 'build'):  # a set of vehicles has only PARTS
+            hv.reset()
+            module.build(hv)
+            hv.export(os.path.join(OUT, name + '.glb'))
+            print(f'built {name}')
         # Moving parts, each its own file (name.part.glb), modelled about the
         # point the game moves it around.
         for part, make in getattr(module, 'PARTS', {}).items():

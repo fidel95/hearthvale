@@ -21,6 +21,10 @@ import { BRIDGE_HEIGHT, OVERPASS, bridgeAlongX, liftOnTile } from './bridges'
 //   each side that looks out over the water.
 // - Avenue: in the colors of Kenney's Modular Road Kit, with a raised
 //   median down the middle carrying the kit's double street lamps.
+// - Highway: four lanes on a concrete shoulder, a median barrier with
+//   yellow lines down a straight stretch, dashed lane lines, guardrails
+//   instead of sidewalks (nobody walks on it), tall lights on the median and
+//   now and then a gantry of green signs.
 // - A Road Bridge over the railway (bridges.ts): the road on a deck up on
 //   four piers, with railings, and the road tiles either side ramped up to it
 //   (built up as embankments).
@@ -47,7 +51,10 @@ const LOOKS: Record<RoadStyle, Look> = {
   dirt: { surface: '#9a7650', top: 0.015, curb: null, edge: '#7d5f3f', paint: null, lamp: null },
   cobble: { surface: '#8d7f70', top: 0.03, curb: '#cbbfa8', edge: '#a39680', paint: null, lamp: 'lantern' },
   avenue: { surface: '#6f7689', top: 0.03, curb: '#c2c2cd', edge: '#505565', paint: '#d8dcea', lamp: 'kit' },
+  // The highway draws its own lanes, barrier and rails (drawHighway); this is its concrete shoulder.
+  highway: { surface: '#8e939b', top: 0.03, curb: null, edge: '#8e939b', paint: '#f2f2f2', lamp: null },
 }
+const HIGHWAY = { lane: '#4b4f57', yellow: '#f2c230', barrier: '#c9ccd2', rail: '#aeb4bc', sign: '#2f8f4e', glow: '#fff1c4' }
 const RUTS = '#b08e64' // a dirt road's wheel tracks
 const JOINTS = '#76695b' // between a cobbled street's bricks
 const MEDIAN = '#c2c2cd'
@@ -106,6 +113,75 @@ export class RoadView {
     return m
   }
 
+  // One highway tile: lanes toward each road beside it, and on a straight
+  // stretch the barrier, markings, lights and the odd sign gantry. Guardrails
+  // along every side with no road beyond it. (Lines sit a few millimetres
+  // apart in height, never level, so they don't flicker.)
+  private drawHighway(
+    box: (color: string, w: number, h: number, d: number, x: number, y: number, z: number) => void,
+    add: (color: string, geometry: THREE.BufferGeometry) => void,
+    c: { x: number; z: number },
+    mask: number,
+    tile: { x: number; z: number },
+  ) {
+    const top = LOOKS.highway.top
+    const W = 0.84 // the lanes, kerb to kerb
+    box(HIGHWAY.lane, W, 0.006, W, c.x, top, c.z)
+    for (const d of DIRECTIONS) {
+      if (mask & d.bit) {
+        box(HIGHWAY.lane, d.dx !== 0 ? 0.5 - W / 2 + 0.01 : W, 0.006, d.dz !== 0 ? 0.5 - W / 2 + 0.01 : W, c.x + d.dx * (0.5 - (0.5 - W / 2) / 2), top, c.z + d.dz * (0.5 - (0.5 - W / 2) / 2))
+      } else {
+        // A guardrail: posts and a rail along the edge.
+        const alongX = d.dz !== 0
+        const x = c.x + d.dx * 0.46
+        const z = c.z + d.dz * 0.46
+        box(HIGHWAY.rail, alongX ? 1 : 0.02, 0.035, alongX ? 0.02 : 1, x, 0.07, z)
+        for (const along of [-0.375, -0.125, 0.125, 0.375]) box(POST, 0.02, 0.09, 0.02, x + (alongX ? along : 0) + d.dx * 0.012, top, z + (alongX ? 0 : along) + d.dz * 0.012)
+      }
+    }
+    const straight = mask === 5 || mask === 10
+    if (!straight) return
+    const alongX = mask === 10
+    // across(a, b): a point `a` across the road and `b` along it.
+    const at = (across: number, along: number) => (alongX ? { x: c.x + along, z: c.z + across } : { x: c.x + across, z: c.z + along })
+    const strip = (color: string, across: number, length: number, along: number, width: number, h: number) => {
+      const p = at(across, along)
+      box(color, alongX ? length : width, h, alongX ? width : length, p.x, top + 0.006, p.z)
+    }
+    // Median barrier, with yellow lines either side of it.
+    const m = at(0, 0)
+    box(HIGHWAY.barrier, alongX ? 1 : 0.07, 0.075, alongX ? 0.07 : 1, m.x, top, m.z)
+    for (const s of [-1, 1]) {
+      strip(HIGHWAY.yellow, s * 0.065, 1, 0, 0.018, 0.004)
+      strip(LOOKS.highway.paint!, s * 0.39, 1, 0, 0.018, 0.004) // the outside edge line
+      strip(LOOKS.highway.paint!, s * 0.225, 0.24, 0, 0.016, 0.004) // a dash between the two lanes
+    }
+    // Tall lights on the median every third tile, arms over both carriageways.
+    if ((tile.x + tile.z) % 3 === 0) {
+      add(POST, new THREE.CylinderGeometry(0.018, 0.026, 0.78, 6).translate(m.x, top + 0.075 + 0.39, m.z))
+      for (const s of [-1, 1]) {
+        const arm = at(s * 0.13, 0)
+        box(POST, alongX ? 0.03 : 0.26, 0.018, alongX ? 0.26 : 0.03, (m.x + arm.x) / 2 + (alongX ? 0 : s * 0), top + 0.84, (m.z + arm.z) / 2)
+        const lamp = at(s * 0.25, 0)
+        add(HIGHWAY.glow, new THREE.BoxGeometry(alongX ? 0.06 : 0.09, 0.02, alongX ? 0.09 : 0.06).translate(lamp.x, top + 0.83, lamp.z))
+      }
+    }
+    // A gantry of green signs over both carriageways, every eighth tile.
+    if ((tile.x + tile.z) % 8 === 4) {
+      for (const s of [-1, 1]) {
+        const post = at(s * 0.47, 0)
+        box(POST, 0.035, 0.66, 0.035, post.x, top, post.z)
+      }
+      box(POST, alongX ? 0.035 : 0.96, 0.035, alongX ? 0.96 : 0.035, m.x, top + 0.62, m.z)
+      for (const s of [-1, 1]) {
+        const sign = at(s * 0.22, 0)
+        box(HIGHWAY.sign, alongX ? 0.02 : 0.3, 0.13, alongX ? 0.3 : 0.02, sign.x, top + 0.5, sign.z)
+        box('#f2f2f2', alongX ? 0.034 : 0.2, 0.012, alongX ? 0.2 : 0.034, sign.x, top + 0.58, sign.z) // the lettering (proud of the sign, never level with it)
+        box('#f2f2f2', alongX ? 0.034 : 0.14, 0.012, alongX ? 0.14 : 0.034, sign.x, top + 0.55, sign.z)
+      }
+    }
+  }
+
   // Called every frame; only does work after roads changed.
   update() {
     if (!this.dirty) return
@@ -141,6 +217,8 @@ export class RoadView {
       const straight = mask === 5 || mask === 10
       box(look.surface, 1, top, 1, c.x, 0, c.z)
 
+      if (style === 'highway') this.drawHighway(box, add, c, mask, b.tile)
+      else {
       // Avenue: a raised median along a straight stretch, and the kit's double lamp on it.
       if (style === 'avenue' && straight) {
         const alongX = mask === 10
@@ -224,6 +302,7 @@ export class RoadView {
         add(POST, new THREE.CylinderGeometry(0.014, 0.02, 0.42, 6).translate(x, 0.21, z))
         add(POST, new THREE.CylinderGeometry(0.05, 0.035, 0.03, 4).rotateY(Math.PI / 4).translate(x, 0.53, z)) // its cap
         add(GLOW.lantern, new THREE.BoxGeometry(0.06, 0.09, 0.06).translate(x, 0.465, z))
+      }
       }
 
       // A road bridge: the deck's underside, and railings along the sides
