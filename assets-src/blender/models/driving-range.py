@@ -5,7 +5,7 @@
 def build(hv):
     hv.cbox(2.88, 0.04, 2.88, 0, 0, 0, 'turf', bevel=0.012)
     for k in range(5):  # mown stripes
-        hv.cbox(2.8, 0.004, 0.25, 0, 0.04, 1.2 - k * 0.5, 'grass', bevel=0)
+        hv.cbox(2.8, 0.012, 0.25, 0, 0.04, 1.2 - k * 0.5, 'grass', bevel=0)
     # Net poles and top wires along both sides.
     for x in (-1.35, 1.35):
         for z in (-1.1, -0.3, 0.5, 1.25):
@@ -34,7 +34,7 @@ def build(hv):
     for x, z, flag in ((-0.65, 0.15, 'sunny'), (0.55, 0.35, 'roofred'), (-0.15, 0.98, 'kartblue')):
         hv.ccyl(0.35, 0.025, x, 0.04, z, 'lime', seg=20)
         hv.ccyl(0.12, 0.03, x + 0.22, 0.04, z + 0.12, 'sand', seg=12)
-        hv.ccyl(0.012, 0.38, x, 0.06, z, 'white', seg=6)
+        hv.ccyl(0.012, 0.41, x, 0.06, z, 'white', seg=6)
         hv.cbox(0.14, 0.08, 0.015, x + 0.07, 0.36, z, flag, bevel=0)
         for k, r in enumerate((0.28, 0.2)):
             hv.ctorus(r, 0.008, x, 0.068 + k * 0.002, z, 'white', axis='y', seg=20, ring=3)

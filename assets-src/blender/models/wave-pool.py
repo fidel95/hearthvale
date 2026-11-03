@@ -7,7 +7,7 @@ def build(hv):
     hv.cbox(3.84, 0.06, 2.88, 0, 0, 0, 'sand', bevel=0.015)
     hv.cbox(3.36, 0.03, 2.2, 0, 0.04, -0.05, 'stone', bevel=0.01)  # pool edge
     hv.cbox(3.28, 0.05, 2.16, 0, 0.04, -0.05, 'water', bevel=0)
-    hv.cbox(3.28, 0.03, 0.42, 0, 0.065, 0.92, 'sand', bevel=0.01)  # beach entry
+    hv.cbox(3.24, 0.03, 0.42, 0, 0.065, 0.92, 'sand', bevel=0.01)  # beach entry
     # Wave machine house.
     hv.cbox(3.12, 0.52, 0.42, 0, 0.06, -1.12, 'white', bevel=0.015)
     hv.cbox(3.28, 0.1, 0.48, 0, 0.58, -1.12, 'coral', bevel=0.012)

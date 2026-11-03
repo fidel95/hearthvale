@@ -22,5 +22,5 @@ if (!blender) {
 const script = fileURLToPath(new URL('../assets-src/blender/build.py', import.meta.url))
 const run = spawnSync(blender, ['-b', '--factory-startup', '-P', script, '--', ...process.argv.slice(2)], { stdio: ['ignore', 'pipe', 'inherit'], encoding: 'utf8' })
 // Blender is chatty; show our own lines.
-for (const line of (run.stdout ?? '').split('\n')) if (/^(built|preview)|Error|Traceback|File "/.test(line)) console.log(line)
+for (const line of (run.stdout ?? '').split('\n')) if (/^(built|preview|flicker)|Error|Traceback|File "/.test(line)) console.log(line)
 process.exit(run.status ?? 1)

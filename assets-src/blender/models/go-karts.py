@@ -24,7 +24,7 @@ def build(hv):
     # Grandstand: three blue rows under a canopy, along the back.
     for k in range(3):
         hv.cbox(1.3, 0.06 + k * 0.06, 0.1, -0.35, 0.04, -0.66 - k * 0.09, 'kartblue' if k % 2 == 0 else 'paleblue', bevel=0.006)
-    hv.cbox(1.3, 0.04, 0.34, -0.35, 0.04, -0.75, 'concrete', bevel=0.006)
+    hv.cbox(1.36, 0.04, 0.34, -0.35, 0.04, -0.75, 'concrete', bevel=0.006)
     for x in (-0.95, 0.25):
         hv.ccyl(0.02, 0.5, x, 0.04, -0.88, 'steel', seg=6)
     hv.cbox(1.36, 0.04, 0.36, -0.35, 0.54, -0.76, 'roofred', bevel=0.01)

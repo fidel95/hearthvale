@@ -18,7 +18,7 @@ def build(hv):
     hv.box(0.42, 0.16, 0.52, 0, front - 0.08, 0.04, 'navy', bevel=0.012)
     hv._on_face('-y', front - 0.16, 0, 0.05, 0.3, 0.34, 0.02, 'glass')
     hv._on_face('-y', front - 0.18, 0, 0.05, 0.02, 0.34, 0.01, 'charcoal', 0)
-    hv.box(0.6, 0.32, 0.04, 0, front - 0.16, 0.5, 'roofblue', bevel=0.01)
+    hv.box(0.6, 0.34, 0.04, 0, front - 0.16, 0.5, 'roofblue', bevel=0.01)
     hv.cyl(0.075, 0.025, 0, front - 0.17, 0.66, 'gold', seg=10, axis='Y', bevel=0)
     hv.cyl(0.045, 0.03, 0, front - 0.18, 0.66, 'navy', seg=5, axis='Y', bevel=0)
     for u in (-0.32, 0.32):

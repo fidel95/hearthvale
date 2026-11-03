@@ -39,8 +39,8 @@ def swing(hv):
     # The galleon: hull drawn side-on, bow at +x.
     hull = [(-0.78, -1.22), (0.72, -1.22), (0.98, -1.12), (0.62, -1.62), (-0.6, -1.62), (-0.82, -1.36)]
     hv.chull(hull, 0.52, 0, 'hull')
-    hv.chull([(-0.8, -1.22), (0.74, -1.22), (0.95, -1.13), (0.92, -1.19), (0.72, -1.26), (-0.8, -1.26)], 0.56, 0, 'gold', bevel=0)
-    hv.cbox(1.5, 0.03, 0.46, 0, -1.24, 0, 'lightwood', bevel=0)  # deck
+    hv.chull([(-0.8, -1.2), (0.74, -1.2), (0.95, -1.11), (0.92, -1.17), (0.72, -1.27), (-0.8, -1.27)], 0.56, 0, 'gold', bevel=0)
+    hv.cbox(1.44, 0.03, 0.46, 0, -1.24, 0, 'lightwood', bevel=0)  # deck
     # Stern and bow castles with rails.
     hv.cbox(0.32, 0.18, 0.52, -0.66, -1.24, 0, 'hull', bevel=0.012)
     hv.cbox(0.34, 0.03, 0.54, -0.66, -1.06, 0, 'gold', bevel=0)

@@ -21,7 +21,7 @@ def build(hv):
             lx, lz = sx * (HW - 0.14), sz * (HD - 0.14)
             hv.ccyl(0.15, DECK_Y + 0.24, lx, -0.22, lz, 'deck', seg=12, r_top=0.13)
             hv.ccyl(0.18, 0.1, lx, 0.02, lz, 'hazard', seg=12)
-        hv.ccyl(0.11, DECK_Y + 0.22, sx * (HW - 0.14), -0.2, 0, 'deck', seg=10, r_top=0.1)
+        hv.ccyl(0.095, DECK_Y + 0.22, sx * (HW - 0.14), -0.2, 0, 'deck', seg=10, r_top=0.09)
         hv.ccyl(0.11, DECK_Y + 0.22, 0, -0.2, sx * (HD - 0.14), 'deck', seg=10, r_top=0.1)
         hv.cstrut((sx * (HW - 0.14), 0.07, -(D - 0.5) / 2), (sx * (HW - 0.14), 0.07, (D - 0.5) / 2), 0.11, 'roofred', seg=10)
         hv.cstrut((-(W - 0.6) / 2, 0.06, sx * (HD - 0.14)), ((W - 0.6) / 2, 0.24, sx * (HD - 0.14)), 0.025, 'slate', seg=4)
@@ -91,7 +91,7 @@ def build(hv):
     # Flare stack at the back-left corner (the flame is the game's).
     fx, fz, fh = -1.42, -1.42, 1.95
     hv.ccyl(0.09, fh, fx, PROC_Y, fz, 'slate', seg=10, r_top=0.045)
-    hv.ccyl(0.06, 0.16, fx, PROC_Y + fh - 0.16, fz, 'roofred', seg=10)
+    hv.ccyl(0.06, 0.14, fx, PROC_Y + fh - 0.18, fz, 'roofred', seg=10)
     hv.ccyl(0.06, 0.08, fx, PROC_Y + fh, fz, 'black', seg=10, r_top=0.05)
     for k in range(3):  # guy-wire struts
         a = k / 3 * math.pi * 2
@@ -123,7 +123,7 @@ def tanker(hv):
     # Bow at +z, keel at y = 0 (the game sails it round its loop).
     outline = [(-0.22, -0.66), (0.22, -0.66), (0.22, 0.52), (0.1, 0.84), (0, 0.9), (-0.1, 0.84), (-0.22, 0.52)]
     hv.cslab(outline, 0, 0.14, 'roofred', bevel=0.02)
-    hv.cslab(outline, 0.0, 0.035, 'black', bevel=0)
+    hv.cslab([(x * 1.03, z * 1.01) for x, z in outline], -0.005, 0.04, 'black', bevel=0)  # waterline, just proud of the hull
     hv.cslab([(x * 0.92, z * 0.97) for x, z in outline], 0.14, 0.03, 'deck', bevel=0)
     for z in (-0.15, 0.18, 0.5):
         hv.ccyl(0.13, 0.07, 0, 0.17, z, 'hazard', seg=14)
@@ -134,7 +134,7 @@ def tanker(hv):
     hv.cbox(0.37, 0.05, 0.02, 0, 0.29, -0.32, 'glassdark', bevel=0)
     hv.cbox(0.31, 0.04, 0.02, 0, 0.42, -0.37, 'glassdark', bevel=0)
     hv.ccyl(0.05, 0.18, 0, 0.47, -0.56, 'hazard', seg=10, r_top=0.045)
-    hv.ccyl(0.052, 0.04, 0, 0.6, -0.56, 'black', seg=10)
+    hv.ccyl(0.052, 0.04, 0, 0.65, -0.56, 'black', seg=10)
 
 
 def helicopter(hv):

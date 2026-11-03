@@ -16,16 +16,17 @@ def build(hv):
     for z in (0.5, 0.85, 1.2):
         hv.trim(W, D, z, 'skyblue', h=0.025, out=0.006) if False else None
     # Red cross sign on the front, near the top.
-    hv._on_face('-y', front, x0, 1.5, 0.3, 0.3, 0.03, 'white')
-    hv._on_face('-y', front - 0.02, x0, 1.53, 0.08, 0.24, 0.02, 'firered', 0)
-    hv._on_face('-y', front - 0.02, x0 - 0.0, 1.61, 0.24, 0.08, 0.02, 'firered', 0)
+    # (Standing out in front of the roof rim, not level with it.)
+    hv._on_face('-y', front - 0.05, x0, 1.5, 0.3, 0.3, 0.03, 'white')
+    hv._on_face('-y', front - 0.07, x0, 1.53, 0.08, 0.24, 0.02, 'firered', 0)
+    hv._on_face('-y', front - 0.07, x0 - 0.0, 1.61, 0.24, 0.08, 0.02, 'firered', 0)
     # Helipad on the roof.
-    hv.cyl(0.42, 0.03, x0, y0, top + 0.06, 'asphalt', seg=20, bevel=0)
-    hv.cyl(0.38, 0.032, x0, y0, top + 0.06, 'gold', seg=20, r_top=0.38, bevel=0)
-    hv.cyl(0.35, 0.034, x0, y0, top + 0.06, 'asphalt', seg=20, bevel=0)
-    hv.box(0.05, 0.26, 0.04, x0 - 0.1, y0, top + 0.06, 'white', bevel=0)
-    hv.box(0.05, 0.26, 0.04, x0 + 0.1, y0, top + 0.06, 'white', bevel=0)
-    hv.box(0.2, 0.05, 0.04, x0, y0, top + 0.06, 'white', bevel=0)
+    # (Layers at least a centimetre apart, so they don't flicker.)
+    hv.cyl(0.42, 0.04, x0, y0, top + 0.04, 'asphalt', seg=20, bevel=0)
+    hv.ctorus(0.36, 0.018, x0, top + 0.085, -y0, 'gold', axis='y', seg=24, ring=4)
+    hv.box(0.05, 0.26, 0.02, x0 - 0.1, y0, top + 0.08, 'white', bevel=0)
+    hv.box(0.05, 0.26, 0.02, x0 + 0.1, y0, top + 0.08, 'white', bevel=0)
+    hv.box(0.2, 0.05, 0.02, x0, y0, top + 0.081, 'white', bevel=0)
     # Lower wing to the right with the entrance.
     wx, wy, ww, wd, wh = 0.85, 0.15, 0.85, 1.1, 0.62
     wtop = hv.block(ww, wd, wh, wx, wy, 0.04, wall='snow', base='slate', top='firered')

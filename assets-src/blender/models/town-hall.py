@@ -41,7 +41,7 @@ def build(hv):
     hv.box(0.42, 0.42, 0.3, 0, y0, cz, 'butter', bevel=0.015)
     hv.box(0.48, 0.48, 0.05, 0, y0, cz + 0.3, 'white', bevel=0.01)
     hv.cyl(0.11, 0.025, 0, y0 - 0.22, cz + 0.15, 'white', seg=16, axis='Y', bevel=0)
-    hv.cyl(0.07, 0.03, 0, y0 - 0.225, cz + 0.15, 'navy', seg=16, axis='Y', bevel=0)
+    hv.cyl(0.07, 0.03, 0, y0 - 0.23, cz + 0.15, 'navy', seg=16, axis='Y', bevel=0)
     hv.cyl(0.2, 0.2, 0, y0, cz + 0.35, 'roofblue', seg=16, r_top=0.02, bevel=0)
     hv.cyl(0.012, 0.36, 0, y0, cz + 0.5, 'white', seg=6, bevel=0)
     hv.box(0.16, 0.012, 0.1, 0.08, y0, cz + 0.74, 'red', bevel=0)

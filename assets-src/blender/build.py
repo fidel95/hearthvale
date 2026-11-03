@@ -83,6 +83,9 @@ def main():
         i = args.index('--preview')
         shot = args[i + 1]
         del args[i:i + 2]
+    if '--verbose' in args:
+        args.remove('--verbose')
+        hv.VERBOSE = True
     only_preview = '--preview-only' in args
     if only_preview:
         args.remove('--preview-only')

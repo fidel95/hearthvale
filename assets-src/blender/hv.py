@@ -116,7 +116,11 @@ def reset():
     _parts.clear()
 
 
+VERBOSE = False
+
+
 def _finish_part(obj, color, bevel, gradient):
+    obj['color'] = color
     obj.data.materials.append(material())
     # Small parts stay sharp: a bevel there costs vertices nobody can see.
     dims = obj.dimensions
@@ -302,8 +306,8 @@ def windows(face, at, start, end, z, count, **kw):
 def door(face, at, u, w=0.24, h=0.36, color='wooddark', frame='white', z=0):
     _on_face(face, at, u, z, w + 0.06, h + 0.04, 0.035, frame, 0.01)
     _on_face(face, at + (0.022 if face[0] == '+' else -0.022), u, z, w, h, 0.03, color, 0.006)
-    # A little step out front.
-    _on_face(face, at, u, z - 0.0, w + 0.12, 0.03, 0.12, 'stonedark', 0.008)
+    # A little step out front (its back tucked a little further into the wall).
+    _on_face(face, at + (0.005 if face[0] == '+' else -0.005), u, z - 0.0, w + 0.12, 0.03, 0.12, 'stonedark', 0.008)
 
 
 def trim(w, d, z, color='charcoal', h=0.05, out=0.025):
@@ -317,8 +321,14 @@ def block(w, d, h, x=0, y=0, z=0, wall='cream', base='charcoal', top='charcoal',
     box(w + 0.04, d + 0.04, 0.07, x, y, z, base, bevel=0.012)
     box(w, d, h, x, y, z, wall, bevel=0.02)
     if parapet:
-        box(w + 0.06, d + 0.06, 0.07, x, y, z + h, top, bevel=0.015)
-        box(w - 0.08, d - 0.08, 0.02, x, y, z + h + 0.05, 'slate2', bevel=0.0)
+        # A rim round the edge (four sides) and the roof inside it, 3 cm
+        # lower than the rim's top. Never level with it: two surfaces at one
+        # height flicker (z-fighting), worst on phones.
+        W, D, t, rh = w + 0.06, d + 0.06, 0.07, 0.08
+        for side in (-1, 1):
+            box(W, t, rh, x, y + side * (D - t) / 2, z + h, top, bevel=0.012)
+            box(t, D - 2 * t, rh, x + side * (W - t) / 2, y, z + h, top, bevel=0.012)
+        box(W - 2 * t + 0.01, D - 2 * t + 0.01, 0.05, x, y, z + h, 'slate2', bevel=0.0)
     return z + h
 
 
@@ -336,8 +346,47 @@ def _apply(obj):
     obj.select_set(False)
 
 
+def flicker_check(name):
+    """Warn about surfaces of two parts facing the same way in the same plane
+    and overlapping: the GPU can't tell which is in front, so they flicker
+    ("z-fighting"), worst on phones. Keep layers at least a centimetre apart."""
+    planes = {}  # (axis, sign, offset in mm) -> [(part index, 2D bounds)]
+    for i, obj in enumerate(_parts):
+        me = obj.data
+        for poly in me.polygons:
+            n = poly.normal
+            axis = max(range(3), key=lambda k: abs(n[k]))
+            if abs(n[axis]) < 0.999 or poly.area < 1e-4:
+                continue
+            if axis == 2 and n[2] < 0:
+                continue  # undersides: the camera is always above
+            others = [k for k in range(3) if k != axis]
+            pts = [me.vertices[v].co for v in poly.vertices]
+            key = (axis, n[axis] > 0, round(pts[0][axis] * 200))  # 5 mm bins
+            bounds = (min(p[others[0]] for p in pts), max(p[others[0]] for p in pts),
+                      min(p[others[1]] for p in pts), max(p[others[1]] for p in pts))
+            planes.setdefault(key, []).append((i, bounds))
+    found = 0
+    for key, faces in planes.items():
+        for a in range(len(faces)):
+            for b in range(a + 1, len(faces)):
+                (i, p), (j, q) = faces[a], faces[b]
+                if i == j or _parts[i]['color'] == _parts[j]['color']:
+                    continue  # one color looks the same whichever wins
+                overlap = min(p[1], q[1]) - max(p[0], q[0]), min(p[3], q[3]) - max(p[2], q[2])
+                if overlap[0] > 0.01 and overlap[1] > 0.01:
+                    found += 1
+                    if VERBOSE:
+                        print(f'  flicker {name}: {"xyz"[key[0]]}{"+" if key[1] else "-"} at {key[2] / 200:.3f}: {_parts[i]["color"]} / {_parts[j]["color"]}')
+    if found:
+        print(f'flicker risk in {name}: {found} overlapping same-plane faces')
+    return found
+
+
 def export(path):
     """Join everything into one mesh with one material and write a .glb."""
+    import os
+    flicker_check(os.path.basename(path))
     bpy.ops.object.select_all(action='DESELECT')
     for o in _parts:
         if o.name in bpy.data.objects:
