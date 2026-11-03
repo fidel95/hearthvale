@@ -155,3 +155,5 @@ the right on a wide screen) so the town stays in view.
 ## Credits
 
 3D models by [Kenney](https://kenney.nl) (CC0): City Kits, Car Kit, Nature Kit, Mini Forest, Mini Characters and more. Each pack's license is in its folder under `public/models/`.
+
+Hearthvale's own models (in `public/models/hearthvale/`) are made in Blender by the scripts in `assets-src/blender/`: `hv.py` is a small modelling kit in the Kenney style (one shared palette texture that starts with Kenney's City Kit colors, chunky shapes with soft bevels, dark trim, framed windows), and each file in `models/` builds one building with it. Rebuild them with `npm run models` (or `npm run models -- town-hall school`), which needs [Blender](https://www.blender.org) 4.x; `npm run models -- --preview out.png town-hall` also renders a picture of them. So far: Town Hall, Fire Station, Police Station, Hospital, School and Library.

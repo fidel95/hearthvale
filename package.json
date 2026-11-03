@@ -10,7 +10,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
-    "balance": "vitest run -c scripts/vitest.config.ts"
+    "balance": "vitest run -c scripts/vitest.config.ts",
+    "models": "node scripts/blender.mjs"
   },
   "devDependencies": {
     "@types/three": "^0.186.0",

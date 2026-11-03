@@ -23,5 +23,10 @@ dist-ssr
 *.sln
 *.sw?
 
-# Raw downloaded asset packs (only the files we use are copied to public/)
-assets-src/
+# Raw downloaded asset packs (only the files we use are copied to public/),
+# except our own Blender model scripts.
+assets-src/*
+!assets-src/blender/
+
+# Python caches from the Blender model scripts
+__pycache__/

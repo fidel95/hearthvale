@@ -190,6 +190,8 @@ export const nature = (name: string) => `${import.meta.env.BASE_URL}models/natur
 // Kenney's City Kit (Commercial) and (Industrial), CC0: shops, apartments, factories and utilities.
 const commercial = (name: string) => `${import.meta.env.BASE_URL}models/commercial/${name}.glb`
 const industrial = (name: string) => `${import.meta.env.BASE_URL}models/industrial/${name}.glb`
+// Our own models, made in Blender from assets-src/blender (npm run models), in the same style.
+const hearthvale = (name: string) => `${import.meta.env.BASE_URL}models/hearthvale/${name}.glb`
 
 export const BUILDING_TYPES: BuildingType[] = [
   // ---- Industry: factories turn goods into products for specialty shops.
@@ -1071,6 +1073,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     upkeep: 20,
     amenity: { bonus: 0.1, radius: 6 },
     populationCapacity: 30,
+    model: hearthvale('fire-station'),
     placeholder: { shape: 'firestation', color: '#c8463a', accent: '#f0e6d8', height: 1.1 },
   },
   {
@@ -1085,6 +1088,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     upkeep: 25,
     amenity: { bonus: 0.06, radius: 6 },
     populationCapacity: 25,
+    model: hearthvale('police-station'),
     placeholder: { shape: 'police', color: '#dfe6ee', accent: '#2f5aa8', height: 1.1 },
   },
   {
@@ -1099,6 +1103,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     upkeep: 45,
     amenity: { bonus: 0.08, radius: 8 },
     populationCapacity: 70,
+    model: hearthvale('hospital'),
     placeholder: { shape: 'hospital', color: '#f6f6f2', accent: '#d8343a', height: 1.8 },
   },
   {
@@ -1113,6 +1118,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     upkeep: 30,
     amenity: { bonus: 0.15, radius: 6 },
     populationCapacity: 50,
+    model: hearthvale('school'),
     placeholder: { shape: 'school', color: '#ffd27a', accent: '#d9482b', height: 1.2 },
   },  {
     id: 'library',
@@ -1127,6 +1133,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     amenity: { bonus: 0.05, radius: 8 },
     populationCapacity: 20,
     attractsVisitors: { lingerSeconds: 6 },
+    model: hearthvale('library'),
     placeholder: { shape: 'library', color: '#e9dcff', accent: '#6b3fc0', height: 1.1 },
   },
   {
@@ -1141,6 +1148,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     upkeep: 40,
     amenity: { bonus: 0.05, radius: 12 },
     populationCapacity: 80,
+    model: hearthvale('town-hall'),
     placeholder: { shape: 'townhall', color: '#f8f1df', accent: '#2f5fc4', height: 1.6 },
   },
 
