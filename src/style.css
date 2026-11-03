@@ -636,9 +636,14 @@ button {
   margin: 0;
 }
 
-.neighbor-franchise {
+/* Scoped, so it wins over .panel-button's margins further down. */
+.neighbor .neighbor-franchise {
   width: 100%;
-  margin-top: 8px;
+  margin: 8px 0 0;
+}
+
+.civic-row .panel-button {
+  margin: 4px 0 0;
 }
 
 /* ...and the face inside is what you see bob up and down. */
