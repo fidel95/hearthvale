@@ -64,7 +64,14 @@ def preview(names, path):
     scene.collection.objects.link(cam)
     scene.camera = cam
     cam.data.type = 'ORTHO'
-    cam.data.ortho_scale = gap * len(names) + 0.4
+    # Wide enough for the row, or for the biggest model in it.
+    from mathutils import Vector
+    biggest = 0.0
+    for o in scene.objects:
+        if o.type == 'MESH' and o.data.vertices and o.name != 'Plane':
+            corners = [o.matrix_world @ Vector(c) for c in o.bound_box]
+            biggest = max(biggest, max(c.x for c in corners) - min(c.x for c in corners), max(c.z for c in corners) - min(c.z for c in corners))
+    cam.data.ortho_scale = max(gap * len(names) + 0.4, biggest * 1.45)
     mid = gap * (len(names) - 1) / 2
     cx, cy = across[0] * mid, across[1] * mid
     # The game's view: looking down from the front-right.

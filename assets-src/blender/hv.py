@@ -377,7 +377,7 @@ def flicker_check(name):
                 if overlap[0] > 0.01 and overlap[1] > 0.01:
                     found += 1
                     if VERBOSE:
-                        print(f'  flicker {name}: {"xyz"[key[0]]}{"+" if key[1] else "-"} at {key[2] / 200:.3f}: {_parts[i]["color"]} / {_parts[j]["color"]}')
+                        print('  flicker %s: %s%s at %.3f: %s %s / %s %s' % (name, 'xyz'[key[0]], '+' if key[1] else '-', key[2] / 200, _parts[i]['color'], [round(v, 2) for v in p], _parts[j]['color'], [round(v, 2) for v in q]))
     if found:
         print(f'flicker risk in {name}: {found} overlapping same-plane faces')
     return found
@@ -422,9 +422,10 @@ def cbox(w, h, d, x=0, y=0, z=0, color='white', bevel=0.012, ry=0):
     return box(w, d, h, x, -z, y, color, bevel, rz=ry)
 
 
-def ccyl(r, h, x=0, y=0, z=0, color='white', seg=12, r_top=None, bevel=0.008, sx=1, sz=1):
-    """An upright cylinder (or cone, with r_top), squashed by sx/sz into an oval."""
-    o = cyl(r, h, x, -z, y, color, seg, r_top, bevel=0)
+def ccyl(r, h, x=0, y=0, z=0, color='white', seg=12, r_top=None, bevel=0.008, sx=1, sz=1, gradient=False):
+    """An upright cylinder (or cone, with r_top), squashed by sx/sz into an oval;
+    gradient shades it lighter toward the top, like Kenney's swatches."""
+    o = cyl(r, h, x, -z, y, color, seg, r_top, bevel=0, gradient=gradient)
     if sx != 1 or sz != 1:
         for v in o.data.vertices:
             v.co.x = x + (v.co.x - x) * sx

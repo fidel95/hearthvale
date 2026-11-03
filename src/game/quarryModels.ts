@@ -320,7 +320,9 @@ export function buildLandfill(group: THREE.Group, add: Add, w: number, d: number
 // that sails in to moor alongside.
 
 export function buildOilRefinery(group: THREE.Group, add: Add, w: number, d: number) {
-  const deckY = 0.28
+  // The Blender model (assets-src/blender/models/oil-refinery.py) uses the
+  // same numbers: the main deck's height, and where the moving parts stand.
+  const deckY = 0.62
   const hw = w / 2 - 0.18
   const hd = d / 2 - 0.18
 
@@ -392,7 +394,7 @@ export function buildOilRefinery(group: THREE.Group, add: Add, w: number, d: num
 
   // Crew quarters & control block (mid-right) with bridge windows and a rotating radar dish.
   const qx = 1.05
-  const qz = -0.25
+  const qz = -0.45
   add(new THREE.BoxGeometry(0.88, 0.34, 0.78), '#eef0f2', qx, topY, qz)
   add(new THREE.BoxGeometry(0.9, 0.05, 0.8), '#e0663a', qx, topY + 0.34, qz)
   add(new THREE.BoxGeometry(0.72, 0.26, 0.62), '#eef0f2', qx, topY + 0.39, qz)
@@ -402,17 +404,18 @@ export function buildOilRefinery(group: THREE.Group, add: Add, w: number, d: num
   add(new THREE.CylinderGeometry(0.025, 0.025, 0.22, 6), '#9aa1a8', qx, topY + 0.7, qz)
   const radar = new THREE.Group()
   radar.position.set(qx, topY + 0.92, qz)
-  radar.add(part(new THREE.BoxGeometry(0.28, 0.05, 0.04), '#f4f6f8', 0, 0, 0))
+  radar.add(ownPart('oil-refinery.radar', () => part(new THREE.BoxGeometry(0.28, 0.05, 0.04), '#f4f6f8', 0, 0, 0)))
   radar.userData.animate = ((seconds) => {
     radar.rotation.y = seconds * 1.4
   }) satisfies Animate
   group.add(radar)
 
   // Cantilevered helipad at the front-right corner (+x, +z) with an H and perimeter lights.
-  const hx = 1.18
-  const hz = 1.12
-  const heliY = topY + 0.24
-  add(new THREE.BoxGeometry(0.12, 0.24, 0.12), '#3a3f47', hx - 0.18, topY, hz - 0.18)
+  // The helideck is on the roof of the accommodation block, at the front right.
+  const hx = 1.2
+  const hz = 1.1
+  const heliY = topY + 0.74
+  add(new THREE.BoxGeometry(0.12, heliY - topY, 0.12), '#3a3f47', hx - 0.18, topY, hz - 0.18)
   add(new THREE.CylinderGeometry(0.56, 0.56, 0.04, 8), '#454b54', hx, heliY, hz)
   add(new THREE.TorusGeometry(0.4, 0.018, 4, 16).rotateX(Math.PI / 2), '#f2b632', hx, heliY + 0.03, hz)
   for (const dx of [-0.12, 0.12]) add(new THREE.BoxGeometry(0.05, 0.008, 0.26), '#ffffff', hx + dx, heliY + 0.04, hz)
@@ -424,9 +427,10 @@ export function buildOilRefinery(group: THREE.Group, add: Add, w: number, d: num
   }
 
   // ---- 1. Blazing Flare Stack (back-left corner) with flickering fire and smoke puffs.
-  const fx = -1.42
-  const fz = -1.42
-  const flareH = 1.95
+  // The flame burns at the tip of the flare boom, out over the sea.
+  const fx = -2.05
+  const fz = -2.05
+  const flareH = 1.3
   add(new THREE.CylinderGeometry(0.045, 0.09, flareH, 8), '#4a5058', fx, procY, fz)
   add(new THREE.CylinderGeometry(0.06, 0.06, 0.16, 8), '#c8463a', fx, procY + flareH - 0.16, fz)
   add(new THREE.CylinderGeometry(0.05, 0.06, 0.08, 8), '#2b2d33', fx, procY + flareH, fz)
@@ -511,10 +515,14 @@ export function buildOilRefinery(group: THREE.Group, add: Add, w: number, d: num
   add(new THREE.CylinderGeometry(0.045, 0.055, 0.14, 8), '#c8463a', px, topY + 0.04, pz + 0.26)
   const walkingBeam = new THREE.Group()
   walkingBeam.position.set(px, topY + 0.45, pz)
-  walkingBeam.add(part(new THREE.BoxGeometry(0.07, 0.07, 0.56), '#f2b632', 0, -0.035, 0))
-  // The curved horsehead at the front (+z) of the walking beam.
-  walkingBeam.add(part(new THREE.BoxGeometry(0.09, 0.22, 0.1), '#e0533f', 0, -0.11, 0.27))
-  walkingBeam.add(part(new THREE.BoxGeometry(0.14, 0.1, 0.12), '#2b2d33', 0, -0.05, -0.26)) // counterweight
+  // The beam, with the horsehead at the front (+z) and a counterweight behind.
+  const beamShapes = new THREE.Group()
+  beamShapes.add(
+    part(new THREE.BoxGeometry(0.07, 0.07, 0.56), '#f2b632', 0, -0.035, 0),
+    part(new THREE.BoxGeometry(0.09, 0.22, 0.1), '#e0533f', 0, -0.11, 0.27),
+    part(new THREE.BoxGeometry(0.14, 0.1, 0.12), '#2b2d33', 0, -0.05, -0.26),
+  )
+  walkingBeam.add(ownPart('oil-refinery.pumpjack', () => beamShapes))
   const polishRod = part(new THREE.CylinderGeometry(0.012, 0.012, 0.36, 6), '#cfd6de', px, topY + 0.1, pz + 0.27)
   group.add(walkingBeam, polishRod)
   walkingBeam.userData.animate = ((seconds) => {
@@ -529,8 +537,11 @@ export function buildOilRefinery(group: THREE.Group, add: Add, w: number, d: num
   add(new THREE.CylinderGeometry(0.12, 0.15, 0.32, 10), '#f2b632', crX, topY, crZ)
   const craneCab = new THREE.Group()
   craneCab.position.set(crX, topY + 0.32, crZ)
-  craneCab.add(part(new THREE.BoxGeometry(0.24, 0.16, 0.26), '#f2b632', 0, 0, 0))
-  craneCab.add(part(new THREE.BoxGeometry(0.1, 0.1, 0.02), '#9fd3f0', -0.06, 0.04, 0.13))
+  const cabShapes = new THREE.Group()
+  cabShapes.add(
+    part(new THREE.BoxGeometry(0.24, 0.16, 0.26), '#f2b632', 0, 0, 0),
+    part(new THREE.BoxGeometry(0.1, 0.1, 0.02), '#9fd3f0', -0.06, 0.04, 0.13),
+  )
   // Crane boom reaching out at 40° above horizontal.
   const boomLen = 1.05
   const boomAngle = 0.65
@@ -538,7 +549,9 @@ export function buildOilRefinery(group: THREE.Group, add: Add, w: number, d: num
   craneBoom.position.set(0, 0.1, 0.08)
   craneBoom.rotation.x = -boomAngle
   craneBoom.add(part(new THREE.BoxGeometry(0.06, 0.06, boomLen).translate(0, 0, boomLen / 2), '#e8a92a', 0, 0, 0))
-  craneCab.add(craneBoom)
+  cabShapes.add(craneBoom)
+  // The cab and its boom (the boom is fixed to the cab; the load moves).
+  craneCab.add(ownPart('oil-refinery.crane', () => cabShapes))
   const tipZ = 0.08 + Math.cos(boomAngle) * boomLen
   const tipY = 0.1 + Math.sin(boomAngle) * boomLen
   const craneCable = part(new THREE.CylinderGeometry(0.008, 0.008, 0.45, 4), '#2b2d33', 0, tipY - 0.45, tipZ)
