@@ -132,6 +132,20 @@ function shuttle(vehicle: THREE.Object3D, curve: THREE.CatmullRomCurve3, times: 
   }
 }
 
+// Round a closed loop, always facing the way it's going (a ship can't back
+// up the way a truck can): waits `wait` seconds at the loop's start, then
+// goes once round in `travel` seconds, easing out and back in.
+function loop(vehicle: THREE.Object3D, curve: THREE.CatmullRomCurve3, wait: number, travel: number): Animate {
+  return (seconds) => {
+    const t = seconds % (wait + travel)
+    const u = t < wait ? 0 : smooth((t - wait) / travel) % 1
+    const p = curve.getPointAt(u)
+    const tangent = curve.getTangentAt(u)
+    vehicle.position.set(p.x, p.y, p.z)
+    vehicle.rotation.y = Math.atan2(tangent.x, tangent.z)
+  }
+}
+
 // To and fro along x between two points, turning round at each end (like
 // the bulldozer on a construction site).
 function toAndFro(vehicle: THREE.Object3D, from: number, to: number, speed: number): Animate {
@@ -601,8 +615,9 @@ export function buildOilRefinery(group: THREE.Group, add: Add, w: number, d: num
     }
   }) satisfies Animate
 
-  // ---- 6. Shuttle Oil Tanker: sails in from the sea, moors along the south
-  // (+z) face of the platform while oil is pumped aboard, and sails out again.
+  // ---- 6. Shuttle Oil Tanker: moors along the south (+z) face of the
+  // platform while oil is pumped aboard, then sails on, circles out to sea and
+  // comes round to pull in alongside again, bow first all the way.
   const tanker = new THREE.Group()
   tanker.userData.liveOnly = true
   tanker.userData.flies = true
@@ -618,13 +633,20 @@ export function buildOilRefinery(group: THREE.Group, add: Add, w: number, d: num
   tanker.add(part(new THREE.BoxGeometry(0.34, 0.24, 0.32), '#f4f6f8', 0, 0.18, -0.46))
   tanker.add(part(new THREE.BoxGeometry(0.35, 0.05, 0.02), '#2b3a4a', 0, 0.32, -0.29))
   tanker.add(part(new THREE.CylinderGeometry(0.05, 0.06, 0.16, 8), '#f2b632', 0, 0.42, -0.52))
-  const tankerRoute = new THREE.CatmullRomCurve3([
-    new THREE.Vector3(-0.35, 0.01, hd + 0.48),
-    new THREE.Vector3(0.4, 0.01, hd + 0.58),
-    new THREE.Vector3(1.5, 0.01, hd + 1.25),
-    new THREE.Vector3(2.6, 0.01, hd + 2.4),
-  ])
-  const moveTanker = shuttle(tanker, tankerRoute, [10, 6, 4, 6])
+  // A closed loop starting at the berth, clear of the platform's legs, out no
+  // farther than the open water to the south-east the old route used.
+  const tankerRoute = new THREE.CatmullRomCurve3(
+    [
+      new THREE.Vector3(0.05, 0.01, hd + 0.66), // the berth
+      new THREE.Vector3(1.5, 0.01, hd + 0.95),
+      new THREE.Vector3(2.4, 0.01, hd + 1.85),
+      new THREE.Vector3(1.0, 0.01, hd + 2.4),
+      new THREE.Vector3(-0.9, 0.01, hd + 1.95),
+      new THREE.Vector3(-1.3, 0.01, hd + 1.05),
+    ],
+    true,
+  )
+  const moveTanker = loop(tanker, tankerRoute, 10, 16)
   tanker.userData.animate = ((seconds) => {
     moveTanker(seconds)
     // Bob and roll gently on the ocean swell.
