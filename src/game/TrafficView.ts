@@ -51,6 +51,7 @@ const PAUSE = { bus: 2.5, train: 3, truck: 6, semi: 4 } // seconds stopped at ea
 // Semis: from the fifth wheel back to the trailer's rear axles (the models,
 // assets-src/blender/models/semi.py, are made to it); how many there can be.
 const SEMI = { kingpin: 0.5, max: 4, perTiles: 6 }
+const HIGHWAY_CREWS = { max: 3, perTiles: 8 } // heavy site vehicles driving in along a highway
 const TRAILERS = ['container-red', 'container-blue', 'tanker', 'logs', 'pipes', 'box']
 const CAR_COLORS = ['#e0453a', '#2f7fe0', '#f2c230', '#f5f5f5', '#3fae6b', '#8a56d6', '#f08a24', '#2b2d33', '#e85d9b']
 const OLIVE = '#5f6b3a'
@@ -185,6 +186,17 @@ const SITE_VEHICLES: [string, number][] = [
   ['rigid-site-dumper', 0.44], ['concrete-mixer-truck', 0.46], ['flatbed-delivery-lorry', 0.48],
   ['wheeled-loader', 0.4], ['backhoe-loader', 0.4], ['tandem-road-roller', 0.38],
 ]
+// What drives in along a highway to work in town: the heavier site vehicles.
+const HIGHWAY_VEHICLES: [string, number][] = [
+  ['articulated-dump-truck', 0.52], ['concrete-mixer-truck', 0.46], ['flatbed-delivery-lorry', 0.48],
+  ['rigid-site-dumper', 0.44], ['backhoe-loader', 0.4],
+]
+function makeHighwayCrew(i: number): THREE.Group {
+  const [name, length] = HIGHWAY_VEHICLES[i % HIGHWAY_VEHICLES.length]
+  const g = new THREE.Group()
+  g.add(modelFitted(polyfork(name), length, { turn: Math.PI / 2 }, () => makeJeep()))
+  return g
+}
 function makeSiteTruck(): THREE.Group {
   const roll = Math.random()
   if (roll < 0.15) return makeKitCar('truck')
@@ -344,6 +356,7 @@ export class TrafficView {
     this.planTrain(all)
     this.planSiteTrucks(all)
     this.planSemis(all)
+    this.planHighwayCrews(all)
     // Buses and trucks share the road with the cars (a semi's trailer too).
     for (const s of this.shuttles) {
       if (s.kind === 'train') continue
@@ -630,20 +643,48 @@ export class TrafficView {
     }
   }
 
+  // Where traffic comes in along a highway: the loose ends of it (a tile with one
+  // road beside it); a highway with no loose end, at its tile farthest from the town.
+  private highwayEntries(all: PlacedBuilding[], highways: PlacedBuilding[]): Tile[] {
+    const isRoad = this.city.isRoad
+    const roadsBeside = (t: Tile) => [[1, 0], [-1, 0], [0, 1], [0, -1]].filter(([dx, dz]) => isRoad({ x: t.x + dx, z: t.z + dz })).length
+    const entries = highways.filter((h) => roadsBeside(h.tile) === 1).map((h) => h.tile)
+    if (entries.length > 0) return entries
+    const mid = all.reduce((m, b) => ({ x: m.x + b.tile.x / all.length, z: m.z + b.tile.z / all.length }), { x: 0, z: 0 })
+    return [highways.reduce((far, h) => (Math.hypot(h.tile.x - mid.x, h.tile.z - mid.z) > Math.hypot(far.tile.x - mid.x, far.tile.z - mid.z) ? h : far)).tile]
+  }
+
+  // ---- Highway crews
+
+  // With a highway, heavy site vehicles (a dumper, a mixer, a lorry...)
+  // drive in from its far end to the middle of town, stop a while, and head back.
+  private planHighwayCrews(all: PlacedBuilding[]) {
+    const highways = all.filter((b) => b.type.road?.style === 'highway')
+    if (highways.length < 3) return
+    const entries = this.highwayEntries(all, highways)
+    const count = Math.min(HIGHWAY_CREWS.max, Math.ceil(highways.length / HIGHWAY_CREWS.perTiles))
+    for (let i = 0; i < count; i++) {
+      const path = pathToFarthest(entries[i % entries.length], this.city.isRoad)
+      if (path.length < 4) continue
+      const out = new Polyline(path.map(center))
+      const back = new Polyline([...path].reverse().map(center))
+      const object = makeHighwayCrew(i)
+      this.scene.add(object)
+      this.shuttles.push({
+        kind: 'truck', objects: [object], lines: [out, back], line: 0, s: Math.random() * out.length * 0.6,
+        stops: [[out.length], [back.length]], nextStop: 0, pause: 0, pauseFor: PAUSE.truck,
+        speed: SPEED.truck, spacing: 0, phase: 0,
+      })
+    }
+  }
+
   // ---- Semis
 
   private planSemis(all: PlacedBuilding[]) {
     const highways = all.filter((b) => b.type.road?.style === 'highway')
     if (highways.length < 3) return
     const isRoad = this.city.isRoad
-    const roadsBeside = (t: Tile) => [[1, 0], [-1, 0], [0, 1], [0, -1]].filter(([dx, dz]) => isRoad({ x: t.x + dx, z: t.z + dz })).length
-    // They come in at the end of the highway (a tile with one road beside it);
-    // a highway with no loose end, at its tile farthest from the town.
-    let entries = highways.filter((h) => roadsBeside(h.tile) === 1).map((h) => h.tile)
-    if (entries.length === 0) {
-      const mid = all.reduce((m, b) => ({ x: m.x + b.tile.x / all.length, z: m.z + b.tile.z / all.length }), { x: 0, z: 0 })
-      entries = [highways.reduce((far, h) => (Math.hypot(h.tile.x - mid.x, h.tile.z - mid.z) > Math.hypot(far.tile.x - mid.x, far.tile.z - mid.z) ? h : far)).tile]
-    }
+    const entries = this.highwayEntries(all, highways)
     // Where they deliver: the kerb outside each factory, warehouse, barn or dock.
     const deliveries = all
       .filter((b) => ['industry', 'storage', 'port'].includes(b.type.category) && this.city.isOperating(b))
