@@ -1117,6 +1117,12 @@ export function createConstructionSite(type: BuildingType): THREE.Group {
   kit('mini-excavator', size * 0.2, w * 0.32, -d * 0.18, -Math.PI / 2)
   kit('scaffold-bay', size * 0.28, -w * 0.12, -d * 0.4)
   kit('site-lighting-tower', size * 0.22, w * 0.4, d * 0.4)
+  // Bigger sites are busier: a dumper and a loader parked about, and a pallet of materials.
+  if (w * d >= 6) {
+    kit('rigid-site-dumper', Math.max(w, d) * 0.14, -w * 0.3, -d * 0.2, Math.PI / 2)
+    kit('wheeled-loader', Math.max(w, d) * 0.14, -w * 0.25, d * 0.24, Math.PI / 2)
+    kit('material-pallet', Math.max(w, d) * 0.07, w * 0.2, d * 0.34)
+  }
   // A bulldozer working to and fro across the front (named, so CityView can
   // drive it; it turns the dozer to face along x).
   const dozer = new THREE.Group()
