@@ -216,6 +216,9 @@ export function modelFitted(url: string, size: number, options: { turn?: number;
 // the tower crane, machines, site office and building materials.
 export const construction = (name: string) => `${import.meta.env.BASE_URL}models/construction/${name}.glb`
 // Which way each one faces as modelled, to turn it toward +z.
+// Polyfork's Construction Site kit (CC BY 4.0, credited in the Settings panel):
+// the cabin, machines, scaffolding and fences that dress a site.
+export const polyfork = (name: string) => `${import.meta.env.BASE_URL}models/polyfork/${name}.glb`
 export const BULLDOZER_TURN = Math.PI / 2
 export const DUMP_TRUCK_TURN = Math.PI
 
@@ -1103,6 +1106,17 @@ export function createConstructionSite(type: BuildingType): THREE.Group {
   put('boxes', size * 0.08, -w * 0.4, -d * 0.16)
   put('barrel', size * 0.045, -w * 0.38, d * 0.24)
   put('mixer', size * 0.26, w * 0.16, -d * 0.4, Math.PI / 2)
+  // Polyfork's kit adds a digger beside a spoil heap, scaffolding and a
+  // light tower.
+  const kit = (name: string, length: number, x: number, z: number, turn = 0) => {
+    const thing = modelFitted(polyfork(name), length, { turn })
+    thing.position.set(x, base, z)
+    group.add(thing)
+  }
+  kit('spoil-heap', size * 0.2, w * 0.36, -d * 0.32)
+  kit('mini-excavator', size * 0.2, w * 0.32, -d * 0.18, -Math.PI / 2)
+  kit('scaffold-bay', size * 0.28, -w * 0.12, -d * 0.4)
+  kit('site-lighting-tower', size * 0.22, w * 0.4, d * 0.4)
   // A bulldozer working to and fro across the front (named, so CityView can
   // drive it; it turns the dozer to face along x).
   const dozer = new THREE.Group()

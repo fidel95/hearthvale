@@ -1,0 +1,6 @@
+Polyfork construction-site kit (https://polyfork.dev/kit/construction-site-9e40b0)
+
+Parts used: mini excavator, scaffold bay, site lighting tower, spoil heap.
+
+Low poly models by Polyfork, licensed CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/).
+Changes: compressed with gltf-transform (meshopt, merged duplicate materials); no change to the shapes.

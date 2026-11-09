@@ -1,11 +1,14 @@
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js'
 
 // Loading .glb model files, shared by every module that draws them (models.ts
 // and the builders for buildings with moving parts), so none of them has to
 // import another just for this.
 
 const loader = new GLTFLoader()
+// Some models (the Polyfork construction kit) are shrunk with meshopt compression.
+loader.setMeshoptDecoder(MeshoptDecoder)
 // One load per file, however many buildings use it. We store the promise
 // (not the result) so two buildings asking at once share a single download.
 const modelCache = new Map<string, Promise<THREE.Object3D>>()

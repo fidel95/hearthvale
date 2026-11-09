@@ -155,6 +155,6 @@ the right on a wide screen) so the town stays in view.
 
 ## Credits
 
-3D models by [Kenney](https://kenney.nl) (CC0): City Kits, Car Kit, Nature Kit, Mini Forest, Mini Characters and more. Each pack's license is in its folder under `public/models/`.
+3D models by [Kenney](https://kenney.nl) (CC0): City Kits, Car Kit, Nature Kit, Mini Forest, Mini Characters and more, plus part of [Polyfork](https://polyfork.dev)'s Construction Site kit (CC BY 4.0). Each pack's license is in its folder under `public/models/`.
 
 Hearthvale's own models (in `public/models/hearthvale/`) are made in Blender by the scripts in `assets-src/blender/`: `hv.py` is a small modelling kit in the Kenney style (one shared palette texture that starts with Kenney's City Kit colors, chunky shapes with soft bevels, dark trim, framed windows), and each file in `models/` builds one building with it. Rebuild them with `npm run models` (or `npm run models -- town-hall school`), which needs [Blender](https://www.blender.org) 4.x; `npm run models -- --preview out.png town-hall` also renders a picture of them. So far: Town Hall, Fire Station, Police Station, Hospital, School and Library, and the nine theme-park rides and the Oil Refinery. For buildings with moving parts the model is the fixed body, drawn at its true size (`modelLive`), and the moving parts (a wheel, a ship, cars, a tanker) are small models of their own (`ride.part.glb`) that the game's code moves, with simple shapes as a fallback.
