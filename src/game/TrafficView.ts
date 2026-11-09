@@ -4,7 +4,7 @@ import { edgeTiles } from './communityRules'
 import { tileToWorld, type Tile } from './grid'
 import { findPath } from './pathfinding'
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
-import { construction, DUMP_TRUCK_TURN, modelCopy, modelFitted } from './models'
+import { construction, DUMP_TRUCK_TURN, modelCopy, modelFitted, polyfork } from './models'
 import { easeShare, turnToward } from './motion'
 import { nextTile, pathToFarthest, Polyline, trainRoute } from './routes'
 import { lightFor, signalJunctions, type Light } from './signals'
@@ -179,10 +179,21 @@ const makeBus = () =>
     ],
     [-0.26, 0.24],
   )
-// A dump truck from the construction kit (or the Car Kit's lorry), facing +x.
+// A construction vehicle (Polyfork's, or the kit's dump truck, or the Car Kit's lorry), facing +x.
+// Polyfork's site vehicles (they face +z as modelled) and how long each is drawn.
+const SITE_VEHICLES: [string, number][] = [
+  ['rigid-site-dumper', 0.44], ['concrete-mixer-truck', 0.46], ['flatbed-delivery-lorry', 0.48],
+  ['wheeled-loader', 0.4], ['backhoe-loader', 0.4], ['tandem-road-roller', 0.38],
+]
 function makeSiteTruck(): THREE.Group {
-  if (Math.random() < 0.35) return makeKitCar('truck')
+  const roll = Math.random()
+  if (roll < 0.15) return makeKitCar('truck')
   const g = new THREE.Group()
+  if (roll < 0.7) {
+    const [name, length] = SITE_VEHICLES[Math.floor(Math.random() * SITE_VEHICLES.length)]
+    g.add(modelFitted(polyfork(name), length, { turn: Math.PI / 2 }, () => makeJeep()))
+    return g
+  }
   const model = modelFitted(construction('dump-truck'), 0.46, { turn: DUMP_TRUCK_TURN }, () => makeJeep())
   model.rotation.y = Math.PI / 2
   g.add(model)
