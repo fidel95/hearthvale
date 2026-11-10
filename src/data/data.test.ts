@@ -1,5 +1,8 @@
+import type * as THREE from 'three'
 import { describe, expect, it } from 'vitest'
 import { BUILDINGS_BY_ID, BUILDING_TYPES } from '../game/buildings'
+import { Kit } from '../game/kit'
+import { KIT_MODELS } from '../game/kitModels'
 import { CROP_TYPES } from '../game/crops'
 import { MATERIALS } from '../game/items'
 import { ACHIEVEMENTS, QUESTS } from '../game/quests'
@@ -65,7 +68,27 @@ describe('catalogs', () => {
     // Vite lists the files in public/ that match; a model URL is /models/... under it.
     const files = new Set(Object.keys(import.meta.glob('/public/models/**/*.glb')))
     for (const b of BUILDING_TYPES) {
-      if (b.model) expect(files.has(`/public${b.model}`), b.model).toBe(true)
+      if (b.model?.startsWith('kit:')) expect(KIT_MODELS[b.model.slice(4)], b.model).toBeTypeOf('function')
+      else if (b.model) expect(files.has(`/public${b.model}`), b.model).toBe(true)
+    }
+  })
+
+  it('build every code-made model (kitModels.ts) inside its footprint', () => {
+    for (const b of BUILDING_TYPES) {
+      if (!b.model?.startsWith('kit:')) continue
+      const kit = new Kit()
+      KIT_MODELS[b.model.slice(4)](kit)
+      const model = kit.build()
+      // Every part merged: one mesh per finish, with real geometry.
+      expect(model.children.length, b.id).toBeGreaterThan(0)
+      for (const mesh of model.children as THREE.Mesh[]) {
+        const box = mesh.geometry.boundingBox!
+        expect(Number.isFinite(box.min.x + box.max.y), b.id).toBe(true)
+        // Nothing sticks out more than a little past the building's tiles
+        // (the Ski Resort's mountain, SKI_SLOPE, reaches 0.2 past its edge).
+        expect(Math.max(-box.min.x, box.max.x), b.id).toBeLessThan(b.size.x / 2 + 0.22)
+        expect(Math.max(-box.min.z, box.max.z), b.id).toBeLessThan(b.size.z / 2 + 0.22)
+      }
     }
   })
 

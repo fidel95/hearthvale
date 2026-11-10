@@ -32,7 +32,8 @@ describe('Offline', () => {
 
   it('packages every model and texture locally', () => {
     for (const t of BUILDING_TYPES) {
-      if (!t.model) continue
+      // Models made in code (kit:) are part of the game's own scripts.
+      if (!t.model || t.model.startsWith('kit:')) continue
       expect(t.model).not.toMatch(/:\/\//)
       expect(publicFiles, t.id).toContain('/public/' + t.model.replace(/^\//, ''))
     }

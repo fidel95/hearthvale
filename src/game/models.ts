@@ -258,7 +258,7 @@ export function createBuildingObject(type: BuildingType, overrideMaterial?: THRE
   if (type.model) {
     group.userData.ready = loadModel(type.model)
       .then((model) => {
-        if (!type.modelLive) return fill(fitToFootprint(model.clone(), type))
+        if (!type.modelLive) return fill(model.userData.trueSize ? model.clone() : fitToFootprint(model.clone(), type))
         // The fixed body at its true size, and the moving parts from the code.
         fill(model.clone())
         const moving = createPlaceholder(type, false)

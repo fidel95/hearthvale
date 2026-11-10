@@ -24,6 +24,18 @@ export function isSharedGeometry(geometry: THREE.BufferGeometry): boolean {
 
 export function loadModel(url: string): Promise<THREE.Object3D> {
   let model = modelCache.get(url)
+  if (!model && url.startsWith(KIT)) {
+    // Built in code with the modelling kit (kit.ts), the first time it's wanted.
+    const name = url.slice(KIT.length)
+    model = Promise.all([import('./kit'), import('./kitModels')]).then(([{ Kit }, { KIT_MODELS }]) => {
+      const build = KIT_MODELS[name]
+      if (!build) throw new Error(`No kit model called ${name}`)
+      const kit = new Kit()
+      build(kit)
+      return kit.build()
+    })
+    modelCache.set(url, model)
+  }
   if (!model) {
     model = loader.loadAsync(url).then((gltf) => {
       gltf.scene.traverse((o) => {
@@ -38,6 +50,11 @@ export function loadModel(url: string): Promise<THREE.Object3D> {
 
 // Our own models, made in Blender (assets-src/blender, npm run models).
 export const ownModel = (name: string) => `${import.meta.env.BASE_URL}models/hearthvale/${name}.glb`
+
+// Our own models built in code with the modelling kit (kit.ts, kitModels.ts).
+// They're made at their true size, so they aren't scaled to fit (userData.trueSize).
+const KIT = 'kit:'
+export const kitModel = (name: string) => KIT + name
 
 // A copy of a model at a given scale, standing where it was modelled (for
 // boats and containers, whose packs model them centered at the waterline or

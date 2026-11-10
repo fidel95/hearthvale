@@ -196,6 +196,8 @@ const commercial = (name: string) => `${import.meta.env.BASE_URL}models/commerci
 const industrial = (name: string) => `${import.meta.env.BASE_URL}models/industrial/${name}.glb`
 // Our own models, made in Blender from assets-src/blender (npm run models), in the same style.
 const hearthvale = (name: string) => `${import.meta.env.BASE_URL}models/hearthvale/${name}.glb`
+// Our models built in code with the modelling kit (kitModels.ts; modelLoading's kitModel).
+const kit = (name: string) => `kit:${name}`
 
 export const BUILDING_TYPES: BuildingType[] = [
   // ---- Industry: factories turn goods into products for specialty shops.
@@ -791,6 +793,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     unlockLevel: 2,
     drawn: true,
     amenity: { bonus: 0.02, radius: 1 },
+    model: kit('flower-bed'),
     placeholder: { shape: 'flowers', color: '#7a5233', accent: '#e8579a', height: 0.3 },
   },
   {
@@ -824,6 +827,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     cost: 40,
     unlockLevel: 5,
     amenity: { bonus: 0.03, radius: 2 },
+    model: kit('bench'),
     placeholder: { shape: 'bench', color: '#8a6a4a', accent: '#3b3b3b', height: 0.25 },
   },  {
     id: 'lamp-post',
@@ -833,6 +837,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     cost: 20,
     unlockLevel: 3,
     amenity: { bonus: 0.02, radius: 1 },
+    model: kit('lamp-post'),
     placeholder: { shape: 'lamp', color: '#3b3f46', accent: '#ffe08a', height: 0.9 },
   },
   {
@@ -844,6 +849,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     unlockLevel: 3,
     drawn: true,
     amenity: { bonus: 0.01, radius: 1 },
+    model: kit('hedge'),
     placeholder: { shape: 'hedge', color: '#3f8f3a', accent: '#2e6e2b', height: 0.35 },
   },
   {
@@ -854,6 +860,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     cost: 140,
     unlockLevel: 7,
     amenity: { bonus: 0.05, radius: 2 },
+    model: kit('gazebo'),
     placeholder: { shape: 'gazebo', color: '#f4efe6', accent: '#b8432f', height: 1.1 },
   },
   {
@@ -865,6 +872,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     unlockLevel: 8,
     amenity: { bonus: 0.05, radius: 3 },
     visitors: 3,
+    model: kit('pond'),
     placeholder: { shape: 'pond', color: '#4fa3d9', accent: '#8a6a4a', height: 0.15 },
   },
 
@@ -878,6 +886,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     amenity: { bonus: 0.06, radius: 3 },
     attractsVisitors: { lingerSeconds: 6 },
     visitors: 2,
+    model: kit('fountain'),
     placeholder: { shape: 'fountain', color: '#c9c6bd', accent: '#6fb7e0', height: 0.6 },
   },
   {
@@ -889,6 +898,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     unlockLevel: 10,
     amenity: { bonus: 0.08, radius: 4 },
     visitors: 2,
+    model: kit('statue'),
     placeholder: { shape: 'statue', color: '#b9b4ab', accent: '#d9a441', height: 1.2 },
   },
 
@@ -961,6 +971,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     supplies: { utility: 'power', amount: 25 },
     upkeep: 5, // no fuel: cheap to run
     recoveryYears: 5, // solar energy property gets a short 5-year period
+    model: kit('solar-farm'),
     placeholder: { shape: 'solar', color: '#2c3e66', accent: '#c9ccd2', height: 0.5 },
   },
   // ---- Storage and trade
@@ -974,6 +985,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     build: { seconds: 60, materials: { lumber: 6 } },
     storage: 150,
     recoveryYears: 20, // farm buildings
+    model: kit('barn'),
     placeholder: { shape: 'barn', color: '#b5432f', accent: '#f2ead8', height: 1.1 },
   },
   {
@@ -1078,6 +1090,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     attractsVisitors: { lingerSeconds: 8 },
     recoveryYears: 15, // land improvements
     visitors: 5,
+    model: kit('park'),
     placeholder: { shape: 'park', color: '#6fbf5a', accent: '#d9c79a', height: 0.6 },
   },
   {
@@ -1186,6 +1199,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     populationCapacity: 30,
     attractsVisitors: { lingerSeconds: 5 },
     visitors: 15,
+    model: kit('clock-tower'),
     placeholder: { shape: 'clocktower', color: '#f2dfb0', accent: '#2f5fc4', height: 3 },
   },
   {
@@ -1202,6 +1216,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     townBonus: 0.03,
     shipSpeedBonus: 0.25,
     visitors: 20,
+    model: kit('lighthouse'),
     placeholder: { shape: 'lighthouse', color: '#f4f1ea', accent: '#c8463a', height: 3.2 },
   },
   {
@@ -1218,6 +1233,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     populationCapacity: 50,
     attractsVisitors: { lingerSeconds: 10 },
     visitors: 30,
+    model: kit('botanical-garden'),
     placeholder: { shape: 'garden', color: '#6fbf5a', accent: '#cfe8f2', height: 1.4 },
   },
   // ---- Transport and the army
@@ -1233,6 +1249,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     requiresRoad: true, // the bus has to reach it
     recoveryYears: 15, // a shelter beside the road: a land improvement
     arrivals: 3,
+    model: kit('bus-stop'),
     placeholder: { shape: 'busstop', color: '#2f7fe0', accent: '#ffd23f', height: 0.6 },
   },
   {
@@ -1248,6 +1265,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     amenity: { bonus: 0.05, radius: 6 }, // people feel safe nearby
     populationCapacity: 40,
     requiresRoad: true, // the squad and the jeep go out on the roads
+    model: kit('army-base'),
     placeholder: { shape: 'armybase', color: '#6b7a4a', accent: '#c2b280', height: 0.9 },
   },
   {
@@ -1276,6 +1294,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     requiresRail: true,
     recoveryYears: 39, // the station building: nonresidential real property
     arrivals: 40,
+    model: kit('train-station'),
     placeholder: { shape: 'station', color: '#e9d3b0', accent: '#2f5fc4', height: 1.2 },
   },
   {
@@ -1294,6 +1313,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     requiresRoad: true, // passengers need to get there
     recoveryYears: 15, // mostly runway and aprons: land improvements
     arrivals: 80,
+    model: kit('airport'),
     placeholder: { shape: 'airport', color: '#4a4f57', accent: '#e8eef2', height: 0.9 },
   },
   {
@@ -1310,6 +1330,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     unique: true,
     requiresRoad: true, // the goods leave by truck
     recoveryYears: 20,
+    model: kit('hangar'),
     placeholder: { shape: 'hangar', color: '#c3c9cf', accent: '#e07a2e', height: 1.1 },
   },
   // ---- Parks, the beach and the slopes
@@ -1325,6 +1346,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     attractsVisitors: { lingerSeconds: 7 },
     recoveryYears: 15, // land improvements
     visitors: 3,
+    model: kit('playground'),
     placeholder: { shape: 'playground', color: '#7fcf62', accent: '#ff7a3d', height: 0.5 },
   },
   {
@@ -1342,6 +1364,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     attractsVisitors: { lingerSeconds: 9 },
     recoveryYears: 15, // land improvements
     visitors: 10,
+    model: kit('sports-field'),
     placeholder: { shape: 'sportsfield', color: '#4fae4a', accent: '#ffffff', height: 0.4 },
   },
   {
@@ -1357,6 +1380,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     attractsVisitors: { lingerSeconds: 12 },
     recoveryYears: 15, // land improvements
     visitors: 25,
+    model: kit('beach'),
     placeholder: { shape: 'beach', color: '#f6e3a4', accent: '#ff5c8a', height: 0.5 },
   },
   {
@@ -1374,6 +1398,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     attractsVisitors: { lingerSeconds: 12 },
     recoveryYears: 15, // land improvements
     visitors: 20,
+    model: kit('central-park'),
     placeholder: { shape: 'bigpark', color: '#5fbf52', accent: '#d9c79a', height: 0.8 },
   },
   {
@@ -1389,6 +1414,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     requiresRoad: true,
     attractsVisitors: { lingerSeconds: 10 },
     visitors: 30,
+    model: kit('ski-resort'),
     placeholder: { shape: 'skiresort', color: '#f4f8fb', accent: '#c8463a', height: 2.4 },
   },
   // ---- The Highlands: built at the foot of a mountain (terrain.ts).
@@ -1464,6 +1490,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     produce: { product: 'eggs', units: 2 },
     animals: { kind: 'chicken', count: 5 },
     recoveryYears: 10, // a single-purpose livestock structure, IRC §168(e)(3)(D)
+    model: kit('pen-chicken'),
     placeholder: { shape: 'pen', color: '#c8463a', accent: '#f2ead8', height: 0.5 },
   },
   {
@@ -1478,6 +1505,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     needs: { water: 1 },
     animals: { kind: 'pig', count: 3 },
     recoveryYears: 10,
+    model: kit('pen-pig'),
     placeholder: { shape: 'pen', color: '#8a5a36', accent: '#e8c9a0', height: 0.5 },
   },
   {
@@ -1492,6 +1520,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     needs: { water: 1 },
     animals: { kind: 'sheep', count: 4 },
     recoveryYears: 10,
+    model: kit('pen-sheep'),
     placeholder: { shape: 'pen', color: '#5b6b7a', accent: '#f2ead8', height: 0.5 },
   },
   {
@@ -1506,6 +1535,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     needs: { water: 2 },
     animals: { kind: 'cow', count: 3 },
     recoveryYears: 10,
+    model: kit('pen-cow'),
     placeholder: { shape: 'pen', color: '#b5432f', accent: '#f2ead8', height: 0.6 },
   },
   // ---- Orchards: planted once, picked again and again.
