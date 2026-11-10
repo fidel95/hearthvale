@@ -53,10 +53,11 @@ export interface PartOptions {
   finish?: Finish
 }
 
-const materials: Record<Finish, THREE.MeshStandardMaterial> = {
+// Glowing parts are unlit, so they show their full color in any light.
+const materials: Record<Finish, THREE.Material> = {
   matte: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.82, metalness: 0 }),
   shiny: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.22, metalness: 0.05 }),
-  glow: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.6, emissive: '#fff1c0', emissiveIntensity: 0.55 }),
+  glow: new THREE.MeshBasicMaterial({ vertexColors: true }),
 }
 
 const UP = new THREE.Vector3(0, 1, 0)
@@ -351,9 +352,13 @@ export class Kit {
     this.ball(0.17 * s, x - 0.11 * s, c + 0.05 * s, z + 0.06 * s, leaf, { lumpy: true })
     this.ball(0.15 * s, x, c + 0.17 * s, z - 0.02 * s, leaf, { lumpy: true })
     if (o.fruit) {
-      for (let i = 0; i < 6; i++) {
-        const a = i * 1.9 + 0.4
-        this.ball(0.035 * s, x + Math.cos(a) * 0.21 * s, c + 0.02 * s + (i % 3) * 0.06 * s, z + Math.abs(Math.sin(a)) * 0.21 * s, o.fruit)
+      // Fruit on the crown's surface, on the sides the camera sees (+x, +z).
+      const cy = c + 0.07 * s
+      for (let i = 0; i < 9; i++) {
+        const a = -0.25 + i * 0.26
+        const e = [0.05, 0.45, 0.8][i % 3]
+        const r = 0.255 * s
+        this.ball(0.042 * s, x + Math.cos(e) * Math.cos(a) * r, cy + Math.sin(e) * r, z + 0.03 * s + Math.cos(e) * Math.sin(a) * r, o.fruit)
       }
     }
   }

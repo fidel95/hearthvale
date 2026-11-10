@@ -1231,6 +1231,374 @@ function skiResort(k: Kit) {
   k.box(0.14, 0.03, 0.04, sx, 0.32, sz + 0.03, 'red', { bevel: 0 })
 }
 
+// ---- Farm workshops and orchards
+
+function bakehouse(k: Kit) {
+  k.ground(1.92, 1.92, 'lawn', 0.03)
+  k.box(1.6, 0.012, 0.5, 0.05, 0.03, 0.62, 'path', { bevel: 0 })
+  // A butter-yellow cottage with timber framing and a steep roof.
+  const x0 = -0.05
+  const z0 = -0.2
+  const W = 1.3
+  const D = 0.9
+  k.box(W + 0.05, 0.06, D + 0.05, x0, 0.03, z0, 'stonedark', { bevel: 0.01 })
+  k.box(W, 0.5, D, x0, 0.09, z0, 'butter', { bevel: 0.018 })
+  for (const u of [-0.62, -0.2, 0.2, 0.62]) k.onFace('+z', z0 + D / 2, x0 + u, 0.09, 0.04, 0.5, 0.02, 'wooddark', { bevel: 0 })
+  k.onFace('+z', z0 + D / 2, x0, 0.36, W, 0.035, 0.02, 'wooddark', { bevel: 0 })
+  k.gableRoof(W, D, 0.38, x0, 0.59, z0, 'roofred', 'butter', { overhang: 0.08 })
+  const front = z0 + D / 2
+  // A shop window under a striped awning, the door, a loaf on the sign.
+  k.window('+z', front, x0 - 0.38, 0.14, { w: 0.42, h: 0.2, frame: 'white', panes: false })
+  for (const dx of [-0.12, 0, 0.12]) k.cyl(0.035, 0.05, x0 - 0.38 + dx, 0.17, front + 0.03, 'lightwood', { seg: 8, sx: 1.6 })
+  k.awning('+z', front, x0 - 0.38, 0.4, 0.5, ['red', 'white'], { depth: 0.2, drop: 0.08 })
+  k.door('+z', front, x0 + 0.2, { w: 0.18, h: 0.3, color: 'roofred', y: 0.09, glass: true })
+  k.window('+z', front, x0 + 0.5, 0.2, { w: 0.15, h: 0.15, box: 'wooddark' })
+  k.onFace('+z', front, x0, 0.66, 0.36, 0.12, 0.03, 'wooddark')
+  k.ball(0.05, x0, 0.72, front + 0.05, 'lightwood', { sx: 2, sy: 0.8 })
+  k.windows('+x', x0 + W / 2, z0 - 0.25, z0 + 0.25, 0.25, 2, { w: 0.15, h: 0.16, box: 'wooddark' })
+  // The brick bread oven on the side, its chimney smoking.
+  const ox = x0 + W / 2 + 0.16
+  k.box(0.28, 0.3, 0.4, ox, 0.03, z0 - 0.15, 'brick', { bevel: 0.02 })
+  k.ball(0.17, ox, 0.33, z0 - 0.15, 'brick', { sy: 0.6, sz: 1.2 })
+  k.ring(0.08, 0.02, ox + 0.14, 0.14, z0 - 0.15, 'stone', 'x', { arc: Math.PI, seg: 8 })
+  k.box(0.14, 0.75, 0.14, x0 - 0.4, 0.55, z0 - 0.2, 'brick', { bevel: 0.01 })
+  k.box(0.18, 0.04, 0.18, x0 - 0.4, 1.3, z0 - 0.2, 'stonedark', { bevel: 0.006 })
+  // A bench of loaves, flour sacks and flowers.
+  k.box(0.44, 0.12, 0.18, -0.5, 0.03, 0.62, 'wood', { bevel: 0.01 })
+  for (const [i, x] of [-0.64, -0.5, -0.36].entries()) k.ball(0.045, x, 0.18, 0.62 + (i % 2) * 0.03, 'lightwood', { sx: 1.7, sy: 0.75 })
+  for (const [x, z] of [[0.55, 0.45], [0.66, 0.5]]) k.ball(0.07, x, 0.08, z, 'snow', { sy: 1.2 })
+  k.bush(0.75, -0.75, 0.1, 'hedge', 'rose')
+  k.bush(-0.8, 0.25, 0.09, 'hedge', 'sunny')
+}
+
+function dairy(k: Kit) {
+  k.ground(1.92, 1.92, 'lawn', 0.03)
+  k.box(1.0, 0.012, 0.5, -0.3, 0.03, 0.62, 'path', { bevel: 0 })
+  // A white creamery with a blue roof and trim.
+  const x0 = -0.3
+  const z0 = -0.18
+  const W = 1.15
+  const D = 0.9
+  k.box(W + 0.05, 0.06, D + 0.05, x0, 0.03, z0, 'stonedark', { bevel: 0.01 })
+  k.box(W, 0.48, D, x0, 0.09, z0, 'snow', { bevel: 0.018 })
+  k.trim(W, D, 0.3, 'blue', { h: 0.03, out: 0.012, x: x0, z: z0 })
+  k.gableRoof(W, D, 0.32, x0, 0.57, z0, 'roofblue', 'snow', { overhang: 0.08 })
+  const front = z0 + D / 2
+  k.door('+z', front, x0 + 0.2, { w: 0.28, h: 0.32, color: 'blue', y: 0.09 })
+  k.window('+z', front, x0 - 0.3, 0.17, { w: 0.22, h: 0.18, shutters: 'blue' })
+  k.windows('+x', x0 + W / 2, z0 - 0.25, z0 + 0.25, 0.17, 2, { w: 0.16, h: 0.18, shutters: 'blue' })
+  // A cheese-wheel sign on the gable.
+  k.rod(0.1, 0.04, x0, 0.66, front + 0.03, 'sunny', 'z', { seg: 16 })
+  k.cyl(0.1, 0.045, x0, 0.66 - 0.0, front + 0.03, 'gold', { seg: 16, arc: Math.PI / 3, start: Math.PI / 2 })
+  // The steel milk tank on legs, and a pipe into the creamery.
+  const tx = 0.6
+  const tz = -0.35
+  for (const [dx, dz] of [[-0.15, -0.12], [0.15, -0.12], [-0.15, 0.12], [0.15, 0.12]]) k.box(0.035, 0.22, 0.035, tx + dx, 0.03, tz + dz, 'steel', { bevel: 0 })
+  k.rod(0.2, 0.55, tx, 0.42, tz, 'pipe', 'z', { seg: 18 })
+  for (const s of [-1, 1]) k.ball(0.2, tx, 0.42, tz + s * 0.27, 'pipe', { sz: 0.35 })
+  k.strut([tx - 0.2, 0.45, tz], [x0 + W / 2, 0.45, tz], 0.025, 'steel')
+  k.cyl(0.05, 0.06, tx, 0.62, tz, 'steel', { seg: 10 })
+  // Churns, a crate of bottles and a little milk float.
+  for (const [x, z] of [[0.2, 0.55], [0.34, 0.6], [0.27, 0.42]]) {
+    k.cyl(0.06, 0.14, x, 0.03, z, 'pipe', { seg: 10, rTop: 0.045 })
+    k.cyl(0.04, 0.04, x, 0.17, z, 'pipe', { seg: 10 })
+  }
+  k.box(0.32, 0.14, 0.18, 0.7, 0.07, 0.55, 'snow', { bevel: 0.02 })
+  k.box(0.12, 0.12, 0.18, 0.88, 0.07, 0.55, 'blue', { bevel: 0.02 })
+  k.box(0.11, 0.06, 0.16, 0.9, 0.13, 0.55, 'glass', { bevel: 0.01, finish: 'shiny' })
+  for (const [dx, dz] of [[0.6, 0.47], [0.85, 0.47], [0.6, 0.63], [0.85, 0.63]]) k.rod(0.04, 0.03, dx, 0.07, dz, 'tyre', 'z', { seg: 10 })
+  k.bush(-0.85, 0.5, 0.1, 'hedge', 'white')
+  k.bush(0.85, -0.85, 0.1, 'hedge')
+}
+
+function winery(k: Kit) {
+  k.ground(2.92, 1.92, 'lawn', 0.03)
+  // A stone cellar house with a terracotta roof and an arched door.
+  const x0 = -0.6
+  const z0 = -0.25
+  const W = 1.5
+  const D = 0.95
+  k.box(W + 0.05, 0.06, D + 0.05, x0, 0.03, z0, 'stonedark', { bevel: 0.01 })
+  k.box(W, 0.58, D, x0, 0.09, z0, 'stone', { bevel: 0.02, gradient: true })
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) k.box(0.08, 0.58, 0.08, x0 + sx * (W / 2 - 0.02), 0.09, z0 + sz * (D / 2 - 0.02), 'stonedark', { bevel: 0.01 })
+  k.gableRoof(W, D, 0.34, x0, 0.67, z0, 'terracotta', 'stone', { overhang: 0.09 })
+  const front = z0 + D / 2
+  k.onFace('+z', front, x0, 0.09, 0.36, 0.32, 0.03, 'stonedark')
+  k.onFace('+z', front + 0.01, x0, 0.09, 0.3, 0.29, 0.02, 'darkwood', { bevel: 0 })
+  k.ring(0.15, 0.03, x0, 0.38, front + 0.015, 'stonedark', 'z', { arc: Math.PI, seg: 12 })
+  k.cyl(0.15, 0.02, x0, 0.38, front + 0.01, 'darkwood', { seg: 12 })
+  for (const u of [-0.5, 0.5]) k.window('+z', front, x0 + u, 0.25, { w: 0.18, h: 0.22, shutters: 'purple', box: 'wooddark' })
+  k.windows('+x', x0 + W / 2, z0 - 0.25, z0 + 0.25, 0.25, 2, { w: 0.16, h: 0.22, shutters: 'purple' })
+  // A little bell cote on the ridge, and a grape sign.
+  k.box(0.14, 0.18, 0.14, x0 + 0.45, 1.0, z0, 'stone', { bevel: 0.01 })
+  k.cyl(0.13, 0.1, x0 + 0.45, 1.18, z0, 'terracotta', { seg: 4, rTop: 0, ry: Math.PI / 4 })
+  for (const [dx, dy] of [[0, 0], [-0.03, -0.04], [0.03, -0.04], [0, -0.08], [-0.015, -0.11], [0.015, -0.11]]) k.ball(0.022, x0 + dx, 0.82 + dy, front + 0.06, 'purple')
+  // Barrels: a stack on their sides, two upright.
+  const barrel = (x: number, y: number, z: number) => {
+    k.rod(0.11, 0.24, x, y + 0.11, z, 'wood', 'z', { seg: 14 })
+    for (const dz of [-0.08, 0.08]) k.ring(0.112, 0.008, x, y + 0.11, z + dz, 'charcoal', 'z', { seg: 14 })
+  }
+  barrel(0.35, 0.03, 0.55)
+  barrel(0.58, 0.03, 0.55)
+  barrel(0.465, 0.23, 0.55)
+  for (const x of [0.2, -0.05]) {
+    k.cyl(0.1, 0.24, x - 0.0, 0.03, -0.0 + 0.62 + (x < 0 ? 0.05 : 0.15), 'wood', { seg: 14 })
+  }
+  // Rows of vines on trellises to the right, heavy with grapes.
+  for (let r = 0; r < 3; r++) {
+    const z = -0.7 + r * 0.38
+    k.box(0.016, 0.02, 0.016, 0, 0, 0, 'wood', { bevel: 0 })
+    for (const x of [0.35, 0.8, 1.25]) k.box(0.03, 0.34, 0.03, x, 0.03, z, 'wood', { bevel: 0 })
+    k.box(0.95, 0.012, 0.012, 0.8, 0.32, z, 'wood', { bevel: 0 })
+    for (let i = 0; i < 6; i++) {
+      const x = 0.4 + i * 0.16
+      k.ball(0.075, x, 0.22, z, i % 2 ? 'foliage' : 'leaf', { lumpy: true, sy: 1.2 })
+      k.ball(0.028, x + 0.02, 0.15, z + 0.06, 'purple')
+      k.ball(0.022, x - 0.02, 0.13, z + 0.06, 'violet')
+    }
+    k.box(1.0, 0.01, 0.12, 0.8, 0.03, z, 'soil', { bevel: 0 })
+  }
+  k.box(0.2, 0.1, 0.14, 1.2, 0.03, 0.55, 'lightwood', { bevel: 0.01 })
+  for (const dx of [-0.05, 0.05]) k.ball(0.035, 1.2 + dx, 0.15, 0.55, 'purple', { lumpy: true })
+  k.bush(-1.3, 0.6, 0.11, 'hedge', 'violet')
+}
+
+function farmersMarket(k: Kit) {
+  k.ground(2.92, 1.92, 'path', 0.03)
+  for (let i = 0; i < 6; i++) k.box(0.45, 0.004, 1.85, -1.2 + i * 0.48, 0.032, 0, i % 2 ? 'sand' : 'path', { bevel: 0 })
+  // Three stalls with striped awnings and crates of produce.
+  const produce: Paint[][] = [['red', 'orange', 'lime'], ['sunny', 'purple', 'coral'], ['green', 'red', 'orange']]
+  const cloths: [Paint, Paint][] = [['red', 'white'], ['green', 'white'], ['blue', 'white']]
+  for (let s = 0; s < 3; s++) {
+    const x = -0.95 + s * 0.95
+    const z = -0.15
+    for (const px of [-0.38, 0.38]) for (const pz of [-0.25, 0.25]) k.box(0.035, pz < 0 ? 0.7 : 0.58, 0.035, x + px, 0.03, z + pz, 'wood', { bevel: 0 })
+    k.box(0.8, 0.24, 0.36, x, 0.03, z + 0.08, 'wood', { bevel: 0.012 })
+    k.box(0.84, 0.03, 0.4, x, 0.27, z + 0.08, 'lightwood', { bevel: 0.006 })
+    for (let c = 0; c < 3; c++) {
+      const cx = x - 0.25 + c * 0.25
+      k.box(0.22, 0.06, 0.24, cx, 0.3, z + 0.08, 'lightwood', { bevel: 0.006 })
+      for (const [ox, oz] of [[-0.05, -0.05], [0.05, -0.05], [0, 0.04], [-0.06, 0.06], [0.06, 0.06], [0, -0.01]]) k.ball(0.038, cx + ox, 0.36, z + 0.08 + oz, produce[s][c])
+    }
+    // Awning: stripes sloping down to the front.
+    for (let i = 0; i < 6; i++) k.slope([z - 0.33, 0.76], [z + 0.36, 0.6], 0.15, x - 0.375 + i * 0.15, 0, 0, cloths[s][i % 2], 'x', { thick: 0.02 })
+    for (let i = 0; i < 6; i++) k.box(0.13, 0.06, 0.015, x - 0.375 + i * 0.15, 0.55, z + 0.37, cloths[s][i % 2], { bevel: 0 })
+    // Baskets on the ground.
+    k.cyl(0.07, 0.07, x + 0.28, 0.03, z + 0.42, 'lightwood', { seg: 10, rTop: 0.085 })
+    k.ball(0.05, x + 0.28, 0.1, z + 0.42, produce[s][(s + 1) % 3], { lumpy: true })
+  }
+  // A string of bunting flags along the front.
+  for (let i = 0; i < 16; i++) {
+    const x = -1.35 + i * 0.18
+    const sag = 0.08 * Math.sin(((i % 8) / 8) * Math.PI)
+    k.cyl(0.04, 0.07, x, 0.66 - sag, 0.32, (['red', 'sunny', 'blue', 'green'] as Paint[])[i % 4], { seg: 3, rTop: 0, ry: Math.PI })
+  }
+  // A chalkboard sign, a hay bale seat, flowers in buckets.
+  k.box(0.04, 0.5, 0.04, 1.3, 0.03, 0.72, 'wood', { bevel: 0 })
+  k.box(0.38, 0.22, 0.04, 1.3, 0.38, 0.74, 'green', { bevel: 0.012 })
+  k.box(0.3, 0.14, 0.01, 1.3, 0.42, 0.765, 'charcoal', { bevel: 0 })
+  k.box(0.26, 0.12, 0.16, -1.15, 0.03, 0.6, 'hay', { bevel: 0.025, gradient: true })
+  for (const [x, c] of [[-0.55, 'rose'], [-0.4, 'sunny'], [-0.25, 'violet']] as const) {
+    k.cyl(0.05, 0.08, x, 0.03, 0.6, 'steel', { seg: 10, rTop: 0.06 })
+    k.bush(x, 0.6, 0.06, 'foliage', c, 0.08)
+  }
+  k.tree(1.25, -0.6, 0.85)
+}
+
+function tractorShed(k: Kit) {
+  k.ground(1.92, 1.92, 'path', 0.03)
+  k.box(0.7, 0.008, 0.7, -0.1, 0.03, 0.6, 'stonedark', { bevel: 0 })
+  // An open-fronted red shed (the tractor parks inside at its middle).
+  const x0 = -0.1
+  const z0 = -0.22
+  const W = 1.5
+  const D = 1.0
+  k.box(W, 0.72, 0.06, x0, 0.03, z0 - D / 2 + 0.03, 'barnred', { bevel: 0.012 })
+  for (const s of [-1, 1]) k.box(0.06, 0.72, D, x0 + s * (W / 2 - 0.03), 0.03, z0, 'barnred', { bevel: 0.012 })
+  for (const s of [-1, 1]) {
+    k.box(0.07, 0.72, 0.07, x0 + s * (W / 2 - 0.03), 0.03, z0 + D / 2, 'white', { bevel: 0.008 })
+    k.strut([x0 + s * (W / 2 - 0.03), 0.4, z0 + D / 2 - 0.04], [x0 + s * (W / 2 - 0.28), 0.72, z0 + D / 2 - 0.04], 0.018, 'white')
+  }
+  k.box(W, 0.07, 0.07, x0, 0.72, z0 + D / 2, 'white', { bevel: 0.008 })
+  k.gableRoof(W, D, 0.3, x0, 0.75, z0, 'roofgray', 'barnred', { overhang: 0.08 })
+  k.window('+x', x0 + W / 2, z0, 0.35, { w: 0.2, h: 0.18, frame: 'white', glass: 'glassdark' })
+  // Inside: a workbench and tools on the back wall.
+  k.box(0.4, 0.2, 0.14, x0 - 0.45, 0.03, z0 - D / 2 + 0.13, 'wood', { bevel: 0.01 })
+  for (const dx of [0.3, 0.42, 0.54]) k.box(0.02, 0.24, 0.01, x0 + dx, 0.3, z0 - D / 2 + 0.07, 'steel', { bevel: 0 })
+  // Hay bales, a fuel drum and a wheelbarrow beside it.
+  for (const [z, y] of [[-0.5, 0.03], [-0.1, 0.03], [-0.3, 0.33]]) k.rod(0.15, 0.22, 0.8, y + 0.15, z, 'hay', 'x', { seg: 14 })
+  k.cyl(0.09, 0.26, 0.8, 0.03, 0.4, 'red', { seg: 12 })
+  k.ring(0.09, 0.008, 0.8, 0.12, 0.4, 'charcoal', 'y', { seg: 12 })
+  k.box(0.14, 0.06, 0.22, -0.8, 0.08, 0.55, 'green', { bevel: 0.015, ry: 0.3 })
+  k.rod(0.04, 0.02, -0.78, 0.06, 0.68, 'tyre', 'x', { seg: 10 })
+  k.bush(0.82, 0.8, 0.09, 'hedge', 'sunny')
+}
+
+function orchard(fruit: Paint): Builder {
+  return (k) => {
+    k.ground(1.95, 1.95, 'lawn', 0.03)
+    // Four fruit trees in rows, mown grass between, a ladder and baskets.
+    for (const [i, [x, z]] of ([[-0.48, -0.5], [0.5, -0.45], [-0.5, 0.45], [0.46, 0.52]] as [number, number][]).entries()) {
+      k.disc(0.3, 0.008, x, 0.03, z, 'turf', { seg: 16 })
+      k.tree(x, z, 1.05 + (i % 2) * 0.1, 'foliage', { fruit })
+    }
+    k.strut([0.2, 0.03, -0.35], [0.36, 0.48, -0.45], 0.012, 'lightwood')
+    k.strut([0.28, 0.03, -0.3], [0.44, 0.48, -0.4], 0.012, 'lightwood')
+    for (let i = 1; i < 6; i++) {
+      const t = i / 6
+      k.strut([0.2 + 0.16 * t, 0.03 + 0.45 * t, -0.35 - 0.1 * t], [0.28 + 0.16 * t, 0.03 + 0.45 * t, -0.3 - 0.1 * t], 0.007, 'lightwood')
+    }
+    for (const [x, z] of [[0.0, 0.05], [0.15, 0.12], [-0.1, -0.1]]) {
+      k.cyl(0.08, 0.08, x, 0.03, z, 'lightwood', { seg: 10, rTop: 0.095 })
+      for (const [dx, dz] of [[-0.03, 0], [0.03, 0.01], [0, -0.03], [0, 0.03]]) k.ball(0.035, x + dx, 0.12, z + dz, fruit)
+    }
+    k.rails(-0.92, 0.92, 0.92, 0.92, 'lightwood', { h: 0.12 })
+  }
+}
+
+// ---- Festival prizes
+
+function blossomArch(k: Kit) {
+  k.box(1.9, 0.012, 0.5, 0, 0, 0, 'lawn', { bevel: 0 })
+  k.box(0.5, 0.014, 0.5, 0, 0.01, 0, 'path', { bevel: 0 })
+  for (const s of [-1, 1]) {
+    k.box(0.1, 0.75, 0.1, s * 0.62, 0, 0, 'white', { bevel: 0.012 })
+    k.box(0.14, 0.05, 0.14, s * 0.62, 0, 0, 'stone', { bevel: 0.01 })
+    k.bush(s * 0.78, 0.05, 0.13, 'hedge', 'rose')
+    k.bush(s * 0.45, 0.12, 0.08, 'hedge', 'white')
+  }
+  k.ring(0.62, 0.05, 0, 0.75, 0, 'white', 'z', { arc: Math.PI, seg: 20 })
+  for (let i = 0; i <= 14; i++) {
+    const a = (i / 14) * Math.PI
+    const x = Math.cos(a) * 0.62
+    const y = 0.75 + Math.sin(a) * 0.62
+    k.ball(0.09, x, y, (i % 2) * 0.04 - 0.02, i % 3 ? 'rose' : '#ffd6e5', { lumpy: true })
+    if (i % 2) k.ball(0.06, x * 1.05, y + 0.04, 0.06, 'pink', { lumpy: true })
+  }
+  for (let i = 0; i < 8; i++) {
+    const s = i < 4 ? -1 : 1
+    k.ball(0.06, s * 0.62 + (i % 2 ? 0.05 : -0.05), 0.2 + (i % 4) * 0.15, 0.06, i % 2 ? 'rose' : 'foliage', { lumpy: true })
+  }
+}
+
+function iceCreamCart(k: Kit) {
+  k.box(0.9, 0.015, 0.9, 0, 0, 0, 'path', { bevel: 0 })
+  for (const s of [-1, 1]) {
+    k.rod(0.11, 0.03, s * 0.2, 0.12, 0.2, 'white', 'z', { seg: 16 })
+    k.ring(0.11, 0.015, s * 0.2, 0.12, 0.215, 'tyre', 'z', { seg: 16 })
+  }
+  k.box(0.6, 0.32, 0.36, 0, 0.1, 0, 'paleblue', { bevel: 0.03, gradient: true })
+  k.box(0.6, 0.04, 0.37, 0, 0.26, 0, 'pink', { bevel: 0.01 })
+  k.box(0.62, 0.03, 0.38, 0, 0.42, 0, 'white', { bevel: 0.01 })
+  for (const [x, c] of [[-0.18, 'pink'], [0, 'cream'], [0.18, 'brown']] as const) k.ball(0.06, x, 0.46, 0.05, c, { sy: 0.7 })
+  k.strut([0.3, 0.3, 0], [0.45, 0.32, 0], 0.012, 'steel')
+  // A striped umbrella over it.
+  k.cyl(0.012, 0.5, 0, 0.45, -0.1, 'white', { seg: 6 })
+  for (let i = 0; i < 8; i++) k.cyl(0.42, 0.14, 0, 0.88, -0.1, i % 2 ? 'pink' : 'white', { rTop: 0, seg: 2, start: (i / 8) * Math.PI * 2, arc: Math.PI / 4 })
+  k.ball(0.025, 0, 1.03, -0.1, 'pink')
+  // A giant cone on a pole.
+  k.cyl(0.008, 0.2, 0.25, 0.44, -0.12, 'steel', { seg: 4 })
+  k.cyl(0.05, 0.14, 0.25, 0.6, -0.12, 'lightwood', { seg: 8, rTop: 0.0, ry: 0 })
+  k.ball(0.06, 0.25, 0.78, -0.12, 'pink')
+  k.box(0.18, 0.2, 0.02, -0.38, 0, 0.3, 'white', { bevel: 0.006, ry: 0.4 })
+  k.box(0.14, 0.12, 0.01, -0.375, 0.05, 0.315, 'pink', { bevel: 0, ry: 0.4 })
+}
+
+function pumpkinPatch(k: Kit) {
+  k.box(1.9, 0.05, 0.85, 0, 0, 0, 'soil', { bevel: 0.01 })
+  k.box(1.94, 0.04, 0.9, 0, 0, 0, 'lawn', { bevel: 0.01 })
+  k.box(1.86, 0.03, 0.8, 0, 0.03, 0, 'soil', { bevel: 0 })
+  // Vines and leaves, pumpkins big and small.
+  for (let i = 0; i < 9; i++) k.ball(0.06, -0.85 + i * 0.21, 0.07, (i % 2 ? 0.2 : -0.22), 'foliage', { lumpy: true, sy: 0.4 })
+  for (const [x, z, r] of [[-0.7, -0.1, 0.13], [-0.35, 0.18, 0.1], [0.05, -0.15, 0.16], [0.5, 0.15, 0.11], [0.75, -0.2, 0.09], [-0.1, 0.22, 0.07]]) {
+    k.ball(r, x, 0.06 + r * 0.75, z, 'orange', { sy: 0.72, seg: 12 })
+    for (let j = 0; j < 4; j++) k.ball(r * 0.98, x, 0.06 + r * 0.75, z, j % 2 ? 'orange' : '#e86f1c', { sy: 0.7, sx: 0.4 + j * 0.15, seg: 10 })
+    k.cyl(0.015, 0.06, x, 0.06 + r * 1.4, z, 'olive', { seg: 5 })
+  }
+  // A scarecrow, a hay bale and a crate.
+  const sx = 0.3
+  const sz = -0.28
+  k.cyl(0.018, 0.75, sx, 0.06, sz, 'wood', { seg: 6 })
+  k.box(0.46, 0.03, 0.03, sx, 0.58, sz, 'wood', { bevel: 0 })
+  k.box(0.22, 0.26, 0.11, sx, 0.4, sz, 'red', { bevel: 0.02 })
+  for (let i = 0; i < 3; i++) k.box(0.225, 0.012, 0.115, sx, 0.45 + i * 0.06, sz, 'navy', { bevel: 0 })
+  for (const s of [-1, 1]) k.cyl(0.035, 0.08, sx + s * 0.25, 0.53, sz, 'hay', { seg: 6, rTop: 0.015 })
+  k.ball(0.08, sx, 0.73, sz, 'sand')
+  k.cyl(0.14, 0.03, sx, 0.78, sz, 'hay', { seg: 12 })
+  k.cyl(0.08, 0.1, sx, 0.8, sz, 'hay', { seg: 10, rTop: 0.05 })
+  k.box(0.28, 0.16, 0.18, -0.75, 0.05, 0.25, 'hay', { bevel: 0.03, gradient: true })
+  k.box(0.18, 0.12, 0.16, 0.8, 0.06, 0.25, 'lightwood', { bevel: 0.01 })
+  k.ball(0.06, 0.8, 0.2, 0.25, 'orange', { sy: 0.75 })
+}
+
+function festiveFir(k: Kit) {
+  k.cyl(0.42, 0.03, 0, 0, 0, 'snow', { seg: 20 })
+  k.cyl(0.07, 0.16, 0, 0.03, 0, 'wooddark', { seg: 8 })
+  const tiers = 4
+  for (let i = 0; i < tiers; i++) {
+    const r = 0.4 - i * 0.08
+    const y = 0.13 + i * 0.25
+    k.cyl(r, 0.42, 0, y, 0, i % 2 ? 'foliage' : 'foliagedark', { rTop: 0, seg: 10 })
+    k.cyl(r * 0.85, 0.05, 0, y, 0, 'snow', { seg: 10, rTop: r * 0.75 })
+  }
+  // Garland lights spiralling round, baubles, the star.
+  const lights: Paint[] = ['red', 'sunny', 'aqua', 'white', 'violet']
+  for (let i = 0; i < 22; i++) {
+    const t = i / 22
+    const y = 0.17 + t * 0.95
+    const r = 0.38 * (1 - t * 0.85)
+    const a = i * 1.15
+    k.ball(0.026, Math.cos(a) * r, y, Math.sin(a) * r, lights[i % lights.length], { finish: 'glow' })
+  }
+  k.cyl(0.11, 0.06, 0, 1.33, 0, 'gold', { seg: 5, rTop: 0, finish: 'glow' })
+  k.cyl(0.11, 0.06, 0, 1.33, 0, 'gold', { seg: 5, rTop: 0, finish: 'glow', ry: Math.PI })
+  k.ball(0.05, 0, 1.33, 0, 'gold', { finish: 'glow' })
+  // Presents underneath.
+  for (const [x, z, s, c, r] of [[0.28, 0.25, 0.12, 'red', 'sunny'], [-0.25, 0.28, 0.1, 'blue', 'white'], [0.05, 0.36, 0.08, 'green', 'red']] as [number, number, number, Paint, Paint][]) {
+    k.box(s, s, s, x, 0.03, z, c, { bevel: 0.008, ry: x })
+    k.box(s + 0.004, s + 0.004, 0.02, x, 0.03, z, r, { bevel: 0, ry: x })
+    k.box(0.02, s + 0.004, s + 0.004, x, 0.03, z, r, { bevel: 0, ry: x })
+  }
+}
+
+// ---- Highlands
+
+function mountainLodge(k: Kit) {
+  k.ground(1.9, 1.9, 'stone', 0.04)
+  k.box(1.8, 0.01, 1.8, 0, 0.04, 0, 'lawn', { bevel: 0 })
+  k.box(0.4, 0.012, 0.5, 0, 0.04, 0.68, 'path', { bevel: 0 })
+  // Stone ground floor, timber above, a steep red roof with deep eaves.
+  const z0 = -0.1
+  const W = 1.2
+  const D = 0.95
+  k.box(W + 0.06, 0.36, D + 0.06, 0, 0.05, z0, 'stone', { bevel: 0.02, gradient: true })
+  k.box(W, 0.36, D, 0, 0.41, z0, 'wood', { bevel: 0.015 })
+  for (let i = 0; i < 6; i++) k.box(W + 0.01, 0.012, D + 0.01, 0, 0.45 + i * 0.055, z0, 'wooddark', { bevel: 0 })
+  k.gableRoof(W, D, 0.5, 0, 0.77, z0, 'roofred', 'wood', { ridge: 'z', overhang: 0.14, thick: 0.05 })
+  const front = z0 + D / 2
+  k.door('+z', front + 0.03, 0, { w: 0.2, h: 0.28, color: 'darkwood', y: 0.05 })
+  for (const u of [-0.38, 0.38]) k.window('+z', front + 0.03, u, 0.16, { w: 0.16, h: 0.16, shutters: 'red' })
+  k.windows('+x', W / 2 + 0.03, z0 - 0.25, z0 + 0.25, 0.16, 2, { w: 0.16, h: 0.16, shutters: 'red' })
+  k.window('+z', front, 0, 0.82, { w: 0.2, h: 0.2, shutters: 'red' })
+  // Balcony round the upper floor at the front, with flower boxes.
+  k.box(W + 0.1, 0.035, 0.2, 0, 0.42, front + 0.1, 'lightwood', { bevel: 0.006 })
+  for (let i = 0; i <= 12; i++) k.box(0.02, 0.13, 0.02, -W / 2 - 0.04 + i * ((W + 0.08) / 12), 0.455, front + 0.19, 'lightwood', { bevel: 0 })
+  k.box(W + 0.1, 0.025, 0.03, 0, 0.58, front + 0.19, 'lightwood', { bevel: 0 })
+  for (const u of [-0.38, 0.38]) {
+    k.box(0.22, 0.05, 0.06, u, 0.6, front + 0.19, 'wooddark', { bevel: 0.006 })
+    for (const dx of [-0.07, 0, 0.07]) k.ball(0.03, u + dx, 0.66, front + 0.19, dx ? 'red' : 'white', { lumpy: true })
+  }
+  for (const s of [-1, 1]) k.strut([s * 0.55, 0.05, front + 0.18], [s * 0.55, 0.42, front + 0.18], 0.025, 'wooddark')
+  // Chimney, firewood and pines.
+  k.box(0.16, 0.6, 0.16, 0.38, 0.85, z0 - 0.25, 'stone', { bevel: 0.012 })
+  k.box(0.2, 0.04, 0.2, 0.38, 1.45, z0 - 0.25, 'stonedark', { bevel: 0.008 })
+  for (let r = 0; r < 3; r++) for (let i = 0; i < 4 - r; i++) k.rod(0.04, 0.28, -0.78 + i * 0.08 + r * 0.04, 0.09 + r * 0.07, 0.3, 'wood', 'z', { seg: 8 })
+  k.pine(-0.75, -0.7, 0.95)
+  k.pine(0.78, -0.65, 0.85)
+  k.pine(0.8, 0.65, 0.7)
+  k.bush(-0.75, 0.75, 0.09, 'hedge', 'violet', 0.04)
+}
+
 export const KIT_MODELS: Record<string, Builder> = {
   barn,
   'pen-chicken': pen(2, 2, 'chicken'),
@@ -1260,4 +1628,17 @@ export const KIT_MODELS: Record<string, Builder> = {
   'army-base': armyBase,
   'solar-farm': solarFarm,
   'ski-resort': skiResort,
+  bakehouse,
+  dairy,
+  winery,
+  'farmers-market': farmersMarket,
+  'tractor-shed': tractorShed,
+  'orchard-apples': orchard('red'),
+  'orchard-cherries': orchard('#b3122e'),
+  'orchard-oranges': orchard('orange'),
+  'blossom-arch': blossomArch,
+  'ice-cream-cart': iceCreamCart,
+  'pumpkin-patch': pumpkinPatch,
+  'festive-fir': festiveFir,
+  'mountain-lodge': mountainLodge,
 }

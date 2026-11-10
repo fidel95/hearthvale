@@ -1,6 +1,6 @@
 import type * as THREE from 'three'
 import { describe, expect, it } from 'vitest'
-import { BUILDINGS_BY_ID, BUILDING_TYPES } from '../game/buildings'
+import { BUILDINGS_BY_ID, BUILDING_TYPES, PRIZE_TYPES } from '../game/buildings'
 import { Kit } from '../game/kit'
 import { KIT_MODELS } from '../game/kitModels'
 import { CROP_TYPES } from '../game/crops'
@@ -67,14 +67,14 @@ describe('catalogs', () => {
   it('point at model files that exist', () => {
     // Vite lists the files in public/ that match; a model URL is /models/... under it.
     const files = new Set(Object.keys(import.meta.glob('/public/models/**/*.glb')))
-    for (const b of BUILDING_TYPES) {
+    for (const b of [...BUILDING_TYPES, ...PRIZE_TYPES]) {
       if (b.model?.startsWith('kit:')) expect(KIT_MODELS[b.model.slice(4)], b.model).toBeTypeOf('function')
       else if (b.model) expect(files.has(`/public${b.model}`), b.model).toBe(true)
     }
   })
 
   it('build every code-made model (kitModels.ts) inside its footprint', () => {
-    for (const b of BUILDING_TYPES) {
+    for (const b of [...BUILDING_TYPES, ...PRIZE_TYPES]) {
       if (!b.model?.startsWith('kit:')) continue
       const kit = new Kit()
       KIT_MODELS[b.model.slice(4)](kit)

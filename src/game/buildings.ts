@@ -1430,6 +1430,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     needs: { water: 1, power: 1, trash: 1 },
     income: { coins: 210, seconds: 200 },
     residents: 8,
+    model: kit('mountain-lodge'),
     placeholder: { shape: 'lodge', color: '#8a5a36', accent: '#c8463a', height: 1.3 },
   },
   {
@@ -1553,6 +1554,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     build: { seconds: 60, materials: { bricks: 2, lumber: 2 } },
     factory: { product: 'bread', input: 0, output: 2, seconds: 120, recipe: { wheat: 6, eggs: 2 } },
     needs: { water: 1, power: 2 },
+    model: kit('bakehouse'),
     placeholder: { shape: 'bakery', color: '#f1dcb4', accent: '#b5432f', height: 0.9 },
   },
   {
@@ -1565,6 +1567,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     build: { seconds: 90, materials: { bricks: 3, steel: 1 } },
     factory: { product: 'cheese', input: 0, output: 2, seconds: 180, recipe: { milk: 6 } },
     needs: { water: 2, power: 2 },
+    model: kit('dairy'),
     placeholder: { shape: 'dairy', color: '#f4f6f8', accent: '#3a6fb0', height: 0.9 },
   },
   {
@@ -1577,6 +1580,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     build: { seconds: 120, materials: { lumber: 4, bricks: 3 } },
     factory: { product: 'wine', input: 0, output: 2, seconds: 300, recipe: { grapes: 8 } },
     needs: { water: 2, power: 2 },
+    model: kit('winery'),
     placeholder: { shape: 'winery', color: '#e8d9c0', accent: '#7b3fa0', height: 1 },
   },
   {
@@ -1590,6 +1594,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     unique: true,
     attractsVisitors: { lingerSeconds: 10 },
     visitors: 10,
+    model: kit('farmers-market'),
     placeholder: { shape: 'market', color: '#f4efe6', accent: '#3f8f3a', height: 0.9 },
   },
   {
@@ -1602,6 +1607,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     unlockLevel: 8,
     unique: true,
     build: { seconds: 90, materials: { lumber: 4, steel: 2 } },
+    model: kit('tractor-shed'),
     placeholder: { shape: 'tractorshed', color: '#b5432f', accent: '#f2ead8', height: 0.9 },
   },
   // ---- Attractions: theme-park rides and leisure venues that earn ticket sales and boost tourism (no goods needed).
@@ -1784,6 +1790,7 @@ function orchard(id: string, name: string, cost: number, unlockLevel: number, se
     produce: { product, units },
     needs: { water: 1 },
     recoveryYears: 10, // orchard trees: 10 years (IRC §168(e)(3)(D))
+    model: kit(`orchard-${product}`),
     placeholder: { shape: 'orchard', color: '#4f9a3c', accent: fruit, height: 0.9 },
   }
 }
@@ -1802,6 +1809,7 @@ const prize = (id: string, name: string, festival: string, size: { x: number; z:
   amenity: { bonus: 0.06, radius: 2 },
   visitors: 5,
   prize: festival,
+  model: kit(id),
   placeholder,
 })
 
